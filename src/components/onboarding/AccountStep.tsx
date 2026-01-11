@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Mail, Phone, Lock, Eye, EyeOff, CheckCircle2, ArrowRight } from 'lucide-react';
+import { User, Mail, Phone, Lock, Eye, EyeOff, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AccountStepProps {
   onComplete: (data: AccountData) => void;
 }
 
-interface AccountData {
+export interface AccountData {
   fullName: string;
   email: string;
   phone: string;
@@ -17,10 +16,10 @@ interface AccountData {
 }
 
 const steps = [
-  { id: 'name', label: 'Full Name', icon: User, placeholder: 'John Doe' },
-  { id: 'email', label: 'Email', icon: Mail, placeholder: 'you@example.com' },
-  { id: 'phone', label: 'Phone Number', icon: Phone, placeholder: '+91 98765 43210' },
-  { id: 'password', label: 'Password', icon: Lock, placeholder: '••••••••' },
+  { id: 'name', label: 'Full Name', icon: User, placeholder: 'Enter your full name', type: 'text' },
+  { id: 'email', label: 'Email Address', icon: Mail, placeholder: 'you@example.com', type: 'email' },
+  { id: 'phone', label: 'Mobile Number', icon: Phone, placeholder: '+91 98765 43210', type: 'tel' },
+  { id: 'password', label: 'Create Password', icon: Lock, placeholder: 'Min 6 characters', type: 'password' },
 ];
 
 export function AccountStep({ onComplete }: AccountStepProps) {
@@ -35,16 +34,19 @@ export function AccountStep({ onComplete }: AccountStepProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [currentField]);
 
-  const currentStep = steps[currentField];
-  const Icon = currentStep.icon;
+  const currentStepData = steps[currentField];
+  const Icon = currentStepData.icon;
 
   const getValue = () => {
-    switch (currentStep.id) {
+    switch (currentStepData.id) {
       case 'name': return data.fullName;
       case 'email': return data.email;
       case 'phone': return data.phone;
@@ -54,7 +56,7 @@ export function AccountStep({ onComplete }: AccountStepProps) {
   };
 
   const setValue = (value: string) => {
-    switch (currentStep.id) {
+    switch (currentStepData.id) {
       case 'name': setData(prev => ({ ...prev, fullName: value })); break;
       case 'email': setData(prev => ({ ...prev, email: value })); break;
       case 'phone': setData(prev => ({ ...prev, phone: value })); break;
@@ -66,13 +68,16 @@ export function AccountStep({ onComplete }: AccountStepProps) {
     const value = getValue();
     if (!value.trim()) return false;
     
-    if (currentStep.id === 'email') {
+    if (currentStepData.id === 'email') {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
     }
-    if (currentStep.id === 'password') {
+    if (currentStepData.id === 'password') {
       return value.length >= 6;
     }
-    return true;
+    if (currentStepData.id === 'phone') {
+      return value.replace(/\D/g, '').length >= 10;
+    }
+    return value.trim().length >= 2;
   };
 
   const handleNext = () => {
@@ -85,7 +90,25 @@ export function AccountStep({ onComplete }: AccountStepProps) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && canProceed()) {
+      e.preventDefault();
       handleNext();
+    }
+  };
+
+  const getInputType = () => {
+    if (currentStepData.id === 'password') {
+      return showPassword ? 'text' : 'password';
+    }
+    return currentStepData.type;
+  };
+
+  const getHelpText = () => {
+    switch (currentStepData.id) {
+      case 'name': return 'This will be used for your profile';
+      case 'email': return 'We\'ll use this for account notifications';
+      case 'phone': return 'For important updates and recovery';
+      case 'password': return 'Choose a secure password (min 6 characters)';
+      default: return '';
     }
   };
 
@@ -97,44 +120,45 @@ export function AccountStep({ onComplete }: AccountStepProps) {
           <div
             key={step.id}
             className={cn(
-              "w-2 h-2 rounded-full transition-all duration-300",
-              index === currentField && "w-8 bg-primary",
-              index < currentField && "bg-emerald-500",
-              index > currentField && "bg-muted"
+              "h-2 rounded-full transition-all duration-300",
+              index === currentField && "w-8 bg-gradient-to-r from-emerald-600 to-green-600",
+              index < currentField && "w-2 bg-emerald-500",
+              index > currentField && "w-2 bg-muted"
             )}
           />
         ))}
       </div>
 
       {/* Current Field */}
-      <div className="text-center space-y-2 animate-fade-in" key={currentField}>
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-600/30">
-          <Icon className="h-8 w-8 text-white" />
+      <div className="text-center space-y-4 animate-fade-in" key={currentField}>
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center mx-auto shadow-lg shadow-emerald-600/30">
+          <Icon className="h-10 w-10 text-white" />
         </div>
         
-        <h2 className="text-2xl font-bold text-foreground">What's your {currentStep.label.toLowerCase()}?</h2>
-        <p className="text-muted-foreground">
-          {currentStep.id === 'password' ? 'Choose a secure password (min 6 characters)' : 'We\'ll use this to personalize your experience'}
-        </p>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">What's your {currentStepData.label.toLowerCase()}?</h2>
+          <p className="text-muted-foreground mt-1">{getHelpText()}</p>
+        </div>
       </div>
 
       <div className="max-w-md mx-auto space-y-4">
         <div className="relative">
+          <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             ref={inputRef}
-            type={currentStep.id === 'password' && !showPassword ? 'password' : currentStep.id === 'email' ? 'email' : 'text'}
-            placeholder={currentStep.placeholder}
+            type={getInputType()}
+            placeholder={currentStepData.placeholder}
             value={getValue()}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="h-14 text-lg text-center rounded-xl border-2 border-border/50 focus:border-primary transition-all pr-12"
+            className="h-14 text-lg pl-12 rounded-xl border-2 border-border/50 focus:border-emerald-500 transition-all pr-12"
           />
           
-          {currentStep.id === 'password' && (
+          {currentStepData.id === 'password' && (
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -144,20 +168,29 @@ export function AccountStep({ onComplete }: AccountStepProps) {
         <Button
           onClick={handleNext}
           disabled={!canProceed()}
-          className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500"
+          className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-lg font-semibold"
         >
-          {currentField === steps.length - 1 ? 'Create Account' : 'Continue'}
-          <ArrowRight className="ml-2 h-4 w-4" />
+          {currentField === steps.length - 1 ? (
+            <>
+              <Sparkles className="mr-2 h-5 w-5" />
+              Continue to Setup
+            </>
+          ) : (
+            <>
+              Continue
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </>
+          )}
         </Button>
       </div>
 
       {/* Completed fields preview */}
       {currentField > 0 && (
         <div className="flex flex-wrap justify-center gap-2 animate-fade-in">
-          {steps.slice(0, currentField).map((step, index) => (
+          {steps.slice(0, currentField).map((step) => (
             <div
               key={step.id}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-sm"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-sm border border-emerald-500/20"
             >
               <CheckCircle2 className="h-4 w-4" />
               <span>{step.label}</span>
@@ -165,6 +198,11 @@ export function AccountStep({ onComplete }: AccountStepProps) {
           ))}
         </div>
       )}
+
+      {/* Step indicator */}
+      <p className="text-center text-sm text-muted-foreground">
+        Step {currentField + 1} of {steps.length}
+      </p>
     </div>
   );
 }

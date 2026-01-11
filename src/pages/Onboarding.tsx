@@ -1,9 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrganizations } from '@/hooks/useOrganizations';
-import { useProperties } from '@/hooks/useProperties';
-import { usePolicySettings } from '@/hooks/usePolicySettings';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { 
@@ -15,20 +12,29 @@ import {
   CreditCard,
   CheckCircle2,
   Loader2,
-  Sparkles
+  Sparkles,
+  User
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { HostyliaLogo } from '@/components/brand/HostyliaLogo';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
+import { AccountStep } from '@/components/onboarding/AccountStep';
 import { OrganizationStep } from '@/components/onboarding/OrganizationStep';
 import { PropertyRulesStep } from '@/components/onboarding/PropertyRulesStep';
 import { ReviewStep } from '@/components/onboarding/ReviewStep';
 
 export interface OnboardingData {
+  // Account details
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  // Organization
   organizationName: string;
   organizationType: 'hostel' | 'boarding_school' | 'college_hostel' | 'coaching' | '';
+  // Property rules
   phoneAllowed: 'no' | 'limited' | 'yes';
   outingAllowed: 'no' | 'permission' | 'weekends' | 'anytime';
   curfewTime: string;
@@ -44,6 +50,10 @@ export interface OnboardingData {
 }
 
 const initialData: OnboardingData = {
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
   organizationName: '',
   organizationType: '',
   phoneAllowed: 'limited',
@@ -61,10 +71,11 @@ const initialData: OnboardingData = {
 };
 
 const steps = [
-  { id: 1, title: 'Organization', icon: Building2 },
-  { id: 2, title: 'Property Rules', icon: Clock },
-  { id: 3, title: 'Mess & Attendance', icon: Utensils },
-  { id: 4, title: 'Fees & Review', icon: CreditCard },
+  { id: 1, title: 'Account', icon: User },
+  { id: 2, title: 'Organization', icon: Building2 },
+  { id: 3, title: 'Property Rules', icon: Clock },
+  { id: 4, title: 'Mess & Attendance', icon: Utensils },
+  { id: 5, title: 'Review & Complete', icon: CreditCard },
 ];
 
 export default function Onboarding() {
@@ -77,10 +88,29 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // If user is already logged in, skip account step
+  useEffect(() => {
+    if (user && currentStep === 1) {
+      setData(prev => ({
+        ...prev,
+        fullName: profile?.full_name || '',
+        email: user.email || '',
+        phone: profile?.phone || '',
+      }));
+      setCurrentStep(2);
+    }
+  }, [user, profile, currentStep]);
+
   const progress = (currentStep / steps.length) * 100;
 
   const updateData = (updates: Partial<OnboardingData>) => {
     setData(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleAccountComplete = (accountData: { fullName: string; email: string; phone: string; password: string }) => {
+    updateData(accountData);
+    setDirection('forward');
+    setCurrentStep(2);
   };
 
   const nextStep = () => {
@@ -92,24 +122,51 @@ export default function Onboarding() {
 
   const prevStep = () => {
     if (currentStep > 1) {
+      // Don't go back to account step if user is logged in
+      if (currentStep === 2 && user) return;
       setDirection('backward');
       setCurrentStep(prev => prev - 1);
     }
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
-    
     setIsSubmitting(true);
     
     try {
+      let userId = user?.id;
+
+      // If no user, create account first
+      if (!userId) {
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: {
+            data: {
+              full_name: data.fullName,
+              phone: data.phone,
+            },
+          },
+        });
+
+        if (authError) throw authError;
+        if (!authData.user) throw new Error('Failed to create account');
+
+        userId = authData.user.id;
+
+        // Update profile with phone
+        await supabase
+          .from('profiles')
+          .update({ phone: data.phone })
+          .eq('id', userId);
+      }
+
       // 1. Create organization
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
           name: data.organizationName,
           type: data.organizationType,
-          owner_id: user.id,
+          owner_id: userId,
           settings: {},
         })
         .select()
@@ -122,7 +179,7 @@ export default function Onboarding() {
         .from('properties')
         .insert({
           name: data.organizationName,
-          owner_id: user.id,
+          owner_id: userId,
           organization_id: orgData.id,
           status: 'active',
         })
@@ -156,13 +213,13 @@ export default function Onboarding() {
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single();
 
       if (!existingRole) {
         await supabase
           .from('user_roles')
-          .insert({ user_id: user.id, role: 'tenant_admin' });
+          .insert({ user_id: userId, role: 'tenant_admin' });
       }
 
       toast({
@@ -185,10 +242,11 @@ export default function Onboarding() {
 
   const canProceed = () => {
     switch (currentStep) {
-      case 1: return data.organizationName.trim() !== '' && data.organizationType !== '';
-      case 2: return true;
-      case 3: return data.attendanceMarkedBy.length > 0;
-      case 4: return data.paymentModes.length > 0;
+      case 1: return false; // Handled by AccountStep
+      case 2: return data.organizationName.trim() !== '' && data.organizationType !== '';
+      case 3: return true;
+      case 4: return data.attendanceMarkedBy.length > 0;
+      case 5: return data.paymentModes.length > 0;
       default: return true;
     }
   };
@@ -199,12 +257,16 @@ export default function Onboarding() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <HostyliaLogo size="md" />
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              Welcome, {profile?.full_name || 'there'}!
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-              Skip for now
-            </Button>
+            {user && (
+              <span className="text-sm text-muted-foreground hidden sm:block">
+                Welcome, {profile?.full_name || 'there'}!
+              </span>
+            )}
+            {!user && currentStep === 1 && (
+              <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
+                Already have an account? Sign In
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -213,7 +275,9 @@ export default function Onboarding() {
         <div className="mb-12">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Setup Your Organization</h1>
+              <h1 className="text-2xl font-bold text-foreground">
+                {currentStep === 1 ? 'Create Your Account' : 'Setup Your Organization'}
+              </h1>
               <p className="text-muted-foreground">Step {currentStep} of {steps.length}</p>
             </div>
             <div className="text-right">
@@ -226,23 +290,23 @@ export default function Onboarding() {
             <Progress value={progress} className="h-2" />
           </div>
           
-          <div className="flex justify-between mt-6">
+          <div className="flex justify-between mt-6 overflow-x-auto pb-2">
             {steps.map((step) => {
               const StepIcon = step.icon;
               const isActive = currentStep === step.id;
               const isComplete = currentStep > step.id;
               
               return (
-                <div key={step.id} className={cn("flex flex-col items-center gap-2 transition-all duration-300", isActive && "scale-105")}>
+                <div key={step.id} className={cn("flex flex-col items-center gap-2 transition-all duration-300 min-w-[60px]", isActive && "scale-105")}>
                   <div className={cn(
-                    "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
+                    "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300",
                     isComplete && "bg-emerald-500 text-white",
                     isActive && "bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
                     !isActive && !isComplete && "bg-muted text-muted-foreground"
                   )}>
-                    {isComplete ? <CheckCircle2 className="h-6 w-6" /> : <StepIcon className="h-5 w-5" />}
+                    {isComplete ? <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6" /> : <StepIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </div>
-                  <span className={cn("text-xs font-medium hidden sm:block", isActive ? "text-foreground" : "text-muted-foreground")}>
+                  <span className={cn("text-xs font-medium hidden sm:block text-center", isActive ? "text-foreground" : "text-muted-foreground")}>
                     {step.title}
                   </span>
                 </div>
@@ -253,34 +317,52 @@ export default function Onboarding() {
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-xl p-6 sm:p-8 mb-8 min-h-[400px]">
           <div key={currentStep} className={cn("animate-fade-in", direction === 'forward' ? 'animate-slide-in-right' : 'animate-slide-in-left')}>
-            {currentStep === 1 && <OrganizationStep data={data} updateData={updateData} />}
-            {currentStep === 2 && <PropertyRulesStep data={data} updateData={updateData} section="rules" />}
-            {currentStep === 3 && <PropertyRulesStep data={data} updateData={updateData} section="mess" />}
-            {currentStep === 4 && <ReviewStep data={data} updateData={updateData} />}
+            {currentStep === 1 && <AccountStep onComplete={handleAccountComplete} />}
+            {currentStep === 2 && <OrganizationStep data={data} updateData={updateData} />}
+            {currentStep === 3 && <PropertyRulesStep data={data} updateData={updateData} section="rules" />}
+            {currentStep === 4 && <PropertyRulesStep data={data} updateData={updateData} section="mess" />}
+            {currentStep === 5 && <ReviewStep data={data} updateData={updateData} />}
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={prevStep} disabled={currentStep === 1} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          
-          {currentStep < steps.length ? (
-            <Button onClick={nextStep} disabled={!canProceed()} className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500">
-              Continue
-              <ArrowRight className="h-4 w-4" />
+        {currentStep !== 1 && (
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="outline" 
+              onClick={prevStep} 
+              disabled={currentStep === 1 || (currentStep === 2 && !!user)} 
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
             </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={isSubmitting || !canProceed()} className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500">
-              {isSubmitting ? (
-                <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
-              ) : (
-                <><Sparkles className="h-4 w-4" />Complete Setup</>
-              )}
-            </Button>
-          )}
-        </div>
+            
+            {currentStep < steps.length ? (
+              <Button onClick={nextStep} disabled={!canProceed()} className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500">
+                Continue
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={handleSubmit} disabled={isSubmitting || !canProceed()} className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500">
+                {isSubmitting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" />Creating Account...</>
+                ) : (
+                  <><Sparkles className="h-4 w-4" />Complete Setup</>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Free trial badge */}
+        {currentStep === 1 && (
+          <div className="mt-6 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <Sparkles className="h-4 w-4 text-emerald-500" />
+              <span className="text-sm text-emerald-600 font-medium">7 Days Free Trial • No Credit Card Required</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
