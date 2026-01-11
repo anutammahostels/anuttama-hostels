@@ -4,28 +4,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Mail, Lock, User, Shield, ArrowRight, Sparkles, CheckCircle2, Building2, Users, Clock, Star } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Sparkles, Building2, Users, Clock, Shield, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { HostyliaLogo } from '@/components/brand/HostyliaLogo';
 import heroBuilding from '@/assets/hero-building.jpg';
-import type { Database } from '@/integrations/supabase/types';
-
-type AppRole = Database['public']['Enums']['app_role'];
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
-
-const roleLabels: Record<AppRole, string> = {
-  super_admin: 'Super Admin',
-  tenant_admin: 'Property Owner',
-  warden: 'Warden',
-  student: 'Student',
-  parent: 'Parent',
-  security_guard: 'Security Guard',
-};
 
 const features = [
   { icon: Building2, text: 'Manage unlimited properties' },
@@ -43,18 +29,16 @@ const stats = [
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<AppRole>('tenant_admin');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
-      navigate('/onboarding');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -79,24 +63,6 @@ export default function Auth() {
     } else {
       toast({ title: 'Welcome back!', description: 'You have successfully signed in.' });
       navigate('/dashboard');
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    if (!fullName.trim()) {
-      toast({ title: 'Name required', description: 'Please enter your full name.', variant: 'destructive' });
-      return;
-    }
-    setIsLoading(true);
-    const { error } = await signUp(email, password, fullName, selectedRole);
-    setIsLoading(false);
-    if (error) {
-      toast({ title: 'Sign up failed', description: error.message.includes('already registered') ? 'This email is already registered.' : error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Account created!', description: 'Your account has been created successfully.' });
-      navigate('/onboarding');
     }
   };
 
@@ -153,70 +119,72 @@ export default function Auth() {
           <div className="lg:hidden flex justify-center"><Link to="/"><HostyliaLogo size="lg" /></Link></div>
           
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold text-foreground">Welcome</h2>
-            <p className="text-muted-foreground">Sign in or create your account</p>
+            <h2 className="text-3xl font-bold text-foreground">Welcome Back</h2>
+            <p className="text-muted-foreground">Sign in to your account to continue</p>
           </div>
 
           <div className="bg-card rounded-2xl border border-border/50 shadow-xl p-6 sm:p-8">
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-muted/50 rounded-xl">
-                <TabsTrigger value="signin" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Sign Up</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="signin" className="space-y-6">
-                <form onSubmit={handleSignIn} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <div className="relative group">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12 rounded-xl" required />
-                    </div>
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <div className="relative group">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12 rounded-xl" required />
-                    </div>
-                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                  </div>
-                  <Button type="submit" className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-secondary text-white" disabled={isLoading}>
-                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</> : <>Sign In<ArrowRight className="ml-2 h-4 w-4" /></>}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup" className="space-y-6">
-                <form onSubmit={handleSignUp} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <div className="relative"><User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="text" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} className="pl-10 h-12 rounded-xl" required /></div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <div className="relative"><Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12 rounded-xl" required /></div>
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <div className="relative"><Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12 rounded-xl" required /></div>
-                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>I am a</Label>
-                    <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
-                      <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
-                      <SelectContent>{(Object.keys(roleLabels) as AppRole[]).map((role) => <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-secondary text-white" disabled={isLoading}>
-                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : <>Create Account<ArrowRight className="ml-2 h-4 w-4" /></>}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+            <form onSubmit={handleSignIn} className="space-y-5">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <div className="relative group">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="email" 
+                    placeholder="you@example.com" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    className="pl-10 h-12 rounded-xl" 
+                    required 
+                  />
+                </div>
+                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label>Password</Label>
+                <div className="relative group">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    className="pl-10 h-12 rounded-xl" 
+                    required 
+                  />
+                </div>
+                {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-secondary text-white" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</>
+                ) : (
+                  <>Sign In<ArrowRight className="ml-2 h-4 w-4" /></>
+                )}
+              </Button>
+            </form>
+          </div>
+
+          {/* Sign up CTA */}
+          <div className="text-center space-y-4">
+            <p className="text-muted-foreground">Don't have an account?</p>
+            <Link to="/onboarding">
+              <Button 
+                variant="outline" 
+                className="w-full h-12 rounded-xl gap-2 border-2 hover:bg-emerald-500/10 hover:border-emerald-500/50"
+              >
+                <Sparkles className="h-4 w-4 text-emerald-500" />
+                Start Free Trial
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              7 days free • No credit card required
+            </p>
           </div>
           
           <p className="text-center text-sm text-muted-foreground">
