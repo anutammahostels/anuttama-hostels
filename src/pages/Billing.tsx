@@ -1,122 +1,20 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Receipt,
-  Plus,
-  Search,
-  Download,
-  IndianRupee,
-  TrendingUp,
-  Clock,
-  AlertTriangle,
-  MoreVertical,
-  Zap,
-  FileText,
-  Send,
-} from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle } from "lucide-react";
+import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
+import { format } from "date-fns";
 
-const invoices = [
-  {
-    id: "INV-2024-001",
-    student: "Rahul Sharma",
-    room: "Block A - 101",
-    amount: 15000,
-    rent: 12000,
-    electricity: 850,
-    mess: 3000,
-    lateFee: 0,
-    dueDate: "2024-01-15",
-    status: "paid",
-    paidDate: "2024-01-12",
-  },
-  {
-    id: "INV-2024-002",
-    student: "Priya Patel",
-    room: "Block B - 205",
-    amount: 16500,
-    rent: 12000,
-    electricity: 1200,
-    mess: 3000,
-    lateFee: 300,
-    dueDate: "2024-01-15",
-    status: "overdue",
-    paidDate: null,
-  },
-  {
-    id: "INV-2024-003",
-    student: "Amit Kumar",
-    room: "Block A - 302",
-    amount: 14800,
-    rent: 12000,
-    electricity: 650,
-    mess: 2150,
-    lateFee: 0,
-    dueDate: "2024-01-20",
-    status: "pending",
-    paidDate: null,
-  },
-  {
-    id: "INV-2024-004",
-    student: "Sneha Reddy",
-    room: "Block C - 108",
-    amount: 15200,
-    rent: 12000,
-    electricity: 950,
-    mess: 2250,
-    lateFee: 0,
-    dueDate: "2024-01-20",
-    status: "pending",
-    paidDate: null,
-  },
-  {
-    id: "INV-2024-005",
-    student: "Vikram Singh",
-    room: "Block A - 401",
-    amount: 18000,
-    rent: 12000,
-    electricity: 1800,
-    mess: 3000,
-    lateFee: 1200,
-    dueDate: "2024-01-10",
-    status: "overdue",
-    paidDate: null,
-  },
-];
-
-const meterReadings = [
-  { room: "101", previous: 4520, current: 4685, units: 165, rate: 8, amount: 1320 },
-  { room: "102", previous: 3210, current: 3380, units: 170, rate: 8, amount: 1360 },
-  { room: "103", previous: 5680, current: 5820, units: 140, rate: 8, amount: 1120 },
-  { room: "201", previous: 2890, current: 3050, units: 160, rate: 8, amount: 1280 },
-  { room: "202", previous: 4100, current: 4290, units: 190, rate: 8, amount: 1520 },
-];
-
-const stats = [
-  { label: "Total Revenue", value: "₹18.5L", icon: IndianRupee, color: "text-green-500", change: "+12%" },
-  { label: "Pending Dues", value: "₹2.4L", icon: Clock, color: "text-yellow-500", change: "32 students" },
-  { label: "Overdue", value: "₹85K", icon: AlertTriangle, color: "text-red-500", change: "8 students" },
-  { label: "This Month", value: "₹4.2L", icon: TrendingUp, color: "text-primary", change: "+8%" },
-];
-
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string | null) => {
   switch (status) {
     case "paid":
       return <Badge className="bg-green-500/10 text-green-600">Paid</Badge>;
@@ -124,12 +22,88 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-yellow-500/10 text-yellow-600">Pending</Badge>;
     case "overdue":
       return <Badge className="bg-red-500/10 text-red-600">Overdue</Badge>;
+    case "partial":
+      return <Badge className="bg-blue-500/10 text-blue-600">Partial</Badge>;
     default:
-      return <Badge variant="secondary">{status}</Badge>;
+      return <Badge variant="secondary">{status || "Unknown"}</Badge>;
   }
 };
 
+const formatCurrency = (amount: number | null) => {
+  if (amount === null) return "₹0";
+  return `₹${amount.toLocaleString('en-IN')}`;
+};
+
 const Billing = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("upi");
+
+  const { invoices, stats, isLoading, recordPayment } = useInvoices();
+
+  // Filter invoices based on search
+  const filteredInvoices = invoices.filter(invoice => {
+    const matchesSearch = searchQuery === "" ||
+      invoice.student?.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.student?.roll_number?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  const handleRecordPayment = async () => {
+    if (!paymentDialog.invoice || !paymentAmount) return;
+    await recordPayment.mutateAsync({
+      id: paymentDialog.invoice.id,
+      amount: parseFloat(paymentAmount),
+      method: paymentMethod,
+    });
+    setPaymentDialog({ open: false, invoice: null });
+    setPaymentAmount("");
+    setPaymentMethod("upi");
+  };
+
+  const statsData = [
+    { 
+      label: "Total Revenue", 
+      value: formatCurrency(stats.totalAmount), 
+      icon: IndianRupee, 
+      color: "text-green-500", 
+      change: `${stats.totalInvoices} invoices` 
+    },
+    { 
+      label: "Collected", 
+      value: formatCurrency(stats.paidAmount), 
+      icon: CheckCircle, 
+      color: "text-blue-500", 
+      change: `${Math.round((stats.paidAmount / (stats.totalAmount || 1)) * 100)}%` 
+    },
+    { 
+      label: "Pending Dues", 
+      value: formatCurrency(stats.pendingAmount), 
+      icon: Clock, 
+      color: "text-yellow-500", 
+      change: "Outstanding" 
+    },
+    { 
+      label: "Overdue", 
+      value: stats.overdueCount.toString(), 
+      icon: AlertTriangle, 
+      color: "text-red-500", 
+      change: "invoices" 
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -137,9 +111,7 @@ const Billing = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Billing & Invoices</h1>
-            <p className="text-muted-foreground">
-              Manage invoices, electricity billing, and payments
-            </p>
+            <p className="text-muted-foreground">Manage invoices, payments, and collections</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline">
@@ -155,7 +127,7 @@ const Billing = () => {
 
         {/* Stats */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
+          {statsData.map((stat) => (
             <Card key={stat.label} className="border-border/50">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -183,7 +155,7 @@ const Billing = () => {
               <div>
                 <p className="font-medium">Late Fee Policy</p>
                 <p className="text-sm text-muted-foreground">
-                  Invoices unpaid 5 days past due date incur a daily penalty of ₹50
+                  Invoices unpaid 5 days past due date incur a daily penalty as per policy
                 </p>
               </div>
             </div>
@@ -194,8 +166,8 @@ const Billing = () => {
         <Tabs defaultValue="invoices">
           <TabsList>
             <TabsTrigger value="invoices">All Invoices</TabsTrigger>
-            <TabsTrigger value="electricity">Electricity Sub-metering</TabsTrigger>
-            <TabsTrigger value="payments">Payment History</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="overdue">Overdue</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
@@ -203,7 +175,12 @@ const Billing = () => {
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search invoices..." className="pl-10" />
+                <Input 
+                  placeholder="Search invoices..." 
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
               <Button variant="outline">
                 <Send className="h-4 w-4 mr-2" />
@@ -213,79 +190,159 @@ const Billing = () => {
 
             <Card className="border-border/50">
               <CardContent className="p-0">
+                {filteredInvoices.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Invoices Found</h3>
+                    <p className="text-muted-foreground mb-4">
+                      {invoices.length === 0 ? "Generate your first invoice to get started" : "Try adjusting your search"}
+                    </p>
+                    <Button className="gradient-primary text-white">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Generate Invoices
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead>Student</TableHead>
+                          <TableHead>Breakdown</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Paid</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredInvoices.map((invoice) => {
+                          const balance = invoice.total_amount - (invoice.paid_amount || 0);
+                          return (
+                            <TableRow key={invoice.id}>
+                              <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{invoice.student?.profile?.full_name || "Unknown"}</p>
+                                  <p className="text-sm text-muted-foreground">{invoice.student?.roll_number || "-"}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm space-y-1">
+                                  {invoice.room_rent && (
+                                    <div className="flex justify-between w-32">
+                                      <span className="text-muted-foreground">Rent:</span>
+                                      <span>{formatCurrency(invoice.room_rent)}</span>
+                                    </div>
+                                  )}
+                                  {invoice.electricity_charges && (
+                                    <div className="flex justify-between w-32">
+                                      <span className="text-muted-foreground">Electricity:</span>
+                                      <span>{formatCurrency(invoice.electricity_charges)}</span>
+                                    </div>
+                                  )}
+                                  {invoice.mess_charges && (
+                                    <div className="flex justify-between w-32">
+                                      <span className="text-muted-foreground">Mess:</span>
+                                      <span>{formatCurrency(invoice.mess_charges)}</span>
+                                    </div>
+                                  )}
+                                  {invoice.other_charges && invoice.other_charges > 0 && (
+                                    <div className="flex justify-between w-32">
+                                      <span className="text-muted-foreground">Other:</span>
+                                      <span>{formatCurrency(invoice.other_charges)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-bold text-lg">{formatCurrency(invoice.total_amount)}</span>
+                              </TableCell>
+                              <TableCell>
+                                <span className={invoice.paid_amount ? "text-green-600" : "text-muted-foreground"}>
+                                  {formatCurrency(invoice.paid_amount || 0)}
+                                </span>
+                                {balance > 0 && (
+                                  <p className="text-xs text-red-500">Due: {formatCurrency(balance)}</p>
+                                )}
+                              </TableCell>
+                              <TableCell>{format(new Date(invoice.due_date), "MMM d, yyyy")}</TableCell>
+                              <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-popover">
+                                    <DropdownMenuItem>
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      View Invoice
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Download PDF
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Send className="h-4 w-4 mr-2" />
+                                      Send Reminder
+                                    </DropdownMenuItem>
+                                    {invoice.status !== 'paid' && (
+                                      <DropdownMenuItem onClick={() => setPaymentDialog({ open: true, invoice })}>
+                                        <IndianRupee className="h-4 w-4 mr-2" />
+                                        Record Payment
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="pending" className="mt-6">
+            <Card className="border-border/50">
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Invoice</TableHead>
                         <TableHead>Student</TableHead>
-                        <TableHead>Breakdown</TableHead>
                         <TableHead>Total</TableHead>
+                        <TableHead>Due</TableHead>
                         <TableHead>Due Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead>Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.map((invoice) => (
+                      {invoices.filter(inv => inv.status === 'pending' || inv.status === 'partial').map((invoice) => (
                         <TableRow key={invoice.id}>
-                          <TableCell className="font-medium">{invoice.id}</TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{invoice.student}</p>
-                              <p className="text-sm text-muted-foreground">{invoice.room}</p>
-                            </div>
+                          <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
+                          <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
+                          <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
+                          <TableCell className="text-red-500 font-medium">
+                            {formatCurrency(invoice.total_amount - (invoice.paid_amount || 0))}
                           </TableCell>
+                          <TableCell>{format(new Date(invoice.due_date), "MMM d, yyyy")}</TableCell>
                           <TableCell>
-                            <div className="text-sm space-y-1">
-                              <div className="flex justify-between w-32">
-                                <span className="text-muted-foreground">Rent:</span>
-                                <span>₹{invoice.rent.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between w-32">
-                                <span className="text-muted-foreground">Electricity:</span>
-                                <span>₹{invoice.electricity.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between w-32">
-                                <span className="text-muted-foreground">Mess:</span>
-                                <span>₹{invoice.mess.toLocaleString()}</span>
-                              </div>
-                              {invoice.lateFee > 0 && (
-                                <div className="flex justify-between w-32 text-red-500">
-                                  <span>Late Fee:</span>
-                                  <span>₹{invoice.lateFee.toLocaleString()}</span>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-bold text-lg">₹{invoice.amount.toLocaleString()}</span>
-                          </TableCell>
-                          <TableCell>{invoice.dueDate}</TableCell>
-                          <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  View Invoice
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download PDF
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Send Reminder
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button 
+                              size="sm" 
+                              className="gradient-primary text-white"
+                              onClick={() => setPaymentDialog({ open: true, invoice })}
+                            >
+                              Record Payment
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -296,64 +353,130 @@ const Billing = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="electricity" className="mt-6">
-            <Card className="border-border/50 mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-yellow-500" />
-                      Sub-meter Readings
-                    </CardTitle>
-                    <CardDescription>
-                      Formula: (Current - Previous Reading) × Unit Rate = Amount
-                    </CardDescription>
-                  </div>
-                  <Button variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Enter Readings
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Room</TableHead>
-                      <TableHead>Previous Reading</TableHead>
-                      <TableHead>Current Reading</TableHead>
-                      <TableHead>Units Consumed</TableHead>
-                      <TableHead>Rate/Unit</TableHead>
-                      <TableHead>Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {meterReadings.map((reading) => (
-                      <TableRow key={reading.room}>
-                        <TableCell className="font-medium">Room {reading.room}</TableCell>
-                        <TableCell>{reading.previous}</TableCell>
-                        <TableCell>{reading.current}</TableCell>
-                        <TableCell>{reading.units} kWh</TableCell>
-                        <TableCell>₹{reading.rate}/kWh</TableCell>
-                        <TableCell className="font-bold">₹{reading.amount}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="payments" className="mt-6">
+          <TabsContent value="overdue" className="mt-6">
             <Card className="border-border/50">
-              <CardContent className="p-6">
-                <div className="text-center text-muted-foreground py-8">
-                  Payment transaction history will be shown here
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Amount Due</TableHead>
+                        <TableHead>Days Overdue</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date()).map((invoice) => {
+                        const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
+                        return (
+                          <TableRow key={invoice.id}>
+                            <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
+                            <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
+                            <TableCell className="text-red-500 font-bold">
+                              {formatCurrency(invoice.total_amount - (invoice.paid_amount || 0))}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="destructive">{daysOverdue} days</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline">
+                                  <Send className="h-3 w-3 mr-1" />
+                                  Remind
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="gradient-primary text-white"
+                                  onClick={() => setPaymentDialog({ open: true, invoice })}
+                                >
+                                  Collect
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Payment Dialog */}
+        <Dialog open={paymentDialog.open} onOpenChange={(open) => setPaymentDialog({ open, invoice: null })}>
+          <DialogContent className="bg-background">
+            <DialogHeader>
+              <DialogTitle>Record Payment</DialogTitle>
+              <DialogDescription>
+                Recording payment for invoice {paymentDialog.invoice?.invoice_number}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Student:</span>
+                  <span className="font-medium">{paymentDialog.invoice?.student?.profile?.full_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Amount:</span>
+                  <span className="font-medium">{formatCurrency(paymentDialog.invoice?.total_amount || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Already Paid:</span>
+                  <span className="text-green-600">{formatCurrency(paymentDialog.invoice?.paid_amount || 0)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="text-muted-foreground">Balance Due:</span>
+                  <span className="font-bold text-red-500">
+                    {formatCurrency((paymentDialog.invoice?.total_amount || 0) - (paymentDialog.invoice?.paid_amount || 0))}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Payment Amount</Label>
+                <Input 
+                  type="number"
+                  placeholder="Enter amount..." 
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Payment Method</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="upi">UPI</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                    <SelectItem value="online">Online Payment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPaymentDialog({ open: false, invoice: null })}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleRecordPayment}
+                disabled={!paymentAmount || recordPayment.isPending}
+                className="gradient-primary text-white"
+              >
+                {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Record Payment"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
