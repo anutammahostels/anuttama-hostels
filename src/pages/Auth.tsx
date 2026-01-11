@@ -159,9 +159,7 @@ export default function Auth() {
             </div>
             <h1 className="text-4xl font-bold text-white leading-tight">
               Transform Your<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-300">
-                Property Management
-              </span>
+              <span className="text-gradient">Property Management</span>
             </h1>
             <p className="text-lg text-slate-300 max-w-md">
               Join hundreds of institutions using Hostylia to streamline operations and delight stakeholders.
