@@ -349,6 +349,15 @@ export function useDashboard() {
     { month: 'Dec', occupancy: statsQuery.data?.occupancyRate || 0 },
   ];
 
+  const refetchAll = async () => {
+    await Promise.all([
+      propertyQuery.refetch(),
+      statsQuery.refetch(),
+      approvalsQuery.refetch(),
+      activityQuery.refetch(),
+    ]);
+  };
+
   return {
     property: propertyQuery.data,
     stats: statsQuery.data || {
@@ -365,5 +374,6 @@ export function useDashboard() {
     recentActivity: activityQuery.data || [],
     occupancyChartData,
     isLoading: statsQuery.isLoading || propertyQuery.isLoading,
+    refetchAll,
   };
 }
