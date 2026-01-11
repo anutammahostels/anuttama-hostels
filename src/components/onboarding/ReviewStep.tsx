@@ -1,17 +1,5 @@
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Building2, 
-  Phone, 
-  MapPin, 
-  Clock, 
-  Users, 
-  Utensils, 
-  Calendar, 
-  CreditCard,
-  CheckCircle2,
-  Sparkles
-} from 'lucide-react';
+import { Building2, Phone, MapPin, Clock, Utensils, Calendar, CreditCard, CheckCircle2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OnboardingData } from '@/pages/Onboarding';
 
@@ -30,15 +18,15 @@ const paymentModeOptions = [
   { id: 'cash', label: 'Cash' },
   { id: 'upi', label: 'UPI' },
   { id: 'cheque', label: 'Cheque' },
-  { id: 'bank_transfer', label: 'Bank Transfer' },
-  { id: 'online', label: 'Online Payment' },
+  { id: 'bank_transfer', label: 'Bank' },
+  { id: 'online', label: 'Online' },
 ];
 
 const orgTypeLabels: Record<string, string> = {
-  hostel: 'Independent Hostel',
-  boarding_school: 'School + Boarding',
+  hostel: 'Hostel/PG',
+  boarding_school: 'Boarding School',
   college_hostel: 'College Hostel',
-  coaching: 'Coaching Residential',
+  coaching: 'Coaching',
 };
 
 export function ReviewStep({ data, updateData }: ReviewStepProps) {
@@ -51,62 +39,62 @@ export function ReviewStep({ data, updateData }: ReviewStepProps) {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-600/30">
-          <Sparkles className="h-8 w-8 text-white" />
+    <div className="space-y-5">
+      <div className="text-center">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center mx-auto mb-2 shadow-md">
+          <Sparkles className="h-5 w-5 text-white" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Almost There!</h2>
-        <p className="text-muted-foreground">Configure fees and review your setup</p>
+        <h2 className="text-lg font-semibold text-foreground">Almost Done!</h2>
+        <p className="text-sm text-muted-foreground">Configure fees & review</p>
       </div>
 
       {/* Fee Configuration */}
-      <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-            <CreditCard className="h-5 w-5 text-indigo-500" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+            <CreditCard className="h-3.5 w-3.5 text-indigo-500" />
           </div>
-          <h3 className="font-semibold text-foreground text-lg">Fee Configuration</h3>
+          <span className="text-sm font-medium">Fees Setup</span>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Fee Collection Cycle</Label>
-          <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Collection Cycle</Label>
+          <div className="flex gap-2">
             {feeCycleOptions.map((option) => (
               <button
                 key={option.id}
                 onClick={() => updateData({ feeCycle: option.id })}
                 className={cn(
-                  "p-4 rounded-xl border-2 text-center transition-all",
+                  "flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all",
                   data.feeCycle === option.id
-                    ? "border-primary bg-primary/5"
+                    ? "border-primary bg-primary/10 text-primary"
                     : "border-border/50 hover:border-primary/50"
                 )}
               >
-                <span className="font-medium text-sm">{option.label}</span>
+                {option.label}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Accepted Payment Methods</Label>
-          <div className="flex flex-wrap gap-3">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Payment Methods</Label>
+          <div className="flex flex-wrap gap-1.5">
             {paymentModeOptions.map((mode) => (
               <button
                 key={mode.id}
                 onClick={() => togglePaymentMode(mode.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all",
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all",
                   data.paymentModes.includes(mode.id)
-                    ? "border-primary bg-primary/5"
+                    ? "border-primary bg-primary/10 text-primary"
                     : "border-border/50 hover:border-primary/50"
                 )}
               >
                 {data.paymentModes.includes(mode.id) && (
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <CheckCircle2 className="h-3 w-3" />
                 )}
-                <span className="font-medium text-sm">{mode.label}</span>
+                {mode.label}
               </button>
             ))}
           </div>
@@ -114,73 +102,34 @@ export function ReviewStep({ data, updateData }: ReviewStepProps) {
       </div>
 
       {/* Summary */}
-      <div className="space-y-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <h3 className="font-semibold text-foreground text-lg flex items-center gap-2">
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-          Setup Summary
-        </h3>
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          Summary
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Organization */}
-          <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Building2 className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Organization</span>
-            </div>
-            <p className="font-semibold text-foreground">{data.organizationName || 'Not set'}</p>
-            <p className="text-sm text-muted-foreground">
-              {data.organizationType ? orgTypeLabels[data.organizationType] : 'Not selected'}
-            </p>
-          </div>
-
-          {/* Phone Policy */}
-          <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Phone className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Phone Policy</span>
-            </div>
-            <p className="font-semibold text-foreground capitalize">{data.phoneAllowed.replace('_', ' ')}</p>
-          </div>
-
-          {/* Outing Policy */}
-          <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Outing Policy</span>
-            </div>
-            <p className="font-semibold text-foreground capitalize">{data.outingAllowed.replace('_', ' ')}</p>
-          </div>
-
-          {/* Curfew */}
-          <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Curfew Time</span>
-            </div>
-            <p className="font-semibold text-foreground">{data.curfewTime}</p>
-          </div>
-
-          {/* Mess */}
-          <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Utensils className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Mess Facility</span>
-            </div>
-            <p className="font-semibold text-foreground">
-              {data.messAvailable ? (data.messMandatory ? 'Mandatory' : 'Optional') : 'Not Available'}
-            </p>
-          </div>
-
-          {/* Attendance */}
-          <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Attendance</span>
-            </div>
-            <p className="font-semibold text-foreground capitalize">{data.attendanceType.replace('_', ' ')}</p>
-          </div>
+        <div className="grid grid-cols-2 gap-2">
+          <SummaryCard icon={Building2} label="Organization" value={data.organizationName || 'Not set'} sub={orgTypeLabels[data.organizationType] || ''} />
+          <SummaryCard icon={Phone} label="Phone" value={data.phoneAllowed.charAt(0).toUpperCase() + data.phoneAllowed.slice(1)} />
+          <SummaryCard icon={MapPin} label="Outing" value={data.outingAllowed.charAt(0).toUpperCase() + data.outingAllowed.slice(1).replace('_', ' ')} />
+          <SummaryCard icon={Clock} label="Curfew" value={data.curfewTime} />
+          <SummaryCard icon={Utensils} label="Mess" value={data.messAvailable ? (data.messMandatory ? 'Mandatory' : 'Optional') : 'N/A'} />
+          <SummaryCard icon={Calendar} label="Attendance" value={data.attendanceType.replace('_', ' ')} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function SummaryCard({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) {
+  return (
+    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+        <Icon className="h-3 w-3" />
+        <span className="text-[10px] font-medium uppercase">{label}</span>
+      </div>
+      <p className="text-sm font-medium text-foreground truncate">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
     </div>
   );
 }
