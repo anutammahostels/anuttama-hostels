@@ -2,7 +2,9 @@ import { Bell, Search, Menu, Sun, Moon, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboard } from "@/hooks/useDashboard";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -10,9 +12,11 @@ interface DashboardHeaderProps {
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const { profile } = useAuth();
+  const { property, isLoading } = useDashboard();
   
   const userInitial = profile?.full_name?.charAt(0) || profile?.email?.charAt(0) || 'U';
   const userName = profile?.full_name || profile?.email?.split('@')[0] || 'User';
+  const propertyName = property?.name || 'Select Property';
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm">
@@ -41,11 +45,17 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
         {/* Right section */}
         <div className="flex items-center gap-2 lg:gap-3">
           {/* Current Property Selector */}
-          <button className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-secondary/70 hover:bg-secondary border border-border/50 transition-all group">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <span className="text-sm font-medium text-foreground">Sunrise Hostel</span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </button>
+          {isLoading ? (
+            <Skeleton className="h-10 w-36 rounded-xl hidden sm:block" />
+          ) : (
+            <button className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-secondary/70 hover:bg-secondary border border-border/50 transition-all group">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                {propertyName}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+          )}
 
           {/* Theme toggle */}
           <Button variant="ghost" size="icon" className="hover:bg-secondary rounded-xl">

@@ -1,26 +1,41 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-
-const data = [
-  { month: "Jan", occupancy: 85 },
-  { month: "Feb", occupancy: 88 },
-  { month: "Mar", occupancy: 92 },
-  { month: "Apr", occupancy: 90 },
-  { month: "May", occupancy: 87 },
-  { month: "Jun", occupancy: 75 },
-  { month: "Jul", occupancy: 70 },
-  { month: "Aug", occupancy: 82 },
-  { month: "Sep", occupancy: 95 },
-  { month: "Oct", occupancy: 94 },
-  { month: "Nov", occupancy: 93 },
-  { month: "Dec", occupancy: 91 },
-];
+import { useDashboard } from "@/hooks/useDashboard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const periods = ["1M", "3M", "1Y"] as const;
 
 export const OccupancyChart = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<typeof periods[number]>("1Y");
+  const { occupancyChartData, isLoading } = useDashboard();
+
+  // Filter data based on period
+  const getFilteredData = () => {
+    switch (selectedPeriod) {
+      case "1M":
+        return occupancyChartData.slice(-1);
+      case "3M":
+        return occupancyChartData.slice(-3);
+      default:
+        return occupancyChartData;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <div>
+            <Skeleton className="h-6 w-40 mb-1" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-xl" />
+        </div>
+        <Skeleton className="h-72 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
@@ -49,7 +64,7 @@ export const OccupancyChart = () => {
 
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={getFilteredData()}>
             <defs>
               <linearGradient id="occupancyGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(152 45% 28%)" stopOpacity={0.4} />
@@ -67,7 +82,7 @@ export const OccupancyChart = () => {
               axisLine={false} 
               tickLine={false}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 500 }}
-              domain={[60, 100]}
+              domain={[0, 100]}
               tickFormatter={(value) => `${value}%`}
             />
             <Tooltip
