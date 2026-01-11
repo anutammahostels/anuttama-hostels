@@ -1,202 +1,109 @@
-import { Check, Smartphone, Wifi, Clock, Users, DoorOpen, Utensils, CreditCard } from "lucide-react";
+import { Check, Smartphone, Clock, Users, DoorOpen, Utensils, CreditCard, Shield, Sliders } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 
 const policies = [
-  {
-    id: "mobile",
-    icon: Smartphone,
-    title: "Mobile Device Policy",
-    description: "Control phone usage rules",
-    options: ["No Phones", "Limited Hours", "Always Allowed"],
-    defaultOption: 1,
-  },
-  {
-    id: "outing",
-    icon: DoorOpen,
-    title: "Outing Policy",
-    description: "Configure student outing rules",
-    options: ["No Outing", "Permission Required", "Weekends Only"],
-    defaultOption: 1,
-  },
-  {
-    id: "curfew",
-    icon: Clock,
-    title: "Curfew Enforcement",
-    description: "Set entry timing rules",
-    options: ["Strict (10 PM)", "Standard (11 PM)", "Flexible"],
-    defaultOption: 0,
-  },
-  {
-    id: "visitor",
-    icon: Users,
-    title: "Visitor Policy",
-    description: "Manage visitor access",
-    options: ["No Visitors", "Parents Only", "Registered Guests"],
-    defaultOption: 1,
-  },
-  {
-    id: "mess",
-    icon: Utensils,
-    title: "Mess Configuration",
-    description: "Food service settings",
-    options: ["Mandatory", "Optional", "External Allowed"],
-    defaultOption: 0,
-  },
-  {
-    id: "payment",
-    icon: CreditCard,
-    title: "Payment Modes",
-    description: "Accepted payment methods",
-    options: ["Cash", "UPI", "Bank Transfer"],
-    defaultOption: 1,
-  },
+  { id: "mobile", icon: Smartphone, title: "Mobile Devices", options: ["Not Allowed", "Limited Hours", "Allowed"] },
+  { id: "outing", icon: DoorOpen, title: "Outing Rules", options: ["Restricted", "With Permission", "Weekends Only"] },
+  { id: "curfew", icon: Clock, title: "Curfew Time", options: ["9 PM", "10 PM", "11 PM"] },
+  { id: "visitor", icon: Users, title: "Visitors", options: ["Not Allowed", "Parents Only", "Registered"] },
+  { id: "mess", icon: Utensils, title: "Mess", options: ["Mandatory", "Optional", "External OK"] },
+  { id: "payment", icon: CreditCard, title: "Payments", options: ["Cash", "UPI", "All Modes"] },
 ];
 
 export const PolicyEngine = () => {
-  const [enabledPolicies, setEnabledPolicies] = useState<Record<string, boolean>>({
-    mobile: true,
-    outing: true,
-    curfew: true,
-    visitor: false,
-    mess: true,
-    payment: true,
+  const [activeOptions, setActiveOptions] = useState<Record<string, number>>({
+    mobile: 1, outing: 1, curfew: 0, visitor: 1, mess: 0, payment: 2
   });
 
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>(() =>
-    policies.reduce((acc, p) => ({ ...acc, [p.id]: p.defaultOption }), {})
-  );
-
-  const togglePolicy = (id: string) => {
-    setEnabledPolicies(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const selectOption = (policyId: string, optionIndex: number) => {
-    setSelectedOptions(prev => ({ ...prev, [policyId]: optionIndex }));
-  };
-
   return (
-    <section className="py-24 bg-muted/30 relative overflow-hidden">
-      {/* Background decorations */}
+    <section className="py-24 bg-background relative overflow-hidden">
+      {/* Background */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <div className="container mx-auto px-4 lg:px-8 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Content */}
           <div>
-            <span className="inline-block px-4 py-1.5 rounded-full bg-secondary/10 text-secondary text-sm font-medium mb-4 animate-fade-in">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary text-sm font-medium mb-6">
+              <Sliders className="h-4 w-4" />
               Smart Policy Engine
             </span>
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 animate-slide-up">
+            <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6 leading-tight">
               One Platform,
               <br />
               <span className="text-gradient">Infinite Configurations</span>
             </h2>
-            <p className="text-muted-foreground text-lg mb-8 leading-relaxed animate-slide-up stagger-1">
-              From strict boarding schools to flexible co-living spaces, the Smart Policy 
-              Engine adapts to your facility's unique requirements. 
-              No hard-coded rules — just flexible settings that control UI and logic.
+            <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
+              From strict boarding schools to flexible co-living spaces — configure every rule to match your facility's unique requirements.
             </p>
 
-            <div className="space-y-4 animate-slide-up stagger-2">
+            <div className="space-y-4">
               {[
                 "Dynamic module activation based on policies",
                 "Automated workflows that respect your rules",
-                "Parent notification controls",
                 "Block-level access restrictions",
                 "Custom fee structures per property",
-              ].map((item, index) => (
+                "Real-time rule enforcement",
+              ].map((item) => (
                 <div key={item} className="flex items-center gap-3 group">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center group-hover:bg-secondary/30 transition-colors">
-                    <Check className="w-4 h-4 text-secondary" />
+                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center group-hover:bg-secondary transition-colors">
+                    <Check className="w-3 h-3 text-secondary group-hover:text-white transition-colors" />
                   </div>
-                  <span className="text-foreground group-hover:text-secondary transition-colors">{item}</span>
+                  <span className="text-foreground">{item}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Interactive demo */}
-          <div className="relative animate-scale-in stagger-3">
-            {/* Glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-primary/10 rounded-3xl blur-3xl" />
+          {/* Interactive Card */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl blur-3xl" />
             
-            <div className="relative rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="relative rounded-2xl lg:rounded-3xl bg-card border border-border p-6 lg:p-8 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="font-semibold text-card-foreground">Policy Settings</h3>
-                  <p className="text-sm text-muted-foreground">Configure your property rules</p>
+                  <h3 className="font-semibold text-foreground text-lg">Policy Settings</h3>
+                  <p className="text-muted-foreground text-sm">Configure your property rules</p>
                 </div>
-                <span className="text-xs text-secondary bg-secondary/10 px-3 py-1.5 rounded-full font-medium animate-pulse">
+                <span className="px-3 py-1.5 rounded-full bg-secondary/10 text-secondary text-xs font-medium">
                   Live Preview
                 </span>
               </div>
 
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                {policies.map((policy, index) => (
+              <div className="space-y-3">
+                {policies.map((policy) => (
                   <div 
                     key={policy.id}
-                    className={`p-4 rounded-xl border transition-all duration-300 ${
-                      enabledPolicies[policy.id] 
-                        ? "bg-secondary/5 border-secondary/20" 
-                        : "bg-muted/50 border-border"
-                    }`}
-                    style={{ animationDelay: `${index * 0.1}s` }}
+                    className="p-4 rounded-xl bg-muted/50 border border-border hover:border-secondary/30 transition-all"
                   >
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg transition-colors ${
-                          enabledPolicies[policy.id] ? "bg-secondary/20" : "bg-muted"
-                        }`}>
-                          <policy.icon className={`h-4 w-4 transition-colors ${
-                            enabledPolicies[policy.id] ? "text-secondary" : "text-muted-foreground"
-                          }`} />
+                        <div className="p-2 rounded-lg bg-secondary/10">
+                          <policy.icon className="h-4 w-4 text-secondary" />
                         </div>
-                        <div>
-                          <h4 className="font-medium text-card-foreground text-sm">
-                            {policy.title}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {policy.description}
-                          </p>
-                        </div>
+                        <span className="font-medium text-foreground text-sm">{policy.title}</span>
                       </div>
-                      <Switch 
-                        checked={enabledPolicies[policy.id]} 
-                        onCheckedChange={() => togglePolicy(policy.id)}
-                      />
                     </div>
                     
-                    {enabledPolicies[policy.id] && (
-                      <div className="flex flex-wrap gap-2 animate-fade-in">
-                        {policy.options.map((option, i) => (
-                          <button
-                            key={option}
-                            onClick={() => selectOption(policy.id, i)}
-                            className={`text-xs px-3 py-1.5 rounded-full transition-all duration-200 ${
-                              selectedOptions[policy.id] === i 
-                                ? "bg-secondary text-white shadow-md" 
-                                : "bg-muted text-muted-foreground hover:bg-secondary/20"
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Connection lines decoration */}
-              <div className="absolute -right-4 top-1/2 -translate-y-1/2 flex flex-col gap-8 hidden lg:flex">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-8 h-px bg-gradient-to-r from-secondary/50 to-transparent" />
-                    <div className="w-2 h-2 rounded-full bg-secondary/50 animate-pulse" />
+                    <div className="flex gap-2">
+                      {policy.options.map((option, i) => (
+                        <button
+                          key={option}
+                          onClick={() => setActiveOptions(prev => ({ ...prev, [policy.id]: i }))}
+                          className={`flex-1 text-xs px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
+                            activeOptions[policy.id] === i 
+                              ? "bg-gradient-to-r from-primary to-secondary text-white shadow-md" 
+                              : "bg-background border border-border text-muted-foreground hover:border-secondary/50"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
