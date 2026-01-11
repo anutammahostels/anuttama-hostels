@@ -1,13 +1,25 @@
-import { Users, BedDouble, Receipt, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, BedDouble, Receipt, AlertTriangle, TrendingUp, TrendingDown, LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const stats = [
+interface StatCard {
+  label: string;
+  value: string;
+  change: string;
+  trend: "up" | "down";
+  icon: LucideIcon;
+  iconBg: string;
+  glowColor: string;
+}
+
+const stats: StatCard[] = [
   {
     label: "Total Students",
     value: "1,247",
     change: "+12",
     trend: "up",
     icon: Users,
-    color: "from-blue-500 to-blue-600",
+    iconBg: "bg-gradient-to-br from-hostylia-navy to-hostylia-navy-light",
+    glowColor: "group-hover:shadow-hostylia-navy/20",
   },
   {
     label: "Occupancy Rate",
@@ -15,7 +27,8 @@ const stats = [
     change: "+2.1%",
     trend: "up",
     icon: BedDouble,
-    color: "from-emerald-500 to-emerald-600",
+    iconBg: "bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light",
+    glowColor: "group-hover:shadow-hostylia-forest/20",
   },
   {
     label: "Pending Dues",
@@ -23,7 +36,8 @@ const stats = [
     change: "-₹32K",
     trend: "down",
     icon: Receipt,
-    color: "from-amber-500 to-orange-500",
+    iconBg: "bg-gradient-to-br from-amber-500 to-orange-500",
+    glowColor: "group-hover:shadow-amber-500/20",
   },
   {
     label: "Open Tickets",
@@ -31,44 +45,56 @@ const stats = [
     change: "+3",
     trend: "up",
     icon: AlertTriangle,
-    color: "from-rose-500 to-pink-500",
+    iconBg: "bg-gradient-to-br from-rose-500 to-pink-500",
+    glowColor: "group-hover:shadow-rose-500/20",
   },
 ];
 
 export const DashboardStats = () => {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map((stat) => (
+      {stats.map((stat, index) => (
         <div
           key={stat.label}
-          className="relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:shadow-lg hover:shadow-primary/5"
+          className={cn(
+            "group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 transition-all duration-300 hover:shadow-xl",
+            stat.glowColor,
+            "animate-fade-in"
+          )}
+          style={{ animationDelay: `${index * 100}ms` }}
         >
           {/* Background decoration */}
-          <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full bg-gradient-to-br ${stat.color} opacity-10 blur-2xl`} />
+          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl transition-all duration-300 group-hover:scale-150" />
           
           <div className="relative">
             {/* Icon and change */}
-            <div className="flex items-center justify-between mb-3">
-              <div className={`inline-flex p-2.5 rounded-lg bg-gradient-to-br ${stat.color}`}>
-                <stat.icon className="h-4 w-4 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className={cn(
+                "inline-flex p-3 rounded-xl shadow-lg transition-transform duration-300 group-hover:scale-110",
+                stat.iconBg
+              )}>
+                <stat.icon className="h-5 w-5 text-white" />
               </div>
-              <div className={`flex items-center gap-1 text-xs font-medium ${
-                stat.trend === "up" ? "text-success" : "text-destructive"
-              }`}>
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
+                stat.trend === "up" 
+                  ? "bg-success/10 text-success" 
+                  : "bg-destructive/10 text-destructive"
+              )}>
                 {stat.trend === "up" ? (
-                  <TrendingUp className="h-3 w-3" />
+                  <TrendingUp className="h-3.5 w-3.5" />
                 ) : (
-                  <TrendingDown className="h-3 w-3" />
+                  <TrendingDown className="h-3.5 w-3.5" />
                 )}
                 {stat.change}
               </div>
             </div>
 
             {/* Value and label */}
-            <p className="text-2xl font-bold text-card-foreground mb-1">
+            <p className="text-3xl font-bold text-card-foreground mb-1 tracking-tight">
               {stat.value}
             </p>
-            <p className="text-sm text-muted-foreground">{stat.label}</p>
+            <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
           </div>
         </div>
       ))}

@@ -11,10 +11,12 @@ import {
   Settings,
   ChevronLeft,
   LogOut,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { HostyliaLogo } from "@/components/brand/HostyliaLogo";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -52,6 +54,15 @@ const roleLabels: Record<AppRole, string> = {
   security_guard: 'Guard',
 };
 
+const roleBadgeColors: Record<AppRole, string> = {
+  super_admin: 'bg-hostylia-forest text-white',
+  tenant_admin: 'bg-hostylia-navy-light text-white',
+  warden: 'bg-amber-600 text-white',
+  student: 'bg-blue-600 text-white',
+  parent: 'bg-purple-600 text-white',
+  security_guard: 'bg-slate-600 text-white',
+};
+
 export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -78,173 +89,134 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
   const userName = profile?.full_name || profile?.email?.split('@')[0] || 'User';
   const userEmail = profile?.email || '';
   const roleLabel = role ? roleLabels[role] : '';
+  const roleBadgeColor = role ? roleBadgeColors[role] : 'bg-muted text-muted-foreground';
+
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <>
+      {/* Logo */}
+      <div className="flex items-center justify-between h-16 px-4 border-b border-hostylia-navy-light/30">
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light flex-shrink-0 transition-transform group-hover:scale-105">
+            <Home className="h-5 w-5 text-white" />
+          </div>
+          {(open || isMobile) && (
+            <div className="flex flex-col">
+              <span className="font-bold text-base text-white tracking-tight">Hostylia</span>
+              <span className="text-[10px] text-hostylia-slate -mt-0.5">Management Suite</span>
+            </div>
+          )}
+        </Link>
+        {!isMobile && (
+          <button
+            onClick={() => onOpenChange(!open)}
+            className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors"
+          >
+            <ChevronLeft
+              className={cn(
+                "h-4 w-4 text-hostylia-slate transition-transform duration-300",
+                !open && "rotate-180"
+              )}
+            />
+          </button>
+        )}
+      </div>
+
+      {/* Role Badge */}
+      {(open || isMobile) && role && (
+        <div className="px-4 py-3">
+          <span className={cn(
+            "inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm",
+            roleBadgeColor
+          )}>
+            {roleLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={isMobile ? () => onOpenChange(false) : undefined}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group",
+                isActive
+                  ? "bg-gradient-to-r from-hostylia-forest to-hostylia-forest-light text-white shadow-lg shadow-hostylia-forest/20"
+                  : "text-hostylia-slate hover:bg-hostylia-navy-light/50 hover:text-white"
+              )}
+            >
+              <item.icon className={cn(
+                "h-5 w-5 flex-shrink-0 transition-transform duration-200",
+                !isActive && "group-hover:scale-110"
+              )} />
+              {(open || isMobile) && <span className="font-medium">{item.label}</span>}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User section */}
+      <div className="p-3 border-t border-hostylia-navy-light/30">
+        <div className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-xl bg-hostylia-navy-light/30",
+          (open || isMobile) ? "" : "justify-center"
+        )}>
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light flex items-center justify-center flex-shrink-0 ring-2 ring-hostylia-forest/30">
+            <span className="text-white text-sm font-semibold uppercase">{userInitial}</span>
+          </div>
+          {(open || isMobile) && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{userName}</p>
+                <p className="text-xs text-hostylia-slate truncate">{userEmail}</p>
+              </div>
+              <button 
+                onClick={handleSignOut}
+                className="p-2 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4 text-hostylia-slate group-hover:text-white transition-colors" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <>
       {/* Backdrop for mobile */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-fade-in"
           onClick={() => onOpenChange(false)}
         />
       )}
 
+      {/* Desktop sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
+          "fixed left-0 top-0 z-50 h-screen bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 flex flex-col",
           open ? "w-64" : "w-20",
-          "hidden lg:block"
+          "hidden lg:flex"
         )}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg gradient-primary flex-shrink-0">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            {open && (
-              <span className="font-bold text-lg text-white">HostelHub</span>
-            )}
-          </Link>
-          <button
-            onClick={() => onOpenChange(!open)}
-            className="p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
-          >
-            <ChevronLeft
-              className={cn(
-                "h-4 w-4 text-sidebar-foreground transition-transform",
-                !open && "rotate-180"
-              )}
-            />
-          </button>
-        </div>
-
-        {/* Role Badge */}
-        {open && role && (
-          <div className="px-4 py-3">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary">
-              {roleLabel}
-            </span>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <nav className="p-3 space-y-1">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {open && <span className="font-medium">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-sidebar-border">
-          <div className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg",
-            open ? "" : "justify-center"
-          )}>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-medium uppercase">{userInitial}</span>
-            </div>
-            {open && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{userName}</p>
-                <p className="text-xs text-sidebar-foreground/70 truncate">{userEmail}</p>
-              </div>
-            )}
-            {open && (
-              <button 
-                onClick={handleSignOut}
-                className="p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4 text-sidebar-foreground" />
-              </button>
-            )}
-          </div>
-        </div>
+        <SidebarContent />
       </aside>
 
       {/* Mobile sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-screen w-64 bg-sidebar border-r border-sidebar-border transition-transform duration-300 lg:hidden",
+          "fixed left-0 top-0 z-50 h-screen w-72 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-transform duration-300 lg:hidden flex flex-col",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Same content as desktop */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg gradient-primary">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-lg text-white">HostelHub</span>
-          </Link>
-        </div>
-
-        {/* Role Badge */}
-        {role && (
-          <div className="px-4 py-3">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary">
-              {roleLabel}
-            </span>
-          </div>
-        )}
-
-        <nav className="p-3 space-y-1">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => onOpenChange(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User section for mobile */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-medium uppercase">{userInitial}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{userName}</p>
-              <p className="text-xs text-sidebar-foreground/70 truncate">{userEmail}</p>
-            </div>
-            <button 
-              onClick={handleSignOut}
-              className="p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
-              title="Sign out"
-            >
-              <LogOut className="h-4 w-4 text-sidebar-foreground" />
-            </button>
-          </div>
-        </div>
+        <SidebarContent isMobile />
       </aside>
     </>
   );
