@@ -18,27 +18,27 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       {/* Welcome section */}
-      <div className="mb-8 animate-fade-in">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-4 md:mb-6 animate-fade-in">
+        <div className="flex flex-col gap-3">
           <div>
             {isLoading ? (
               <>
-                <Skeleton className="h-8 w-64 mb-2" />
-                <Skeleton className="h-5 w-80" />
+                <Skeleton className="h-6 md:h-8 w-48 md:w-64 mb-2" />
+                <Skeleton className="h-4 md:h-5 w-64 md:w-80" />
               </>
             ) : (
               <>
-                <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-1">
-                  Welcome back, {firstName} 👋
+                <h1 className="text-lg md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
+                  Welcome, {firstName} 👋
                 </h1>
-                <p className="text-muted-foreground">
-                  Here's what's happening at <span className="text-hostylia-forest font-medium">{propertyName}</span> today
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  <span className="text-hostylia-forest font-medium">{propertyName}</span> overview
                 </p>
               </>
             )}
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-4 py-2 rounded-xl">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
             <span>All systems operational</span>
           </div>
         </div>
@@ -48,15 +48,15 @@ const Dashboard = () => {
       <DashboardStats />
 
       {/* Main content grid */}
-      <div className="grid lg:grid-cols-3 gap-6 mt-6">
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
         {/* Charts - takes 2 columns */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 md:space-y-6">
           <OccupancyChart />
           <QuickActions />
         </div>
 
         {/* Right sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <PendingApprovals />
           <RecentActivity />
         </div>

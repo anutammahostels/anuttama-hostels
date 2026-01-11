@@ -43,20 +43,20 @@ export const RecentActivity = () => {
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-16" />
+      <div className="rounded-xl md:rounded-2xl border border-border/50 bg-card p-3 md:p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-3 md:mb-6">
+          <Skeleton className="h-5 w-24 md:h-6 md:w-32" />
+          <Skeleton className="h-4 w-12 md:w-16" />
         </div>
-        <div className="space-y-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-start gap-3 p-3">
-              <Skeleton className="h-9 w-9 rounded-xl" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-start gap-2 md:gap-3 p-2 md:p-3">
+              <Skeleton className="h-7 w-7 md:h-9 md:w-9 rounded-lg md:rounded-xl" />
               <div className="flex-1">
-                <Skeleton className="h-4 w-32 mb-1" />
-                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-24 md:h-4 md:w-32 mb-1" />
+                <Skeleton className="h-2 w-20 md:h-3 md:w-24" />
               </div>
-              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-3 w-12 md:w-16" />
             </div>
           ))}
         </div>
@@ -65,43 +65,43 @@ export const RecentActivity = () => {
   }
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="font-bold text-lg text-card-foreground">Recent Activity</h3>
-        <button className="text-sm font-semibold text-hostylia-forest hover:text-hostylia-forest-light transition-colors">
+    <div className="rounded-xl md:rounded-2xl border border-border/50 bg-card p-3 md:p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-3 md:mb-6">
+        <h3 className="font-bold text-sm md:text-lg text-card-foreground">Recent Activity</h3>
+        <button className="text-xs md:text-sm font-semibold text-hostylia-forest hover:text-hostylia-forest-light transition-colors">
           View all
         </button>
       </div>
 
       {recentActivity.length === 0 ? (
-        <div className="text-center py-8">
-          <Activity className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">No recent activity</p>
+        <div className="text-center py-6">
+          <Activity className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+          <p className="text-xs md:text-sm text-muted-foreground">No recent activity</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {recentActivity.map((activity) => {
+        <div className="space-y-2 md:space-y-4">
+          {recentActivity.slice(0, 4).map((activity) => {
             const { icon: Icon, bg } = getActivityIcon(activity.type);
             return (
               <div 
                 key={activity.id} 
-                className="flex items-start gap-3 p-3 -mx-3 rounded-xl hover:bg-secondary/50 transition-colors group"
+                className="flex items-start gap-2 md:gap-3 p-2 md:p-3 -mx-2 md:-mx-3 rounded-lg md:rounded-xl hover:bg-secondary/50 transition-colors group"
               >
                 <div className={cn(
-                  "p-2.5 rounded-xl shadow-md transition-transform group-hover:scale-110",
+                  "p-1.5 md:p-2.5 rounded-lg md:rounded-xl shadow-md transition-transform group-hover:scale-110",
                   bg
                 )}>
-                  <Icon className="h-4 w-4 text-white" />
+                  <Icon className="h-3 w-3 md:h-4 md:w-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-card-foreground truncate">
+                  <p className="text-xs md:text-sm font-semibold text-card-foreground truncate">
                     {activity.title}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  <p className="text-[10px] md:text-xs text-muted-foreground truncate mt-0.5">
                     {activity.description}
                   </p>
                 </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
+                <span className="text-[10px] md:text-xs text-muted-foreground whitespace-nowrap font-medium">
                   {activity.time}
                 </span>
               </div>
