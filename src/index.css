@@ -137,10 +137,12 @@
     background: var(--gradient-hero);
   }
 
-  /* Text gradient */
+  /* Text gradient - Fixed to properly clip text */
   .text-gradient {
-    @apply bg-clip-text text-transparent;
     background: linear-gradient(135deg, hsl(217 91% 55%) 0%, hsl(152 55% 50%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   /* Glass morphism */
