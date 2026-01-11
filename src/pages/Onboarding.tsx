@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { 
@@ -19,6 +20,7 @@ import { HostyliaLogo } from '@/components/brand/HostyliaLogo';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
+import { WelcomeScreen } from '@/components/onboarding/WelcomeScreen';
 import { AccountStep } from '@/components/onboarding/AccountStep';
 import { OrganizationStep } from '@/components/onboarding/OrganizationStep';
 import { PropertyRulesStep } from '@/components/onboarding/PropertyRulesStep';
@@ -74,25 +76,44 @@ const steps = [
   { id: 5, title: 'Review', icon: CreditCard },
 ];
 
+const slideVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 100 : -100,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 100 : -100,
+    opacity: 0,
+  }),
+};
+
 export default function Onboarding() {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [direction, setDirection] = useState(1);
   
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user && currentStep === 1) {
-      setData(prev => ({
-        ...prev,
-        fullName: profile?.full_name || '',
-        email: user.email || '',
-        phone: profile?.phone || '',
-      }));
-      setCurrentStep(2);
+    if (user) {
+      setShowWelcome(false);
+      if (currentStep === 1) {
+        setData(prev => ({
+          ...prev,
+          fullName: profile?.full_name || '',
+          email: user.email || '',
+          phone: profile?.phone || '',
+        }));
+        setCurrentStep(2);
+      }
     }
   }, [user, profile, currentStep]);
 
@@ -104,13 +125,13 @@ export default function Onboarding() {
 
   const handleAccountComplete = (accountData: { fullName: string; email: string; phone: string; password: string }) => {
     updateData(accountData);
-    setDirection('forward');
+    setDirection(1);
     setCurrentStep(2);
   };
 
   const nextStep = () => {
     if (currentStep < steps.length) {
-      setDirection('forward');
+      setDirection(1);
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -118,7 +139,7 @@ export default function Onboarding() {
   const prevStep = () => {
     if (currentStep > 1) {
       if (currentStep === 2 && user) return;
-      setDirection('backward');
+      setDirection(-1);
       setCurrentStep(prev => prev - 1);
     }
   };
@@ -239,6 +260,11 @@ export default function Onboarding() {
     }
   };
 
+  // Show welcome screen first
+  if (showWelcome && !user) {
+    return <WelcomeScreen onGetStarted={() => setShowWelcome(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Compact Header */}
@@ -262,7 +288,11 @@ export default function Onboarding() {
 
       <div className="container mx-auto px-4 py-4 sm:py-6 max-w-2xl">
         {/* Compact Progress Section */}
-        <div className="mb-6">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
           {/* Step indicator pills */}
           <div className="flex items-center justify-center gap-1.5 mb-4">
             {steps.map((step, index) => {
@@ -271,12 +301,19 @@ export default function Onboarding() {
               
               return (
                 <div key={step.id} className="flex items-center">
-                  <div className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all",
-                    isComplete && "bg-emerald-500 text-white",
-                    isActive && "bg-primary text-primary-foreground",
-                    !isActive && !isComplete && "bg-muted text-muted-foreground"
-                  )}>
+                  <motion.div 
+                    initial={false}
+                    animate={{ 
+                      scale: isActive ? 1.05 : 1,
+                      backgroundColor: isComplete ? 'rgb(16 185 129)' : isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted))'
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors",
+                      isComplete && "text-white",
+                      isActive && "text-primary-foreground",
+                      !isActive && !isComplete && "text-muted-foreground"
+                    )}
+                  >
                     {isComplete ? (
                       <CheckCircle2 className="h-3 w-3" />
                     ) : (
@@ -284,12 +321,15 @@ export default function Onboarding() {
                     )}
                     <span className="hidden sm:inline">{step.title}</span>
                     <span className="sm:hidden">{step.id}</span>
-                  </div>
+                  </motion.div>
                   {index < steps.length - 1 && (
-                    <div className={cn(
-                      "w-4 h-0.5 mx-1",
-                      currentStep > step.id ? "bg-emerald-500" : "bg-muted"
-                    )} />
+                    <motion.div 
+                      initial={false}
+                      animate={{ 
+                        backgroundColor: currentStep > step.id ? 'rgb(16 185 129)' : 'hsl(var(--muted))'
+                      }}
+                      className="w-4 h-0.5 mx-1"
+                    />
                   )}
                 </div>
               );
@@ -298,27 +338,43 @@ export default function Onboarding() {
           
           {/* Progress bar */}
           <div className="h-1 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-emerald-500 to-green-500 transition-all duration-500"
-              style={{ width: `${progress}%` }}
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+              className="h-full bg-gradient-to-r from-emerald-500 to-green-500"
             />
           </div>
+        </motion.div>
+
+        {/* Main Content Card */}
+        <div className="bg-card rounded-xl border border-border/50 shadow-lg p-4 sm:p-6 mb-4 overflow-hidden">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={currentStep}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+            >
+              {currentStep === 1 && <AccountStep onComplete={handleAccountComplete} />}
+              {currentStep === 2 && <OrganizationStep data={data} updateData={updateData} />}
+              {currentStep === 3 && <PropertyRulesStep data={data} updateData={updateData} section="rules" />}
+              {currentStep === 4 && <PropertyRulesStep data={data} updateData={updateData} section="mess" />}
+              {currentStep === 5 && <ReviewStep data={data} updateData={updateData} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        {/* Main Content Card - Compact */}
-        <div className="bg-card rounded-xl border border-border/50 shadow-lg p-4 sm:p-6 mb-4">
-          <div key={currentStep} className={cn("animate-fade-in", direction === 'forward' ? 'animate-slide-in-right' : 'animate-slide-in-left')}>
-            {currentStep === 1 && <AccountStep onComplete={handleAccountComplete} />}
-            {currentStep === 2 && <OrganizationStep data={data} updateData={updateData} />}
-            {currentStep === 3 && <PropertyRulesStep data={data} updateData={updateData} section="rules" />}
-            {currentStep === 4 && <PropertyRulesStep data={data} updateData={updateData} section="mess" />}
-            {currentStep === 5 && <ReviewStep data={data} updateData={updateData} />}
-          </div>
-        </div>
-
-        {/* Navigation - Compact */}
+        {/* Navigation */}
         {currentStep !== 1 && (
-          <div className="flex items-center justify-between">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-between"
+          >
             <Button 
               variant="ghost" 
               size="sm"
@@ -354,17 +410,21 @@ export default function Onboarding() {
                 )}
               </Button>
             )}
-          </div>
+          </motion.div>
         )}
 
-        {/* Free trial badge - Compact */}
+        {/* Free trial badge */}
         {currentStep === 1 && (
-          <div className="mt-4 text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 text-center"
+          >
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <Sparkles className="h-3 w-3 text-emerald-500" />
               <span className="text-xs text-emerald-600 font-medium">7 Days Free Trial</span>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>
