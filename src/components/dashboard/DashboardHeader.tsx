@@ -1,12 +1,17 @@
 import { Bell, Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
 }
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
+  const { profile } = useAuth();
+  
+  const userInitial = profile?.full_name?.charAt(0) || profile?.email?.charAt(0) || 'U';
+
   return (
     <header className="sticky top-0 z-30 h-16 bg-background/80 backdrop-blur-xl border-b border-border">
       <div className="flex items-center justify-between h-full px-6">
@@ -47,7 +52,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
 
           {/* Profile */}
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all">
-            <span className="text-white text-sm font-medium">A</span>
+            <span className="text-white text-sm font-medium uppercase">{userInitial}</span>
           </div>
         </div>
       </div>

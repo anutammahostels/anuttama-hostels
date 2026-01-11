@@ -3,7 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Students from "./pages/Students";
@@ -23,20 +26,86 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/properties" element={<Properties />} />
-          <Route path="/dashboard/students" element={<Students />} />
-          <Route path="/dashboard/rooms" element={<RoomAllocation />} />
-          <Route path="/dashboard/passes" element={<GatePasses />} />
-          <Route path="/dashboard/mess" element={<MessManagement />} />
-          <Route path="/dashboard/billing" element={<Billing />} />
-          <Route path="/dashboard/maintenance" element={<Maintenance />} />
-          <Route path="/dashboard/settings" element={<Settings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/properties"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}>
+                  <Properties />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/students"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}>
+                  <Students />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/rooms"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}>
+                  <RoomAllocation />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/passes"
+              element={
+                <ProtectedRoute>
+                  <GatePasses />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/mess"
+              element={
+                <ProtectedRoute>
+                  <MessManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/billing"
+              element={
+                <ProtectedRoute>
+                  <Billing />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/maintenance"
+              element={
+                <ProtectedRoute>
+                  <Maintenance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
