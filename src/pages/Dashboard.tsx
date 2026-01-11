@@ -9,13 +9,21 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       {/* Welcome section */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground mb-1">
-          Welcome back, Admin
-        </h1>
-        <p className="text-muted-foreground">
-          Here's what's happening at Sunrise Hostel today
-        </p>
+      <div className="mb-8 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-1">
+              Welcome back, Admin 👋
+            </h1>
+            <p className="text-muted-foreground">
+              Here's what's happening at <span className="text-hostylia-forest font-medium">Sunrise Hostel</span> today
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-4 py-2 rounded-xl">
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+            <span>All systems operational</span>
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
