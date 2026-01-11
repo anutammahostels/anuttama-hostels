@@ -42,9 +42,7 @@ export const Hero = () => {
           <h1 className="text-center text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 animate-slide-up leading-tight">
             Smart Residential
             <br />
-            <span className="bg-gradient-to-r from-primary via-[hsl(180,70%,50%)] to-secondary bg-clip-text text-transparent">
-              Management Platform
-            </span>
+            <span className="text-gradient">Management Platform</span>
           </h1>
 
           {/* Subtitle */}

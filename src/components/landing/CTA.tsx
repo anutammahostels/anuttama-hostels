@@ -34,9 +34,7 @@ export const CTA = () => {
           <h2 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight">
             Ready to Transform Your
             <br />
-            <span className="bg-gradient-to-r from-primary via-[hsl(180,70%,50%)] to-secondary bg-clip-text text-transparent">
-              Residential Operations?
-            </span>
+            <span className="text-gradient">Residential Operations?</span>
           </h2>
 
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
