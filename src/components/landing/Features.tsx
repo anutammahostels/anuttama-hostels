@@ -102,104 +102,104 @@ export const Features = () => {
         </div>
 
         {/* Features grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6 mb-20">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-16 lg:mb-20">
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className="group relative rounded-2xl lg:rounded-3xl bg-card border border-border p-6 lg:p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-2 hover:border-primary/20 overflow-hidden"
+              className="group relative rounded-xl lg:rounded-2xl bg-card border border-border p-4 lg:p-6 transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 lg:hover:-translate-y-2 hover:border-primary/20 overflow-hidden"
             >
               {/* Gradient glow on hover */}
-              <div className={`absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 blur-3xl transition-opacity duration-500`} />
+              <div className={`absolute -top-16 -right-16 w-32 h-32 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 blur-3xl transition-opacity duration-500`} />
               
               {/* Icon */}
-              <div className={`inline-flex p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-gradient-to-br ${feature.gradient} mb-5 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
-                <feature.icon className="h-6 w-6 text-white" />
+              <div className={`inline-flex p-2.5 lg:p-3 rounded-lg lg:rounded-xl bg-gradient-to-br ${feature.gradient} mb-3 lg:mb-4 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
+                <feature.icon className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
               </div>
               
               {/* Content */}
-              <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+              <h3 className="text-base lg:text-lg font-semibold text-foreground mb-1.5 lg:mb-2 group-hover:text-primary transition-colors">
                 {feature.title}
               </h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">
+              <p className="text-muted-foreground text-sm leading-relaxed mb-3 lg:mb-4 line-clamp-2 lg:line-clamp-none">
                 {feature.description}
               </p>
 
               {/* Benefits list */}
-              <div className="space-y-2">
+              <div className="space-y-1.5 lg:space-y-2">
                 {feature.benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-secondary flex-shrink-0" />
+                  <div key={benefit} className="flex items-center gap-1.5 lg:gap-2 text-xs lg:text-sm">
+                    <CheckCircle2 className="h-3 w-3 lg:h-4 lg:w-4 text-secondary flex-shrink-0" />
                     <span className="text-foreground">{benefit}</span>
                   </div>
                 ))}
               </div>
 
               {/* Learn more link */}
-              <div className="mt-5 pt-4 border-t border-border flex items-center gap-2 text-primary font-medium opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                Learn more <ArrowRight className="h-4 w-4" />
+              <div className="mt-3 lg:mt-4 pt-3 lg:pt-4 border-t border-border flex items-center gap-2 text-primary font-medium text-sm opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                Learn more <ArrowRight className="h-3 w-3 lg:h-4 lg:w-4" />
               </div>
             </div>
           ))}
         </div>
 
         {/* Feature images showcase */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-20">
+        <div className="grid md:grid-cols-2 gap-4 lg:gap-8 mb-12 lg:mb-20">
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl lg:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <img 
               src={hostelRoomImage} 
               alt="Modern hostel room" 
-              className="relative rounded-3xl w-full h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
+              className="relative rounded-xl lg:rounded-3xl w-full h-48 lg:h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
             />
-            <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
-              <p className="font-semibold text-foreground">Smart Room Management</p>
-              <p className="text-sm text-muted-foreground">Visual bed allocation, condition tracking, and real-time occupancy updates</p>
+            <div className="absolute bottom-3 left-3 right-3 lg:bottom-4 lg:left-4 lg:right-4 p-3 lg:p-4 rounded-lg lg:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
+              <p className="font-semibold text-foreground text-sm lg:text-base">Smart Room Management</p>
+              <p className="text-xs lg:text-sm text-muted-foreground line-clamp-1 lg:line-clamp-none">Visual bed allocation and real-time occupancy</p>
             </div>
           </div>
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-primary/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-primary/20 rounded-xl lg:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <img 
               src={messCafeteriaImage} 
               alt="Hostel mess cafeteria" 
-              className="relative rounded-3xl w-full h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
+              className="relative rounded-xl lg:rounded-3xl w-full h-48 lg:h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
             />
-            <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
-              <p className="font-semibold text-foreground">Integrated Mess System</p>
-              <p className="text-sm text-muted-foreground">Menu planning, meal tracking, smart rebates, and nutritional management</p>
+            <div className="absolute bottom-3 left-3 right-3 lg:bottom-4 lg:left-4 lg:right-4 p-3 lg:p-4 rounded-lg lg:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
+              <p className="font-semibold text-foreground text-sm lg:text-base">Integrated Mess System</p>
+              <p className="text-xs lg:text-sm text-muted-foreground line-clamp-1 lg:line-clamp-none">Menu planning, smart rebates, and nutrition</p>
             </div>
           </div>
         </div>
 
         {/* Roles section */}
-        <div className="text-center mb-12">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            <Users className="h-4 w-4" />
+        <div className="text-center mb-8 lg:mb-12">
+          <span className="inline-flex items-center gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full bg-primary/10 text-primary text-xs lg:text-sm font-medium mb-3 lg:mb-4">
+            <Users className="h-3 w-3 lg:h-4 lg:w-4" />
             Role-Based Access
           </span>
-          <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-3">
+          <h2 className="text-xl lg:text-3xl font-bold text-foreground mb-2 lg:mb-3">
             7 Tailored Dashboards
           </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
-            Each role gets a dedicated interface optimized for their specific responsibilities.
-            <span className="font-medium text-foreground"> Right access, right tools, right time.</span>
+          <p className="text-muted-foreground max-w-lg mx-auto text-sm lg:text-base">
+            Each role gets a dedicated interface.
+            <span className="font-medium text-foreground"> Right access, right time.</span>
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3 lg:gap-4 mb-12">
+        <div className="flex flex-wrap justify-center gap-2 lg:gap-3 mb-8 lg:mb-12">
           {roles.map((role, index) => (
             <div
               key={role.label}
-              className="group flex items-center gap-3 px-4 lg:px-5 py-3 lg:py-4 rounded-xl lg:rounded-2xl bg-card border border-border hover:bg-gradient-to-r hover:from-primary hover:to-secondary hover:border-transparent transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1"
+              className="group flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl bg-card border border-border hover:bg-gradient-to-r hover:from-primary hover:to-secondary hover:border-transparent transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 lg:hover:-translate-y-1"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <div className={`p-2 rounded-lg ${role.color}/20 group-hover:bg-white/20 transition-colors`}>
-                <role.icon className="h-4 w-4 text-secondary group-hover:text-white transition-colors" />
+              <div className={`p-1.5 lg:p-2 rounded-md lg:rounded-lg ${role.color}/20 group-hover:bg-white/20 transition-colors`}>
+                <role.icon className="h-3 w-3 lg:h-4 lg:w-4 text-secondary group-hover:text-white transition-colors" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-foreground group-hover:text-white transition-colors text-sm">
+                <p className="font-semibold text-foreground group-hover:text-white transition-colors text-xs lg:text-sm">
                   {role.label}
                 </p>
-                <p className="text-xs text-muted-foreground group-hover:text-white/70 transition-colors">
+                <p className="text-[10px] lg:text-xs text-muted-foreground group-hover:text-white/70 transition-colors hidden sm:block">
                   {role.desc}
                 </p>
               </div>
