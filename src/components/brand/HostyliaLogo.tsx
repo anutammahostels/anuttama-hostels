@@ -1,10 +1,11 @@
 import hostyliaLogo from "@/assets/hostylia-logo.png";
+import hostyliaLogoDark from "@/assets/hostylia-logo-dark.png";
 
 interface HostyliaLogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   showText?: boolean;
-  textColor?: "light" | "dark" | "auto";
+  variant?: "light" | "dark" | "auto";
   animated?: boolean;
 }
 
@@ -12,53 +13,26 @@ const sizeMap = {
   sm: "h-8",
   md: "h-10",
   lg: "h-12",
-  xl: "h-16",
-};
-
-const textSizeMap = {
-  sm: "text-lg",
-  md: "text-xl",
-  lg: "text-2xl",
-  xl: "text-3xl",
+  xl: "h-14",
 };
 
 export const HostyliaLogo = ({
   size = "md",
   className = "",
-  showText = true,
-  textColor = "auto",
+  showText = false,
+  variant = "auto",
   animated = false,
 }: HostyliaLogoProps) => {
-  const getTextColorClass = () => {
-    switch (textColor) {
-      case "light":
-        return "text-white";
-      case "dark":
-        return "text-foreground";
-      default:
-        return "text-foreground dark:text-white";
-    }
-  };
+  // Use dark logo on dark backgrounds, light logo on light backgrounds
+  const logo = variant === "dark" ? hostyliaLogoDark : hostyliaLogo;
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center ${className}`}>
       <img
-        src={hostyliaLogo}
-        alt="Hostylia"
+        src={logo}
+        alt="Hostylia - Smart Residential Management"
         className={`${sizeMap[size]} w-auto object-contain ${animated ? "animate-float" : ""}`}
       />
-      {showText && (
-        <div className="flex flex-col">
-          <span className={`font-bold ${textSizeMap[size]} ${getTextColorClass()} tracking-tight`}>
-            Hostylia
-          </span>
-          {size === "lg" || size === "xl" ? (
-            <span className="text-xs text-muted-foreground -mt-0.5">
-              Smart Residential Management
-            </span>
-          ) : null}
-        </div>
-      )}
     </div>
   );
 };
