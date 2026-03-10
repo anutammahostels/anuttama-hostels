@@ -32,15 +32,19 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   
-  const { signIn, user } = useAuth();
+  const { signIn, user, role } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
+    if (user && role) {
+      if (role === 'student') {
+        navigate('/student');
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [user, navigate]);
+  }, [user, role, navigate]);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
