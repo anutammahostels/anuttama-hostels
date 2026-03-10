@@ -5,7 +5,7 @@ import { HostyliaLogo } from "@/components/brand/HostyliaLogo";
 const footerLinks = {
   Product: [
     { label: "Features", href: "/features" },
-    { label: "Pricing", href: "/pricing" },
+    
     { label: "Solutions", href: "/solutions" },
   ],
   Company: [

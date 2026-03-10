@@ -11,7 +11,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Solutions from "./pages/Solutions";
 import FeaturesPage from "./pages/FeaturesPage";
-import Pricing from "./pages/Pricing";
+
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
@@ -23,7 +23,7 @@ import MessManagement from "./pages/MessManagement";
 import Billing from "./pages/Billing";
 import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
-import DemoPayments from "./pages/DemoPayments";
+
 import Complaints from "./pages/Complaints";
 import NotFound from "./pages/NotFound";
 
@@ -53,7 +53,7 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/solutions" element={<Solutions />} />
             <Route path="/features" element={<FeaturesPage />} />
-            <Route path="/pricing" element={<Pricing />} />
+            
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
 
@@ -67,7 +67,7 @@ const App = () => (
             <Route path="/dashboard/billing" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Billing /></ProtectedRoute>} />
             <Route path="/dashboard/maintenance" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Maintenance /></ProtectedRoute>} />
             <Route path="/dashboard/complaints" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Complaints /></ProtectedRoute>} />
-            <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><DemoPayments /></ProtectedRoute>} />
+            
             <Route path="/dashboard/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Settings /></ProtectedRoute>} />
 
             {/* Student Dashboard */}
