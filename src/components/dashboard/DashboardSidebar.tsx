@@ -46,6 +46,7 @@ const allMenuItems: MenuItem[] = [
   { icon: Receipt, label: "Billing", shortLabel: "Bills", path: "/dashboard/billing" },
   { icon: IndianRupee, label: "Payments", shortLabel: "Pay", path: "/dashboard/payments" },
   { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/dashboard/maintenance" },
+  { icon: MessageSquareWarning, label: "Complaints", shortLabel: "Compl.", path: "/dashboard/complaints" },
   { icon: Settings, label: "Settings", shortLabel: "Settings", path: "/dashboard/settings" },
 ];
 
