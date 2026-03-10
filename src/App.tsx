@@ -26,6 +26,16 @@ import Settings from "./pages/Settings";
 import DemoPayments from "./pages/DemoPayments";
 import NotFound from "./pages/NotFound";
 
+// Student pages
+import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentGatePasses from "./pages/student/StudentGatePasses";
+import StudentInvoices from "./pages/student/StudentInvoices";
+import StudentComplaints from "./pages/student/StudentComplaints";
+import StudentMess from "./pages/student/StudentMess";
+import StudentMaintenance from "./pages/student/StudentMaintenance";
+import StudentNotices from "./pages/student/StudentNotices";
+import StudentProfile from "./pages/student/StudentProfile";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -45,86 +55,29 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/properties"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}>
-                  <Properties />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/students"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}>
-                  <Students />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/rooms"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}>
-                  <RoomAllocation />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/passes"
-              element={
-                <ProtectedRoute>
-                  <GatePasses />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/mess"
-              element={
-                <ProtectedRoute>
-                  <MessManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/billing"
-              element={
-                <ProtectedRoute>
-                  <Billing />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/maintenance"
-              element={
-                <ProtectedRoute>
-                  <Maintenance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/payments"
-              element={
-                <ProtectedRoute>
-                  <DemoPayments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
+
+            {/* Admin / Staff Dashboard */}
+            <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/properties" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Properties /></ProtectedRoute>} />
+            <Route path="/dashboard/students" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Students /></ProtectedRoute>} />
+            <Route path="/dashboard/rooms" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><RoomAllocation /></ProtectedRoute>} />
+            <Route path="/dashboard/passes" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><GatePasses /></ProtectedRoute>} />
+            <Route path="/dashboard/mess" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><MessManagement /></ProtectedRoute>} />
+            <Route path="/dashboard/billing" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Billing /></ProtectedRoute>} />
+            <Route path="/dashboard/maintenance" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Maintenance /></ProtectedRoute>} />
+            <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><DemoPayments /></ProtectedRoute>} />
+            <Route path="/dashboard/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Settings /></ProtectedRoute>} />
+
+            {/* Student Dashboard */}
+            <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
+            <Route path="/student/passes" element={<ProtectedRoute allowedRoles={['student']}><StudentGatePasses /></ProtectedRoute>} />
+            <Route path="/student/invoices" element={<ProtectedRoute allowedRoles={['student']}><StudentInvoices /></ProtectedRoute>} />
+            <Route path="/student/complaints" element={<ProtectedRoute allowedRoles={['student']}><StudentComplaints /></ProtectedRoute>} />
+            <Route path="/student/mess" element={<ProtectedRoute allowedRoles={['student']}><StudentMess /></ProtectedRoute>} />
+            <Route path="/student/maintenance" element={<ProtectedRoute allowedRoles={['student']}><StudentMaintenance /></ProtectedRoute>} />
+            <Route path="/student/notices" element={<ProtectedRoute allowedRoles={['student']}><StudentNotices /></ProtectedRoute>} />
+            <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['student']}><StudentProfile /></ProtectedRoute>} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
