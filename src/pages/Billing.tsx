@@ -4,15 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle } from "lucide-react";
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
+import { useStudents } from "@/hooks/useStudents";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const getStatusBadge = (status: string | null) => {
   switch (status) {
@@ -40,7 +44,29 @@ const Billing = () => {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("upi");
 
-  const { invoices, stats, isLoading, recordPayment } = useInvoices();
+  // Generate Invoices dialog state
+  const [generateDialog, setGenerateDialog] = useState(false);
+  const [billingMonth, setBillingMonth] = useState(() => format(new Date(), 'yyyy-MM'));
+  const [dueDate, setDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 15);
+    return format(d, 'yyyy-MM-dd');
+  });
+  const [defaultRoomRent, setDefaultRoomRent] = useState("5000");
+  const [defaultMessCharges, setDefaultMessCharges] = useState("3000");
+  const [defaultElectricity, setDefaultElectricity] = useState("500");
+  const [defaultOtherCharges, setDefaultOtherCharges] = useState("0");
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateProgress, setGenerateProgress] = useState(0);
+  const [generateResults, setGenerateResults] = useState<{ success: number; failed: number } | null>(null);
+
+  const { invoices, stats, isLoading, recordPayment, createInvoice } = useInvoices();
+  const { students } = useStudents();
+  const { toast } = useToast();
+
+  // Active students for invoice generation
+  const activeStudents = students.filter(s => s.status === 'active');
 
   // Filter invoices based on search
   const filteredInvoices = invoices.filter(invoice => {
@@ -61,6 +87,78 @@ const Billing = () => {
     setPaymentDialog({ open: false, invoice: null });
     setPaymentAmount("");
     setPaymentMethod("upi");
+  };
+
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedStudentIds.length === activeStudents.length) {
+      setSelectedStudentIds([]);
+    } else {
+      setSelectedStudentIds(activeStudents.map(s => s.id));
+    }
+  };
+
+  const resetGenerateDialog = () => {
+    setGenerateDialog(false);
+    setSelectedStudentIds([]);
+    setIsGenerating(false);
+    setGenerateProgress(0);
+    setGenerateResults(null);
+  };
+
+  const handleGenerateInvoices = async () => {
+    if (selectedStudentIds.length === 0) {
+      toast({ title: "No students selected", description: "Please select at least one student.", variant: "destructive" });
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerateProgress(0);
+    let success = 0;
+    let failed = 0;
+
+    for (let i = 0; i < selectedStudentIds.length; i++) {
+      const studentId = selectedStudentIds[i];
+      const roomRent = parseFloat(defaultRoomRent) || 0;
+      const messCharges = parseFloat(defaultMessCharges) || 0;
+      const electricity = parseFloat(defaultElectricity) || 0;
+      const otherCharges = parseFloat(defaultOtherCharges) || 0;
+      const totalAmount = roomRent + messCharges + electricity + otherCharges;
+
+      const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${(i + 1 + invoices.length).toString().padStart(4, '0')}`;
+
+      try {
+        await createInvoice.mutateAsync({
+          student_id: studentId,
+          invoice_number: invoiceNumber,
+          billing_month: `${billingMonth}-01`,
+          due_date: dueDate,
+          room_rent: roomRent,
+          mess_charges: messCharges,
+          electricity_charges: electricity,
+          other_charges: otherCharges,
+          total_amount: totalAmount,
+          status: 'pending',
+        });
+        success++;
+      } catch {
+        failed++;
+      }
+
+      setGenerateProgress(Math.round(((i + 1) / selectedStudentIds.length) * 100));
+    }
+
+    setGenerateResults({ success, failed });
+    setIsGenerating(false);
+
+    if (success > 0) {
+      toast({ title: "Invoices Generated", description: `${success} invoice(s) created successfully.${failed > 0 ? ` ${failed} failed.` : ''}` });
+    }
   };
 
   const statsData = [
@@ -118,7 +216,7 @@ const Billing = () => {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button className="gradient-primary text-white">
+            <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               Generate Invoices
             </Button>
@@ -197,7 +295,7 @@ const Billing = () => {
                     <p className="text-muted-foreground mb-4">
                       {invoices.length === 0 ? "Generate your first invoice to get started" : "Try adjusting your search"}
                     </p>
-                    <Button className="gradient-primary text-white">
+                    <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
                       <Plus className="h-4 w-4 mr-2" />
                       Generate Invoices
                     </Button>
@@ -475,6 +573,126 @@ const Billing = () => {
                 {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Record Payment"}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Generate Invoices Dialog */}
+        <Dialog open={generateDialog} onOpenChange={(open) => { if (!open) resetGenerateDialog(); }}>
+          <DialogContent className="bg-background sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Generate Invoices</DialogTitle>
+              <DialogDescription>
+                Create invoices for selected students with default charge amounts.
+              </DialogDescription>
+            </DialogHeader>
+
+            {generateResults ? (
+              <div className="py-6 text-center space-y-4">
+                <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+                <div>
+                  <h3 className="text-lg font-semibold">{generateResults.success} Invoice(s) Generated</h3>
+                  {generateResults.failed > 0 && (
+                    <p className="text-sm text-red-500">{generateResults.failed} failed</p>
+                  )}
+                </div>
+                <Button onClick={resetGenerateDialog} className="gradient-primary text-white">Done</Button>
+              </div>
+            ) : (
+              <div className="space-y-6 py-4">
+                {/* Billing Period */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Billing Month</Label>
+                    <Input type="month" value={billingMonth} onChange={(e) => setBillingMonth(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Due Date</Label>
+                    <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                  </div>
+                </div>
+
+                {/* Default Charges */}
+                <div>
+                  <h4 className="font-medium mb-3">Default Charges (₹)</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Room Rent</Label>
+                      <Input type="number" value={defaultRoomRent} onChange={(e) => setDefaultRoomRent(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Mess Charges</Label>
+                      <Input type="number" value={defaultMessCharges} onChange={(e) => setDefaultMessCharges(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Electricity</Label>
+                      <Input type="number" value={defaultElectricity} onChange={(e) => setDefaultElectricity(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Other Charges</Label>
+                      <Input type="number" value={defaultOtherCharges} onChange={(e) => setDefaultOtherCharges(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="mt-3 p-3 bg-muted/50 rounded-lg flex justify-between">
+                    <span className="text-sm text-muted-foreground">Total per student:</span>
+                    <span className="font-bold">
+                      {formatCurrency(
+                        (parseFloat(defaultRoomRent) || 0) +
+                        (parseFloat(defaultMessCharges) || 0) +
+                        (parseFloat(defaultElectricity) || 0) +
+                        (parseFloat(defaultOtherCharges) || 0)
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Student Selection */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium">Select Students ({selectedStudentIds.length}/{activeStudents.length})</h4>
+                    <Button variant="outline" size="sm" onClick={toggleSelectAll}>
+                      {selectedStudentIds.length === activeStudents.length ? "Deselect All" : "Select All"}
+                    </Button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
+                    {activeStudents.length === 0 ? (
+                      <p className="p-4 text-sm text-muted-foreground text-center">No active students found</p>
+                    ) : (
+                      activeStudents.map(student => (
+                        <div key={student.id} className="flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors">
+                          <Checkbox 
+                            checked={selectedStudentIds.includes(student.id)}
+                            onCheckedChange={() => toggleStudentSelection(student.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{student.profile?.full_name || "Unknown"}</p>
+                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "N/A"}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {isGenerating && (
+                  <div className="space-y-2">
+                    <Progress value={generateProgress} />
+                    <p className="text-sm text-muted-foreground text-center">Generating invoices... {generateProgress}%</p>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={resetGenerateDialog} disabled={isGenerating}>Cancel</Button>
+                  <Button 
+                    className="gradient-primary text-white" 
+                    onClick={handleGenerateInvoices}
+                    disabled={selectedStudentIds.length === 0 || isGenerating}
+                  >
+                    {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Receipt className="h-4 w-4 mr-2" />}
+                    Generate {selectedStudentIds.length} Invoice(s)
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

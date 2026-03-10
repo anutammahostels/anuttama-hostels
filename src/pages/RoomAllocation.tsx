@@ -4,12 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BedDouble, Search, Users, Loader2, Eye, Plus, UserPlus } from "lucide-react";
 import { useRooms, type RoomWithDetails } from "@/hooks/useRooms";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
+import { useDashboard } from "@/hooks/useDashboard";
+import { useToast } from "@/hooks/use-toast";
 
 const getBedStatusColor = (status: string | null) => {
   switch (status) {
@@ -39,11 +42,30 @@ const RoomAllocation = () => {
   const [allocationDialog, setAllocationDialog] = useState<{ open: boolean; bedId: string | null; roomNumber: string }>({ open: false, bedId: null, roomNumber: "" });
   const [selectedStudent, setSelectedStudent] = useState<string>("");
 
-  const { rooms, blocks, stats, isLoading, assignBed, vacateBed } = useRooms();
+  // Add Room dialog state
+  const [addRoomDialog, setAddRoomDialog] = useState(false);
+  const [addRoomStep, setAddRoomStep] = useState<'select' | 'new_block' | 'new_floor' | 'room_details'>('select');
+  const [newBlockName, setNewBlockName] = useState("");
+  const [newFloorNumber, setNewFloorNumber] = useState("");
+  const [selectedBlockId, setSelectedBlockId] = useState("");
+  const [selectedFloorId, setSelectedFloorId] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
+  const [roomCapacity, setRoomCapacity] = useState("1");
+  const [roomType, setRoomType] = useState("shared");
+  const [monthlyRent, setMonthlyRent] = useState("");
+  const [bedCount, setBedCount] = useState("1");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { property } = useDashboard();
+  const { rooms, blocks, floors, stats, isLoading, assignBed, vacateBed, createBlock, createFloor, createRoom, createBed } = useRooms(property?.id);
   const { students } = useStudents();
+  const { toast } = useToast();
 
   // Get unique floors from rooms
   const uniqueFloors = [...new Set(rooms.map(r => r.floor?.floor_number).filter(Boolean))].sort((a, b) => (a || 0) - (b || 0));
+
+  // Get floors for selected block in dialog
+  const floorsForBlock = floors?.filter((f: any) => f.block_id === selectedBlockId || f.block?.id === selectedBlockId) || [];
 
   // Filter rooms
   const filteredRooms = rooms.filter(room => {
@@ -75,6 +97,89 @@ const RoomAllocation = () => {
     return student?.profile?.full_name || "Unknown";
   };
 
+  const resetAddRoomDialog = () => {
+    setAddRoomDialog(false);
+    setAddRoomStep('select');
+    setNewBlockName("");
+    setNewFloorNumber("");
+    setSelectedBlockId("");
+    setSelectedFloorId("");
+    setRoomNumber("");
+    setRoomCapacity("1");
+    setRoomType("shared");
+    setMonthlyRent("");
+    setBedCount("1");
+    setIsSubmitting(false);
+  };
+
+  const handleCreateBlock = async () => {
+    if (!newBlockName || !property?.id) return;
+    setIsSubmitting(true);
+    try {
+      const block = await createBlock.mutateAsync({ name: newBlockName, property_id: property.id });
+      setSelectedBlockId(block.id);
+      setNewBlockName("");
+      setAddRoomStep('select');
+      toast({ title: "Block created", description: `Block "${block.name}" created successfully.` });
+    } catch {
+      // error handled by hook
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateFloor = async () => {
+    if (!newFloorNumber || !selectedBlockId) return;
+    setIsSubmitting(true);
+    try {
+      const floor = await createFloor.mutateAsync({ 
+        block_id: selectedBlockId, 
+        floor_number: parseInt(newFloorNumber),
+        name: `Floor ${newFloorNumber}`,
+      });
+      setSelectedFloorId(floor.id);
+      setNewFloorNumber("");
+      setAddRoomStep('room_details');
+      toast({ title: "Floor created", description: `Floor ${newFloorNumber} created successfully.` });
+    } catch {
+      // error handled by hook
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    if (!roomNumber || !selectedFloorId) return;
+    setIsSubmitting(true);
+    try {
+      const room = await createRoom.mutateAsync({
+        floor_id: selectedFloorId,
+        room_number: roomNumber,
+        capacity: parseInt(roomCapacity),
+        room_type: roomType,
+        monthly_rent: monthlyRent ? parseFloat(monthlyRent) : null,
+        status: 'available',
+      });
+
+      // Create beds
+      const numBeds = parseInt(bedCount);
+      for (let i = 1; i <= numBeds; i++) {
+        await createBed.mutateAsync({
+          room_id: room.id,
+          bed_number: i.toString(),
+          status: 'available',
+        });
+      }
+
+      toast({ title: "Room created", description: `Room ${roomNumber} with ${numBeds} bed(s) created.` });
+      resetAddRoomDialog();
+    } catch {
+      // error handled by hook
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -94,9 +199,9 @@ const RoomAllocation = () => {
             <h1 className="text-2xl font-bold text-foreground">Room Allocation</h1>
             <p className="text-muted-foreground">Visual room and bed management</p>
           </div>
-          <Button className="gradient-primary text-white">
-            <Users className="h-4 w-4 mr-2" />
-            Quick Allocate
+          <Button className="gradient-primary text-white" onClick={() => setAddRoomDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Room
           </Button>
         </div>
 
@@ -208,7 +313,7 @@ const RoomAllocation = () => {
               <p className="text-muted-foreground mb-4">
                 {rooms.length === 0 ? "Add rooms to your property to get started" : "Try adjusting your filters"}
               </p>
-              <Button className="gradient-primary text-white">
+              <Button className="gradient-primary text-white" onClick={() => setAddRoomDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Room
               </Button>
@@ -228,9 +333,6 @@ const RoomAllocation = () => {
                       <Badge variant="outline" className="text-xs">
                         {room.floor?.block?.name || "Block"} - F{room.floor?.floor_number}
                       </Badge>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Eye className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -327,6 +429,150 @@ const RoomAllocation = () => {
                 {assignBed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Assign"}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Room Dialog */}
+        <Dialog open={addRoomDialog} onOpenChange={(open) => { if (!open) resetAddRoomDialog(); }}>
+          <DialogContent className="bg-background sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {addRoomStep === 'new_block' ? 'Create New Block' : 
+                 addRoomStep === 'new_floor' ? 'Create New Floor' : 
+                 addRoomStep === 'room_details' ? 'Room Details' : 'Add Room'}
+              </DialogTitle>
+              <DialogDescription>
+                {addRoomStep === 'select' ? 'Select or create a block and floor, then add room details.' :
+                 addRoomStep === 'new_block' ? 'Create a new block for your property.' :
+                 addRoomStep === 'new_floor' ? 'Add a floor to the selected block.' :
+                 'Enter room and bed details.'}
+              </DialogDescription>
+            </DialogHeader>
+
+            {addRoomStep === 'select' && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Block</Label>
+                  <div className="flex gap-2">
+                    <Select value={selectedBlockId} onValueChange={(v) => { setSelectedBlockId(v); setSelectedFloorId(""); }}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select block..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        {blocks.map(block => (
+                          <SelectItem key={block.id} value={block.id}>{block.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="icon" onClick={() => setAddRoomStep('new_block')}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {selectedBlockId && (
+                  <div className="space-y-2">
+                    <Label>Floor</Label>
+                    <div className="flex gap-2">
+                      <Select value={selectedFloorId} onValueChange={setSelectedFloorId}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Select floor..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {floorsForBlock.map((floor: any) => (
+                            <SelectItem key={floor.id} value={floor.id}>Floor {floor.floor_number}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button variant="outline" size="icon" onClick={() => setAddRoomStep('new_floor')}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={resetAddRoomDialog}>Cancel</Button>
+                  <Button 
+                    disabled={!selectedBlockId || !selectedFloorId}
+                    className="gradient-primary text-white"
+                    onClick={() => setAddRoomStep('room_details')}
+                  >
+                    Next
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+
+            {addRoomStep === 'new_block' && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Block Name</Label>
+                  <Input placeholder="e.g. Block A, Boys Hostel" value={newBlockName} onChange={(e) => setNewBlockName(e.target.value)} />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddRoomStep('select')}>Back</Button>
+                  <Button disabled={!newBlockName || isSubmitting} className="gradient-primary text-white" onClick={handleCreateBlock}>
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Block"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+
+            {addRoomStep === 'new_floor' && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Floor Number</Label>
+                  <Input type="number" placeholder="e.g. 1, 2, 3" value={newFloorNumber} onChange={(e) => setNewFloorNumber(e.target.value)} />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddRoomStep('select')}>Back</Button>
+                  <Button disabled={!newFloorNumber || isSubmitting} className="gradient-primary text-white" onClick={handleCreateFloor}>
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Floor"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+
+            {addRoomStep === 'room_details' && (
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Room Number *</Label>
+                    <Input placeholder="e.g. 101" value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Room Type</Label>
+                    <Select value={roomType} onValueChange={setRoomType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="shared">Shared</SelectItem>
+                        <SelectItem value="suite">Suite</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Number of Beds *</Label>
+                    <Input type="number" min="1" max="10" value={bedCount} onChange={(e) => setBedCount(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Monthly Rent (₹)</Label>
+                    <Input type="number" placeholder="Optional" value={monthlyRent} onChange={(e) => setMonthlyRent(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddRoomStep('select')}>Back</Button>
+                  <Button disabled={!roomNumber || isSubmitting} className="gradient-primary text-white" onClick={handleCreateRoom}>
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Room"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
