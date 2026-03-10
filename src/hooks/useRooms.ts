@@ -103,6 +103,44 @@ export function useRooms(propertyId?: string) {
     enabled: !!user,
   });
 
+  const createBlock = useMutation({
+    mutationFn: async (input: { name: string; property_id: string; floor_count?: number }) => {
+      const { data, error } = await supabase
+        .from('blocks')
+        .insert(input)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Block;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blocks'] });
+      toast({ title: 'Block Created', description: 'New block has been added.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const createFloor = useMutation({
+    mutationFn: async (input: { block_id: string; floor_number: number; name?: string }) => {
+      const { data, error } = await supabase
+        .from('floors')
+        .insert(input)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Floor;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['floors'] });
+      toast({ title: 'Floor Created', description: 'New floor has been added.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const createRoom = useMutation({
     mutationFn: async (input: RoomInsert) => {
       const { data, error } = await supabase
@@ -127,6 +165,25 @@ export function useRooms(propertyId?: string) {
         description: error.message,
         variant: 'destructive',
       });
+    },
+  });
+
+  const createBed = useMutation({
+    mutationFn: async (input: { room_id: string; bed_number: string; status?: string }) => {
+      const { data, error } = await supabase
+        .from('beds')
+        .insert({ ...input, status: input.status || 'available' })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Bed;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      toast({ title: 'Bed Created', description: 'New bed has been added.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
