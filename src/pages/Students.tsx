@@ -23,10 +23,106 @@ const Students = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [bulkResults, setBulkResults] = useState<{ success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { students, stats, isLoading, error } = useStudents();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    return lines.slice(1).map(line => {
+      const values = line.split(",").map(v => v.trim());
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => { obj[h] = values[i] || ""; });
+      return obj;
+    });
+  };
+
+  const downloadTemplate = () => {
+    const csv = "full_name,email,phone,roll_number,course,department,year,date_of_birth,blood_group,emergency_contact\nRahul Sharma,rahul@example.com,+919876543210,CS2026001,B.Tech CSE,Computer Science,1,2005-01-15,A+,+919876543211";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "students_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const text = await file.text();
+    const rows = parseCSV(text);
+    
+    if (rows.length === 0) {
+      toast({ title: "Invalid CSV", description: "No data rows found. Please check the file format.", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setBulkDialogOpen(true);
+    setBulkUploading(true);
+    setBulkProgress(0);
+    const results: { success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } = { success: [], errors: [] };
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const formData = {
+        full_name: row.full_name || row.name || "",
+        email: row.email || "",
+        phone: row.phone || "",
+        roll_number: row.roll_number || "",
+        course: row.course || "",
+        department: row.department || "",
+        year: row.year || "",
+        date_of_birth: row.date_of_birth || "",
+        blood_group: row.blood_group || "",
+        emergency_contact: row.emergency_contact || "",
+      };
+
+      if (!formData.full_name || !formData.email) {
+        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Name and email are required" });
+        setBulkProgress(((i + 1) / rows.length) * 100);
+        continue;
+      }
+
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: formData });
+        if (fnError) throw fnError;
+        if (data?.error) throw new Error(data.error);
+        results.success.push({ email: formData.email, password: data.tempPassword, name: formData.full_name });
+      } catch (err: any) {
+        results.errors.push({ row: i + 2, name: formData.full_name, error: err.message || "Failed" });
+      }
+      setBulkProgress(((i + 1) / rows.length) * 100);
+    }
+
+    setBulkResults(results);
+    setBulkUploading(false);
+    queryClient.invalidateQueries({ queryKey: ["students"] });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const downloadCredentials = () => {
+    if (!bulkResults) return;
+    const csv = "name,email,temporary_password\n" + bulkResults.success.map(s => `${s.name},${s.email},${s.password}`).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "student_credentials.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Form state
   const [form, setForm] = useState({
