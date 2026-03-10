@@ -153,7 +153,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
                 "h-4 w-4 flex-shrink-0 transition-transform duration-200",
                 !isActive && "group-hover:scale-110"
               )} />
-              {isMobile && <span className="text-sm font-medium">{item.label}</span>}
+              <span className="text-sm font-medium">{item.label}</span>
             </Link>
           );
         })}
