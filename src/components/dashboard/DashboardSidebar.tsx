@@ -191,7 +191,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
 
       {/* Desktop sidebar - Always collapsed */}
       <aside
-        className="fixed left-0 top-0 z-50 h-screen w-14 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col"
+        className="fixed left-0 top-0 z-50 h-screen w-52 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col"
       >
         <SidebarContent />
       </aside>
