@@ -9,6 +9,7 @@ import {
   Receipt,
   IndianRupee,
   Wrench,
+  MessageSquareWarning,
   Settings,
   ChevronLeft,
   LogOut,
