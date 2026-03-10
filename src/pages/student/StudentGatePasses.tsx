@@ -102,7 +102,7 @@ export default function StudentGatePasses() {
                     <SelectContent>
                       <SelectItem value="day_out">Day Out</SelectItem>
                       <SelectItem value="night_out">Night Out</SelectItem>
-                      <SelectItem value="weekend">Weekend</SelectItem>
+                      <SelectItem value="vacation">Vacation</SelectItem>
                       <SelectItem value="emergency">Emergency</SelectItem>
                     </SelectContent>
                   </Select>
