@@ -16,25 +16,22 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("authorization")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
 
-    // Verify the calling user
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { authorization: authHeader } },
-    });
-    
+    // Use service role client to verify the calling user's token
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Extract JWT and get user
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user: callingUser }, error: authError } = await adminClient.auth.getUser(token);
+    if (authError || !callingUser) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const callingUserId = claimsData.claims.sub as string;
+    const callingUserId = callingUser.id;
 
     // Check admin role
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
       .select("role")
