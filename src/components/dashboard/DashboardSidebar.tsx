@@ -159,38 +159,22 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
 
       {/* User section */}
       <div className="p-2 border-t border-hostylia-navy-light/30">
-        <div className={cn(
-          "flex items-center gap-2 px-2 py-2 rounded-lg bg-hostylia-navy-light/30",
-          isMobile ? "" : "justify-center"
-        )}>
+        <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-hostylia-navy-light/30">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light flex items-center justify-center flex-shrink-0 ring-2 ring-hostylia-forest/30">
             <span className="text-white text-xs font-semibold uppercase">{userInitial}</span>
           </div>
-          {isMobile && (
-            <>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{userName}</p>
-                <p className="text-[10px] text-hostylia-slate truncate">{roleLabel}</p>
-              </div>
-              <button 
-                onClick={handleSignOut}
-                className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group"
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4 text-hostylia-slate group-hover:text-white transition-colors" />
-              </button>
-            </>
-          )}
-        </div>
-        {!isMobile && (
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-white truncate">{userName}</p>
+            <p className="text-[10px] text-hostylia-slate truncate">{roleLabel}</p>
+          </div>
           <button 
             onClick={handleSignOut}
-            className="w-full mt-1 p-2 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group flex items-center justify-center"
+            className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group"
             title="Sign out"
           >
             <LogOut className="h-4 w-4 text-hostylia-slate group-hover:text-white transition-colors" />
           </button>
-        )}
+        </div>
       </div>
     </>
   );
