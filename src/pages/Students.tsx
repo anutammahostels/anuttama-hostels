@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil } from "lucide-react";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
+import { useRooms } from "@/hooks/useRooms";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,9 +30,43 @@ const Students = () => {
   const [bulkResults, setBulkResults] = useState<{ success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { students, stats, isLoading, error } = useStudents();
+  // Edit student state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentWithProfile | null>(null);
+  const [editForm, setEditForm] = useState({
+    roll_number: "",
+    course: "",
+    department: "",
+    year: "",
+    date_of_birth: "",
+    blood_group: "",
+    emergency_contact: "",
+    status: "",
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Assign room state
+  const [assignRoomOpen, setAssignRoomOpen] = useState(false);
+  const [assigningStudent, setAssigningStudent] = useState<StudentWithProfile | null>(null);
+  const [selectedBedId, setSelectedBedId] = useState("");
+
+  const { students, stats, isLoading, error, updateStudent } = useStudents();
+  const { rooms } = useRooms();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Get available beds from rooms
+  const availableBeds = rooms.flatMap(room =>
+    (room.beds || [])
+      .filter(bed => !bed.student_id && bed.status === "available")
+      .map(bed => ({
+        bedId: bed.id,
+        bedNumber: bed.bed_number,
+        roomNumber: room.room_number,
+        blockName: room.floor?.block?.name || "Block",
+        floorNumber: room.floor?.floor_number,
+      }))
+  );
 
   const parseCSV = (text: string) => {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -177,6 +212,87 @@ const Students = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     resetForm();
+  };
+
+  // Edit student handlers
+  const openEditDialog = (student: StudentWithProfile) => {
+    setEditingStudent(student);
+    setEditForm({
+      roll_number: student.roll_number || "",
+      course: student.course || "",
+      department: student.department || "",
+      year: student.year?.toString() || "",
+      date_of_birth: student.date_of_birth || "",
+      blood_group: student.blood_group || "",
+      emergency_contact: student.emergency_contact || "",
+      status: student.status || "active",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingStudent) return;
+    setIsUpdating(true);
+    try {
+      await updateStudent.mutateAsync({
+        id: editingStudent.id,
+        roll_number: editForm.roll_number || null,
+        course: editForm.course || null,
+        department: editForm.department || null,
+        year: editForm.year ? parseInt(editForm.year) : null,
+        date_of_birth: editForm.date_of_birth || null,
+        blood_group: editForm.blood_group || null,
+        emergency_contact: editForm.emergency_contact || null,
+        status: editForm.status || "active",
+      });
+      setEditDialogOpen(false);
+      setEditingStudent(null);
+    } catch (err: any) {
+      // toast handled by hook
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Assign room handlers
+  const openAssignRoom = (student: StudentWithProfile) => {
+    setAssigningStudent(student);
+    setSelectedBedId("");
+    setAssignRoomOpen(true);
+  };
+
+  const handleAssignRoom = async () => {
+    if (!assigningStudent || !selectedBedId) return;
+    try {
+      const { error } = await supabase
+        .from("beds")
+        .update({ student_id: assigningStudent.id, status: "occupied" })
+        .eq("id", selectedBedId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({ title: "Room Assigned", description: `${assigningStudent.profile?.full_name} has been assigned to the selected bed.` });
+      setAssignRoomOpen(false);
+      setAssigningStudent(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to assign room", variant: "destructive" });
+    }
+  };
+
+  const handleVacateBed = async (student: StudentWithProfile) => {
+    if (!student.bed) return;
+    try {
+      const { error } = await supabase
+        .from("beds")
+        .update({ student_id: null, status: "available" })
+        .eq("id", student.bed.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({ title: "Bed Vacated", description: `${student.profile?.full_name} has been removed from the room.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to vacate bed", variant: "destructive" });
+    }
   };
 
   // Filter students based on search
@@ -325,11 +441,34 @@ const Students = () => {
                             <p className="font-semibold text-sm truncate">{student.profile?.full_name || "Unknown"}</p>
                             <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "-"}</p>
                           </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => openEditDialog(student)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit Details
+                              </DropdownMenuItem>
+                              {student.bed ? (
+                                <DropdownMenuItem onClick={() => handleVacateBed(student)} className="text-destructive">
+                                  <BedDouble className="h-4 w-4 mr-2" /> Vacate Room
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={() => openAssignRoom(student)}>
+                                  <BedDouble className="h-4 w-4 mr-2" /> Assign Room
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs text-muted-foreground">Room: {getRoomDisplay(student)}</p>
                           <Badge variant="secondary" className={`${getStatusColor(student.status)} text-[10px]`}>
                             {student.status || "unknown"}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">Room: {getRoomDisplay(student)}</p>
                       </CardContent>
                     </Card>
                   ))}
@@ -382,11 +521,18 @@ const Students = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="bg-popover">
-                                <DropdownMenuItem>View Profile</DropdownMenuItem>
-                                <DropdownMenuItem>Edit Details</DropdownMenuItem>
-                                <DropdownMenuItem>View Payments</DropdownMenuItem>
-                                <DropdownMenuItem>Generate Gate Pass</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive">Check Out</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openEditDialog(student)}>
+                                  <Pencil className="h-4 w-4 mr-2" /> Edit Details
+                                </DropdownMenuItem>
+                                {student.bed ? (
+                                  <DropdownMenuItem onClick={() => handleVacateBed(student)} className="text-destructive">
+                                    <BedDouble className="h-4 w-4 mr-2" /> Vacate Room
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onClick={() => openAssignRoom(student)}>
+                                    <BedDouble className="h-4 w-4 mr-2" /> Assign Room
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -589,6 +735,121 @@ const Students = () => {
                 Done
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Student Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Student Details</DialogTitle>
+            <DialogDescription>
+              Update details for {editingStudent?.profile?.full_name || "student"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold">Roll Number</Label>
+                <Input value={editForm.roll_number} onChange={(e) => setEditForm(f => ({ ...f, roll_number: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Course</Label>
+                <Input value={editForm.course} onChange={(e) => setEditForm(f => ({ ...f, course: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Department</Label>
+                <Input value={editForm.department} onChange={(e) => setEditForm(f => ({ ...f, department: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Year</Label>
+                <Select value={editForm.year} onValueChange={(v) => setEditForm(f => ({ ...f, year: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1st Year</SelectItem>
+                    <SelectItem value="2">2nd Year</SelectItem>
+                    <SelectItem value="3">3rd Year</SelectItem>
+                    <SelectItem value="4">4th Year</SelectItem>
+                    <SelectItem value="5">5th Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Date of Birth</Label>
+                <Input type="date" value={editForm.date_of_birth} onChange={(e) => setEditForm(f => ({ ...f, date_of_birth: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Blood Group</Label>
+                <Select value={editForm.blood_group} onValueChange={(v) => setEditForm(f => ({ ...f, blood_group: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => (
+                      <SelectItem key={bg} value={bg}>{bg}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Emergency Contact</Label>
+                <Input value={editForm.emergency_contact} onChange={(e) => setEditForm(f => ({ ...f, emergency_contact: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Status</Label>
+                <Select value={editForm.status} onValueChange={(v) => setEditForm(f => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="on_leave">On Leave</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button className="gradient-primary text-white" onClick={handleEditSubmit} disabled={isUpdating}>
+              {isUpdating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Room Dialog */}
+      <Dialog open={assignRoomOpen} onOpenChange={setAssignRoomOpen}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Assign Room</DialogTitle>
+            <DialogDescription>
+              Select a bed for {assigningStudent?.profile?.full_name || "student"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {availableBeds.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No available beds. Please add rooms and beds first.</p>
+            ) : (
+              <Select value={selectedBedId} onValueChange={setSelectedBedId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a bed..." />
+                </SelectTrigger>
+                <SelectContent className="bg-popover max-h-60">
+                  {availableBeds.map(bed => (
+                    <SelectItem key={bed.bedId} value={bed.bedId}>
+                      {bed.blockName} - Room {bed.roomNumber} - Bed {bed.bedNumber} (Floor {bed.floorNumber})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignRoomOpen(false)}>Cancel</Button>
+            <Button className="gradient-primary text-white" onClick={handleAssignRoom} disabled={!selectedBedId}>
+              Assign
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
