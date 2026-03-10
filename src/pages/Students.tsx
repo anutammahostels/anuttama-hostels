@@ -519,6 +519,79 @@ const Students = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={bulkDialogOpen} onOpenChange={(open) => { if (!bulkUploading) { setBulkDialogOpen(open); if (!open) setBulkResults(null); } }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{bulkUploading ? "Uploading Students..." : bulkResults ? "Upload Complete" : "Bulk Upload"}</DialogTitle>
+            <DialogDescription>
+              {bulkUploading ? "Please wait while students are being created." : bulkResults ? `${bulkResults.success.length} created, ${bulkResults.errors.length} failed.` : "Upload a CSV file to add multiple students."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {bulkUploading && (
+            <div className="py-4 space-y-3">
+              <Progress value={bulkProgress} className="h-2" />
+              <p className="text-sm text-muted-foreground text-center">{Math.round(bulkProgress)}% complete</p>
+            </div>
+          )}
+
+          {bulkResults && !bulkUploading && (
+            <div className="space-y-4 py-2">
+              {bulkResults.success.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    {bulkResults.success.length} students created successfully
+                  </div>
+                  <Button variant="outline" size="sm" onClick={downloadCredentials} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Credentials CSV
+                  </Button>
+                  <p className="text-xs text-muted-foreground">⚠️ Download credentials now. Passwords cannot be retrieved later.</p>
+                </div>
+              )}
+
+              {bulkResults.errors.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    {bulkResults.errors.length} rows failed
+                  </div>
+                  <div className="bg-muted rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                    {bulkResults.errors.map((err, i) => (
+                      <p key={i} className="text-xs">
+                        <span className="font-medium">Row {err.row}</span> ({err.name}): {err.error}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!bulkUploading && !bulkResults && (
+            <div className="py-4 space-y-3">
+              <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full">
+                <Download className="h-4 w-4 mr-2" />
+                Download CSV Template
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Required columns: <code className="bg-muted px-1 rounded">full_name</code>, <code className="bg-muted px-1 rounded">email</code>. Optional: phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            {!bulkUploading && (
+              <Button onClick={() => { setBulkDialogOpen(false); setBulkResults(null); }}>
+                Done
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
