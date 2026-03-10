@@ -24,6 +24,7 @@ import Billing from "./pages/Billing";
 import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
 import DemoPayments from "./pages/DemoPayments";
+import Complaints from "./pages/Complaints";
 import NotFound from "./pages/NotFound";
 
 // Student pages
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/dashboard/mess" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><MessManagement /></ProtectedRoute>} />
             <Route path="/dashboard/billing" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Billing /></ProtectedRoute>} />
             <Route path="/dashboard/maintenance" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Maintenance /></ProtectedRoute>} />
+            <Route path="/dashboard/complaints" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Complaints /></ProtectedRoute>} />
             <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><DemoPayments /></ProtectedRoute>} />
             <Route path="/dashboard/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Settings /></ProtectedRoute>} />
 
