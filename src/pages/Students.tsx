@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, MoreVertical, Download, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle } from "lucide-react";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { Progress } from "@/components/ui/progress";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,10 +23,106 @@ const Students = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [bulkResults, setBulkResults] = useState<{ success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { students, stats, isLoading, error } = useStudents();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    return lines.slice(1).map(line => {
+      const values = line.split(",").map(v => v.trim());
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => { obj[h] = values[i] || ""; });
+      return obj;
+    });
+  };
+
+  const downloadTemplate = () => {
+    const csv = "full_name,email,phone,roll_number,course,department,year,date_of_birth,blood_group,emergency_contact\nRahul Sharma,rahul@example.com,+919876543210,CS2026001,B.Tech CSE,Computer Science,1,2005-01-15,A+,+919876543211";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "students_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const text = await file.text();
+    const rows = parseCSV(text);
+    
+    if (rows.length === 0) {
+      toast({ title: "Invalid CSV", description: "No data rows found. Please check the file format.", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setBulkDialogOpen(true);
+    setBulkUploading(true);
+    setBulkProgress(0);
+    const results: { success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } = { success: [], errors: [] };
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const formData = {
+        full_name: row.full_name || row.name || "",
+        email: row.email || "",
+        phone: row.phone || "",
+        roll_number: row.roll_number || "",
+        course: row.course || "",
+        department: row.department || "",
+        year: row.year || "",
+        date_of_birth: row.date_of_birth || "",
+        blood_group: row.blood_group || "",
+        emergency_contact: row.emergency_contact || "",
+      };
+
+      if (!formData.full_name || !formData.email) {
+        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Name and email are required" });
+        setBulkProgress(((i + 1) / rows.length) * 100);
+        continue;
+      }
+
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: formData });
+        if (fnError) throw fnError;
+        if (data?.error) throw new Error(data.error);
+        results.success.push({ email: formData.email, password: data.tempPassword, name: formData.full_name });
+      } catch (err: any) {
+        results.errors.push({ row: i + 2, name: formData.full_name, error: err.message || "Failed" });
+      }
+      setBulkProgress(((i + 1) / rows.length) * 100);
+    }
+
+    setBulkResults(results);
+    setBulkUploading(false);
+    queryClient.invalidateQueries({ queryKey: ["students"] });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const downloadCredentials = () => {
+    if (!bulkResults) return;
+    const csv = "name,email,temporary_password\n" + bulkResults.success.map(s => `${s.name},${s.email},${s.password}`).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "student_credentials.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Form state
   const [form, setForm] = useState({
@@ -134,9 +231,16 @@ const Students = () => {
             <p className="text-muted-foreground">Manage student profiles and allocations</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleBulkUpload}
+            />
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Upload
             </Button>
             <Button className="gradient-primary text-white" onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -413,6 +517,79 @@ const Students = () => {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={bulkDialogOpen} onOpenChange={(open) => { if (!bulkUploading) { setBulkDialogOpen(open); if (!open) setBulkResults(null); } }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{bulkUploading ? "Uploading Students..." : bulkResults ? "Upload Complete" : "Bulk Upload"}</DialogTitle>
+            <DialogDescription>
+              {bulkUploading ? "Please wait while students are being created." : bulkResults ? `${bulkResults.success.length} created, ${bulkResults.errors.length} failed.` : "Upload a CSV file to add multiple students."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {bulkUploading && (
+            <div className="py-4 space-y-3">
+              <Progress value={bulkProgress} className="h-2" />
+              <p className="text-sm text-muted-foreground text-center">{Math.round(bulkProgress)}% complete</p>
+            </div>
+          )}
+
+          {bulkResults && !bulkUploading && (
+            <div className="space-y-4 py-2">
+              {bulkResults.success.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    {bulkResults.success.length} students created successfully
+                  </div>
+                  <Button variant="outline" size="sm" onClick={downloadCredentials} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Credentials CSV
+                  </Button>
+                  <p className="text-xs text-muted-foreground">⚠️ Download credentials now. Passwords cannot be retrieved later.</p>
+                </div>
+              )}
+
+              {bulkResults.errors.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    {bulkResults.errors.length} rows failed
+                  </div>
+                  <div className="bg-muted rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                    {bulkResults.errors.map((err, i) => (
+                      <p key={i} className="text-xs">
+                        <span className="font-medium">Row {err.row}</span> ({err.name}): {err.error}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!bulkUploading && !bulkResults && (
+            <div className="py-4 space-y-3">
+              <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full">
+                <Download className="h-4 w-4 mr-2" />
+                Download CSV Template
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Required columns: <code className="bg-muted px-1 rounded">full_name</code>, <code className="bg-muted px-1 rounded">email</code>. Optional: phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            {!bulkUploading && (
+              <Button onClick={() => { setBulkDialogOpen(false); setBulkResults(null); }}>
+                Done
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
