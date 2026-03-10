@@ -358,11 +358,6 @@ const FeaturesPage = () => {
                     Start Free Trial <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link to="/pricing">
-                  <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                    View Pricing
-                  </Button>
-                </Link>
               </div>
             </div>
           </div>
