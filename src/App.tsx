@@ -11,7 +11,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Solutions from "./pages/Solutions";
 import FeaturesPage from "./pages/FeaturesPage";
-import Pricing from "./pages/Pricing";
+
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
