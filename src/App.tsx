@@ -110,6 +110,14 @@ const App = () => (
               }
             />
             <Route
+              path="/dashboard/payments"
+              element={
+                <ProtectedRoute>
+                  <DemoPayments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/dashboard/settings"
               element={
                 <ProtectedRoute>
