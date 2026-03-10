@@ -23,6 +23,7 @@ import MessManagement from "./pages/MessManagement";
 import Billing from "./pages/Billing";
 import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
+import DemoPayments from "./pages/DemoPayments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Maintenance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/payments"
+              element={
+                <ProtectedRoute>
+                  <DemoPayments />
                 </ProtectedRoute>
               }
             />
