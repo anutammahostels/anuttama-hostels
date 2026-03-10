@@ -67,7 +67,7 @@ const App = () => (
             <Route path="/dashboard/billing" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Billing /></ProtectedRoute>} />
             <Route path="/dashboard/maintenance" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Maintenance /></ProtectedRoute>} />
             <Route path="/dashboard/complaints" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Complaints /></ProtectedRoute>} />
-            <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><DemoPayments /></ProtectedRoute>} />
+            
             <Route path="/dashboard/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><Settings /></ProtectedRoute>} />
 
             {/* Student Dashboard */}

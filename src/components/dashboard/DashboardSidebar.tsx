@@ -7,7 +7,7 @@ import {
   QrCode,
   UtensilsCrossed,
   Receipt,
-  IndianRupee,
+  
   Wrench,
   MessageSquareWarning,
   Settings,
