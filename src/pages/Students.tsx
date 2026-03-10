@@ -231,9 +231,16 @@ const Students = () => {
             <p className="text-muted-foreground">Manage student profiles and allocations</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleBulkUpload}
+            />
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Upload
             </Button>
             <Button className="gradient-primary text-white" onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
