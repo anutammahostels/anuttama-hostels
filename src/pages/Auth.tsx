@@ -66,7 +66,7 @@ export default function Auth() {
       toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? 'Invalid email or password.' : error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Welcome back!', description: 'You have successfully signed in.' });
-      navigate('/dashboard');
+      // Role-based redirect will be handled by the useEffect above
     }
   };
 

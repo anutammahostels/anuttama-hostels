@@ -32,8 +32,9 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
   // If specific roles are required, check if user has one of them
   if (allowedRoles && allowedRoles.length > 0 && role) {
     if (!allowedRoles.includes(role)) {
-      // Redirect to dashboard with access denied message
-      return <Navigate to="/dashboard" replace />;
+      // Redirect students to student dashboard, others to admin dashboard
+      const redirectTo = role === 'student' ? '/student' : '/dashboard';
+      return <Navigate to={redirectTo} replace />;
     }
   }
 
