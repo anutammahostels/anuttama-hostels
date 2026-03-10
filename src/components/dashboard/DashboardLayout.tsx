@@ -16,7 +16,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       
       <div className={cn(
         "transition-all duration-300",
-        "lg:ml-20" // Default collapsed on desktop
+        "lg:ml-52"
       )}>
         <DashboardHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
         
