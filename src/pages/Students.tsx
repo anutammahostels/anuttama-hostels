@@ -4,15 +4,83 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Filter, MoreVertical, Download, Users, UserCheck, UserX, Clock, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Filter, MoreVertical, Download, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2 } from "lucide-react";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
   const { students, stats, isLoading, error } = useStudents();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Form state
+  const [form, setForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    roll_number: "",
+    course: "",
+    department: "",
+    year: "",
+    date_of_birth: "",
+    blood_group: "",
+    emergency_contact: "",
+  });
+
+  const resetForm = () => {
+    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "" });
+    setCreatedCredentials(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.full_name.trim() || !form.email.trim()) {
+      toast({ title: "Validation Error", description: "Name and email are required.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("create-student", {
+        body: form,
+      });
+
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+
+      setCreatedCredentials({ email: form.email, password: data.tempPassword });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast({ title: "Student Added", description: `${form.full_name} has been registered successfully.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to create student", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    resetForm();
+  };
 
   // Filter students based on search
   const filteredStudents = students.filter(student => {
@@ -70,7 +138,7 @@ const Students = () => {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button className="gradient-primary text-white">
+            <Button className="gradient-primary text-white" onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Student
             </Button>
@@ -78,17 +146,17 @@ const Students = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {statsData.map((stat) => (
             <Card key={stat.label} className="border-border/50">
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
-                    <stat.icon className="h-5 w-5" />
+                    <stat.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
                   </div>
                 </div>
               </CardContent>
@@ -96,118 +164,257 @@ const Students = () => {
           ))}
         </div>
 
-        {/* Search and Filters */}
+        {/* Search */}
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or roll number..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <Input placeholder="Search by name or roll number..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              <Button variant="outline">
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" /> Filters
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Students Table */}
+        {/* Students Table / Cards */}
         <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>All Students</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">All Students</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               {isLoading ? "Loading..." : `${filteredStudents.length} students found`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : filteredStudents.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-12 px-4">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No students found</h3>
-                <p className="text-muted-foreground mb-4">
+                <p className="text-muted-foreground mb-4 text-sm">
                   {searchQuery ? "Try adjusting your search" : "Add your first student to get started"}
                 </p>
-                <Button className="gradient-primary text-white">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Student
+                <Button className="gradient-primary text-white" onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Student
                 </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Room</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={student.profile?.avatar_url || ""} />
-                              <AvatarFallback className="bg-primary/10 text-primary">
-                                {student.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
-                              <p className="text-sm text-muted-foreground">{student.roll_number || "No Roll #"}</p>
-                            </div>
+              <>
+                {/* Mobile cards */}
+                <div className="sm:hidden space-y-2 p-3">
+                  {filteredStudents.map((student) => (
+                    <Card key={student.id} className="border-border/50">
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={student.profile?.avatar_url || ""} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {student.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm truncate">{student.profile?.full_name || "Unknown"}</p>
+                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "-"}</p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">{getRoomDisplay(student)}</p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">{student.course || "-"}</p>
-                          <p className="text-xs text-muted-foreground">{student.year ? `Year ${student.year}` : ""}</p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className={getStatusColor(student.status)}>
+                          <Badge variant="secondary" className={`${getStatusColor(student.status)} text-[10px]`}>
                             {student.status || "unknown"}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover">
-                              <DropdownMenuItem>View Profile</DropdownMenuItem>
-                              <DropdownMenuItem>Edit Details</DropdownMenuItem>
-                              <DropdownMenuItem>View Payments</DropdownMenuItem>
-                              <DropdownMenuItem>Generate Gate Pass</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">Check Out</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">Room: {getRoomDisplay(student)}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Room</TableHead>
+                        <TableHead>Course</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredStudents.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={student.profile?.avatar_url || ""} />
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {student.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
+                                <p className="text-sm text-muted-foreground">{student.roll_number || "No Roll #"}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell><p className="text-sm">{getRoomDisplay(student)}</p></TableCell>
+                          <TableCell>
+                            <p className="text-sm">{student.course || "-"}</p>
+                            <p className="text-xs text-muted-foreground">{student.year ? `Year ${student.year}` : ""}</p>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className={getStatusColor(student.status)}>
+                              {student.status || "unknown"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-popover">
+                                <DropdownMenuItem>View Profile</DropdownMenuItem>
+                                <DropdownMenuItem>Edit Details</DropdownMenuItem>
+                                <DropdownMenuItem>View Payments</DropdownMenuItem>
+                                <DropdownMenuItem>Generate Gate Pass</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive">Check Out</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Student Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          {!createdCredentials ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Add New Student</DialogTitle>
+                <DialogDescription>Fill in the student details. A login account will be created automatically.</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs font-semibold">Full Name *</Label>
+                    <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Email *</Label>
+                    <Input type="email" placeholder="student@email.com" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Phone</Label>
+                    <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Roll Number</Label>
+                    <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Course</Label>
+                    <Input placeholder="B.Tech CSE" value={form.course} onChange={(e) => setForm(f => ({ ...f, course: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Department</Label>
+                    <Input placeholder="Computer Science" value={form.department} onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Year</Label>
+                    <Select value={form.year} onValueChange={(v) => setForm(f => ({ ...f, year: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1st Year</SelectItem>
+                        <SelectItem value="2">2nd Year</SelectItem>
+                        <SelectItem value="3">3rd Year</SelectItem>
+                        <SelectItem value="4">4th Year</SelectItem>
+                        <SelectItem value="5">5th Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Date of Birth</Label>
+                    <Input type="date" value={form.date_of_birth} onChange={(e) => setForm(f => ({ ...f, date_of_birth: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Blood Group</Label>
+                    <Select value={form.blood_group} onValueChange={(v) => setForm(f => ({ ...f, blood_group: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => (
+                          <SelectItem key={bg} value={bg}>{bg}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Emergency Contact</Label>
+                    <Input placeholder="+91 9876543210" value={form.emergency_contact} onChange={(e) => setForm(f => ({ ...f, emergency_contact: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={handleCloseDialog}>Cancel</Button>
+                <Button className="gradient-primary text-white" onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</> : <><Plus className="h-4 w-4 mr-2" /> Add Student</>}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" /> Student Created!
+                </DialogTitle>
+                <DialogDescription>Share these login credentials with the student. The password cannot be retrieved later.</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 py-4">
+                <div className="bg-muted rounded-lg p-4 space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Email</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm font-mono bg-background rounded px-2 py-1">{createdCredentials.email}</code>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCopy(createdCredentials.email, "email")}>
+                        {copiedField === "email" ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Temporary Password</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm font-mono bg-background rounded px-2 py-1">{createdCredentials.password}</code>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCopy(createdCredentials.password, "password")}>
+                        {copiedField === "password" ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">⚠️ Make sure to copy the password now. It won't be shown again.</p>
+              </div>
+
+              <DialogFooter>
+                <Button className="gradient-primary text-white w-full" onClick={handleCloseDialog}>Done</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
