@@ -23,7 +23,7 @@ import MessManagement from "./pages/MessManagement";
 import Billing from "./pages/Billing";
 import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
-import DemoPayments from "./pages/DemoPayments";
+
 import Complaints from "./pages/Complaints";
 import NotFound from "./pages/NotFound";
 
