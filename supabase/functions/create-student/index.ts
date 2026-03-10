@@ -32,7 +32,6 @@ serve(async (req) => {
     const callingUserId = callingUser.id;
 
     // Check admin role
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
       .select("role")
