@@ -18,7 +18,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("authorization")!;
 
     // Verify the calling user is admin
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { authorization: authHeader } },
     });
     const { data: { user: callingUser }, error: authError } = await userClient.auth.getUser();
