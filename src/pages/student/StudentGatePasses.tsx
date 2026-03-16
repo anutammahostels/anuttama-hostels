@@ -170,6 +170,6 @@ export default function StudentGatePasses() {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

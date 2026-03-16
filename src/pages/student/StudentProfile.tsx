@@ -164,6 +164,6 @@ export default function StudentProfile() {
           </Card>
         )}
       </div>
-    </StudentLayout>
+    </>
   );
 }

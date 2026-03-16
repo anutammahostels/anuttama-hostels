@@ -157,6 +157,6 @@ export default function StudentMaintenance() {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

@@ -81,6 +81,6 @@ export default function StudentInvoices() {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

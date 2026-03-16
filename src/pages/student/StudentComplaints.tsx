@@ -157,6 +157,6 @@ export default function StudentComplaints() {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

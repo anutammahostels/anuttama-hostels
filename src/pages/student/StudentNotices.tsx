@@ -52,6 +52,6 @@ export default function StudentNotices() {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

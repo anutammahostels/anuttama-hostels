@@ -248,6 +248,6 @@ export default function StudentDashboard() {
           </Card>
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

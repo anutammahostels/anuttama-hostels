@@ -129,6 +129,6 @@ export default function StudentMess() {
           </div>
         )}
       </div>
-    </StudentLayout>
+    </>
   );
 }
