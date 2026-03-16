@@ -4,21 +4,13 @@ import {
   LayoutDashboard,
   Building2,
   Users,
-  BedDouble,
-  QrCode,
-  UtensilsCrossed,
-  Receipt,
-  Wrench,
   MessageSquareWarning,
   Settings,
-  Home,
   X,
   LogOut,
-  Bell,
-  UserCog,
   Megaphone,
-  ClipboardList,
-  KeyRound,
+  BarChart3,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,38 +35,27 @@ const menuSections: MenuSection[] = [
     title: "Overview",
     items: [
       { icon: LayoutDashboard, label: "Dashboard", path: "/superadmin" },
-      { icon: UserCog, label: "User Management", path: "/superadmin/users" },
+      { icon: Landmark, label: "Organizations", path: "/superadmin/organizations" },
     ],
   },
   {
-    title: "Property Management",
+    title: "Hostel Management",
     items: [
       { icon: Building2, label: "Properties", path: "/superadmin/properties" },
-      { icon: BedDouble, label: "Rooms & Beds", path: "/superadmin/rooms" },
+      { icon: Users, label: "User Management", path: "/superadmin/users" },
     ],
   },
   {
-    title: "Student Management",
+    title: "Monitoring",
     items: [
-      { icon: Users, label: "Students", path: "/superadmin/students" },
-      { icon: ClipboardList, label: "Attendance", path: "/superadmin/attendance" },
-      { icon: QrCode, label: "Gate Passes", path: "/superadmin/passes" },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      { icon: UtensilsCrossed, label: "Mess Management", path: "/superadmin/mess" },
-      { icon: Receipt, label: "Billing & Invoices", path: "/superadmin/billing" },
-      { icon: Wrench, label: "Maintenance", path: "/superadmin/maintenance" },
       { icon: MessageSquareWarning, label: "Complaints", path: "/superadmin/complaints" },
       { icon: Megaphone, label: "Notices", path: "/superadmin/notices" },
+      { icon: BarChart3, label: "Reports", path: "/superadmin/reports" },
     ],
   },
   {
-    title: "Configuration",
+    title: "System",
     items: [
-      { icon: KeyRound, label: "Policy Engine", path: "/superadmin/policies" },
       { icon: Settings, label: "Settings", path: "/superadmin/settings" },
     ],
   },
