@@ -174,7 +174,7 @@ const SuperAdminNotices = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

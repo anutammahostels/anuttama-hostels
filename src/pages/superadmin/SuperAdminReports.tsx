@@ -183,7 +183,7 @@ const SuperAdminReports = () => {
           </Card>
         </div>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

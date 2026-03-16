@@ -162,7 +162,7 @@ const SuperAdminPolicies = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

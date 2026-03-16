@@ -112,7 +112,7 @@ const SuperAdminUsers = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

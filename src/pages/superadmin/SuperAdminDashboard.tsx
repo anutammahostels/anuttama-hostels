@@ -120,7 +120,7 @@ const SuperAdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

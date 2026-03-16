@@ -115,7 +115,7 @@ const SuperAdminAttendance = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

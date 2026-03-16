@@ -215,7 +215,7 @@ const SuperAdminOrganizations = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 
