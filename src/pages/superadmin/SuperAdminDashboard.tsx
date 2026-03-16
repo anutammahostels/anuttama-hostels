@@ -1,46 +1,49 @@
 import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Building2, Users, BedDouble, AlertTriangle, QrCode, Receipt, Wrench } from "lucide-react";
+import { Shield, Building2, Users, Landmark, AlertTriangle, Megaphone, BarChart3, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 const SuperAdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['superadmin-stats'],
     queryFn: async () => {
-      const [properties, students, rooms, gatePasses, invoices, complaints, maintenance, users] = await Promise.all([
-        supabase.from('properties').select('id', { count: 'exact', head: true }),
-        supabase.from('students').select('id', { count: 'exact', head: true }),
-        supabase.from('rooms').select('id', { count: 'exact', head: true }),
-        supabase.from('gate_passes').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('complaints').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+      const [organizations, properties, users, complaints] = await Promise.all([
+        supabase.from('organizations').select('id', { count: 'exact', head: true }),
+        supabase.from('properties').select('id, total_capacity, occupied_beds'),
         supabase.from('user_roles').select('id', { count: 'exact', head: true }),
+        supabase.from('complaints').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
+
+      const totalCapacity = properties.data?.reduce((s, p) => s + (p.total_capacity || 0), 0) || 0;
+      const totalOccupied = properties.data?.reduce((s, p) => s + (p.occupied_beds || 0), 0) || 0;
+
       return {
-        properties: properties.count || 0,
-        students: students.count || 0,
-        rooms: rooms.count || 0,
-        pendingPasses: gatePasses.count || 0,
-        pendingInvoices: invoices.count || 0,
-        pendingComplaints: complaints.count || 0,
-        openMaintenance: maintenance.count || 0,
+        organizations: organizations.count || 0,
+        properties: properties.data?.length || 0,
         totalUsers: users.count || 0,
+        pendingComplaints: complaints.count || 0,
+        occupancyRate: totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0,
       };
     },
   });
 
   const statCards = [
-    { label: "Total Properties", value: stats?.properties, icon: Building2, color: "from-blue-600 to-blue-400" },
-    { label: "Total Students", value: stats?.students, icon: Users, color: "from-emerald-600 to-emerald-400" },
-    { label: "Total Rooms", value: stats?.rooms, icon: BedDouble, color: "from-purple-600 to-purple-400" },
-    { label: "Total Users", value: stats?.totalUsers, icon: Shield, color: "from-orange-600 to-orange-400" },
-    { label: "Pending Passes", value: stats?.pendingPasses, icon: QrCode, color: "from-amber-600 to-amber-400" },
-    { label: "Pending Invoices", value: stats?.pendingInvoices, icon: Receipt, color: "from-rose-600 to-rose-400" },
+    { label: "Organizations", value: stats?.organizations, icon: Landmark, color: "from-blue-600 to-blue-400" },
+    { label: "Properties", value: stats?.properties, icon: Building2, color: "from-emerald-600 to-emerald-400" },
+    { label: "Total Users", value: stats?.totalUsers, icon: Users, color: "from-purple-600 to-purple-400" },
     { label: "Open Complaints", value: stats?.pendingComplaints, icon: AlertTriangle, color: "from-red-600 to-red-400" },
-    { label: "Open Maintenance", value: stats?.openMaintenance, icon: Wrench, color: "from-slate-600 to-slate-400" },
+  ];
+
+  const quickActions = [
+    { label: "Organizations", path: "/superadmin/organizations", icon: Landmark },
+    { label: "Properties", path: "/superadmin/properties", icon: Building2 },
+    { label: "User Management", path: "/superadmin/users", icon: Users },
+    { label: "Complaints", path: "/superadmin/complaints", icon: AlertTriangle },
+    { label: "Notices", path: "/superadmin/notices", icon: Megaphone },
+    { label: "Reports", path: "/superadmin/reports", icon: BarChart3 },
   ];
 
   return (
@@ -51,7 +54,7 @@ const SuperAdminDashboard = () => {
             <Shield className="h-7 w-7 text-red-500" />
             Super Admin Dashboard
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Complete system overview and management</p>
+          <p className="text-muted-foreground text-sm mt-1">Global overview across all hostels</p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -74,47 +77,48 @@ const SuperAdminDashboard = () => {
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">System Health</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {["Database", "Authentication", "Storage", "Edge Functions"].map((service) => (
-                <div key={service} className="flex items-center justify-between py-1.5">
-                  <span className="text-sm text-foreground">{service}</span>
-                  <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Operational
-                  </span>
+        {/* Occupancy overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold">Platform Occupancy</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-6 w-full" />
+            ) : (
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="w-full bg-secondary rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-3 rounded-full transition-all"
+                      style={{ width: `${stats?.occupancyRate || 0}%` }}
+                    />
+                  </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <span className="text-lg font-bold text-foreground min-w-[3rem] text-right">{stats?.occupancyRate}%</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2">
-              {[
-                { label: "Manage Users", path: "/superadmin/users", icon: Users },
-                { label: "View Properties", path: "/superadmin/properties", icon: Building2 },
-                { label: "View Complaints", path: "/superadmin/complaints", icon: AlertTriangle },
-                { label: "System Settings", path: "/superadmin/settings", icon: Shield },
-              ].map((action) => (
-                <a
-                  key={action.path}
-                  href={action.path}
-                  className="flex items-center gap-2 p-3 rounded-lg border border-border/50 hover:bg-secondary/50 transition-colors text-sm"
-                >
-                  <action.icon className="h-4 w-4 text-muted-foreground" />
-                  {action.label}
-                </a>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {quickActions.map((action) => (
+              <Link
+                key={action.path}
+                to={action.path}
+                className="flex items-center gap-2 p-3 rounded-lg border border-border/50 hover:bg-secondary/50 transition-colors text-sm"
+              >
+                <action.icon className="h-4 w-4 text-muted-foreground" />
+                {action.label}
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </SuperAdminLayout>
   );

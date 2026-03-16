@@ -41,8 +41,8 @@ import StudentProfile from "./pages/student/StudentProfile";
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
 import SuperAdminUsers from "./pages/superadmin/SuperAdminUsers";
 import SuperAdminNotices from "./pages/superadmin/SuperAdminNotices";
-import SuperAdminAttendance from "./pages/superadmin/SuperAdminAttendance";
-import SuperAdminPolicies from "./pages/superadmin/SuperAdminPolicies";
+import SuperAdminOrganizations from "./pages/superadmin/SuperAdminOrganizations";
+import SuperAdminReports from "./pages/superadmin/SuperAdminReports";
 import SuperAdminWrapper from "./pages/superadmin/SuperAdminWrapper";
 
 const queryClient = new QueryClient();
@@ -90,18 +90,12 @@ const App = () => (
 
             {/* Super Admin Routes */}
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminDashboard /></ProtectedRoute>} />
-            <Route path="/superadmin/users" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminUsers /></ProtectedRoute>} />
+            <Route path="/superadmin/organizations" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminOrganizations /></ProtectedRoute>} />
             <Route path="/superadmin/properties" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><Properties /></SuperAdminWrapper></ProtectedRoute>} />
-            <Route path="/superadmin/students" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><Students /></SuperAdminWrapper></ProtectedRoute>} />
-            <Route path="/superadmin/rooms" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><RoomAllocation /></SuperAdminWrapper></ProtectedRoute>} />
-            <Route path="/superadmin/passes" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><GatePasses /></SuperAdminWrapper></ProtectedRoute>} />
-            <Route path="/superadmin/mess" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><MessManagement /></SuperAdminWrapper></ProtectedRoute>} />
-            <Route path="/superadmin/billing" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><Billing /></SuperAdminWrapper></ProtectedRoute>} />
-            <Route path="/superadmin/maintenance" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><Maintenance /></SuperAdminWrapper></ProtectedRoute>} />
+            <Route path="/superadmin/users" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminUsers /></ProtectedRoute>} />
             <Route path="/superadmin/complaints" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><Complaints /></SuperAdminWrapper></ProtectedRoute>} />
             <Route path="/superadmin/notices" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminNotices /></ProtectedRoute>} />
-            <Route path="/superadmin/attendance" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminAttendance /></ProtectedRoute>} />
-            <Route path="/superadmin/policies" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminPolicies /></ProtectedRoute>} />
+            <Route path="/superadmin/reports" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminReports /></ProtectedRoute>} />
             <Route path="/superadmin/settings" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminWrapper><Settings /></SuperAdminWrapper></ProtectedRoute>} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
