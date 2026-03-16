@@ -89,7 +89,7 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
               title={item.label}
             >
               <item.icon className={cn("h-4 w-4 flex-shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
-              {isMobile && <span className="text-sm font-medium">{item.label}</span>}
+              <span className="text-sm font-medium">{item.label}</span>
             </Link>
           );
         })}
