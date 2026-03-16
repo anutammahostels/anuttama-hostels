@@ -54,12 +54,10 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex-shrink-0 transition-transform group-hover:scale-105">
             <Home className="h-4 w-4 text-white" />
           </div>
-          {isMobile && (
-            <div className="flex flex-col">
-              <span className="font-bold text-sm text-white tracking-tight">Hostylia</span>
-              <span className="text-[9px] text-hostylia-slate -mt-0.5">Student Portal</span>
-            </div>
-          )}
+          <div className="flex flex-col">
+            <span className="font-bold text-sm text-white tracking-tight">Hostylia</span>
+            <span className="text-[9px] text-hostylia-slate -mt-0.5">Student Portal</span>
+          </div>
         </Link>
         {isMobile && (
           <button onClick={() => onOpenChange(false)} className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors">
