@@ -1,4 +1,4 @@
-import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Building2, Users, BedDouble, AlertTriangle, TrendingUp, IndianRupee } from "lucide-react";
