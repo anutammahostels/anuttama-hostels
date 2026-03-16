@@ -43,7 +43,7 @@ export default function StudentMess() {
   const activeSub = subscriptions.find((s) => s.status === "active");
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Mess Management</h1>
