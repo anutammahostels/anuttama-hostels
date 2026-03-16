@@ -329,7 +329,7 @@ const Students = () => {
 
   if (error) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex items-center justify-center h-64">
           <p className="text-destructive">Error loading students: {error.message}</p>
         </div>
