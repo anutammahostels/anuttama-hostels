@@ -696,7 +696,7 @@ const Billing = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    </>
   );
 };
 

@@ -576,7 +576,7 @@ const RoomAllocation = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    </>
   );
 };
 

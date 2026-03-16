@@ -391,7 +391,7 @@ const GatePasses = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    </>
   );
 };
 
