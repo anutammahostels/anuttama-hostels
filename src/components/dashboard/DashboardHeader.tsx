@@ -32,13 +32,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
         <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3">
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative h-9 w-9 hover:bg-secondary rounded-lg">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-hostylia-forest opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-hostylia-forest"></span>
-            </span>
-          </Button>
+          <NotificationsDropdown />
 
           {/* Profile */}
           <button className="flex items-center gap-2 p-1 md:p-1.5 rounded-lg hover:bg-secondary transition-all group">
