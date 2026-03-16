@@ -89,7 +89,7 @@ export default function StudentDashboard() {
   ];
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6">
         {/* Welcome */}
         <div>
