@@ -8,10 +8,8 @@ interface DashboardHeaderProps {
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const { profile } = useAuth();
-  const { property, isLoading } = useDashboard();
   
   const userInitial = profile?.full_name?.charAt(0) || profile?.email?.charAt(0) || 'U';
-  const propertyName = property?.name || 'Property';
 
   return (
     <header className="sticky top-0 z-30 h-14 md:h-16 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm">
