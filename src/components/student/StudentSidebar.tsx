@@ -115,7 +115,7 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
   return (
     <>
       {open && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-fade-in" onClick={() => onOpenChange(false)} />}
-      <aside className="fixed left-0 top-0 z-50 h-screen w-14 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col">
+      <aside className="fixed left-0 top-0 z-50 h-screen w-52 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col">
         <SidebarContent />
       </aside>
       <aside className={cn(
