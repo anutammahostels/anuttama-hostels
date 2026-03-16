@@ -603,7 +603,7 @@ const DemoPayments = () => {
           onComplete={(method) => handlePaymentComplete(selectedInvoice.id, method)}
         />
       )}
-    </DashboardLayout>
+    </>
   );
 };
 

@@ -242,6 +242,6 @@ export default function Complaints() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

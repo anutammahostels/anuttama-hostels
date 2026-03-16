@@ -280,7 +280,7 @@ const MessManagement = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    </>
   );
 };
 
