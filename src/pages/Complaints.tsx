@@ -99,7 +99,7 @@ export default function Complaints() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Complaint Management</h1>
