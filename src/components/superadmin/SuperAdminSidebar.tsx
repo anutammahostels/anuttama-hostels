@@ -16,7 +16,6 @@ import {
   LogOut,
   Bell,
   UserCog,
-  Eye,
   Megaphone,
   ClipboardList,
   KeyRound,
