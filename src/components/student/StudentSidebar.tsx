@@ -66,13 +66,11 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
         )}
       </div>
 
-      {isMobile && (
-        <div className="px-3 py-2">
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold shadow-sm bg-blue-600 text-white">
-            Student
-          </span>
-        </div>
-      )}
+      <div className="px-3 py-2">
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold shadow-sm bg-blue-600 text-white">
+          Student
+        </span>
+      </div>
 
       <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
         {menuItems.map((item) => {
