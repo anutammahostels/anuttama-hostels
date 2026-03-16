@@ -1,4 +1,4 @@
-import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Building2, Users, Landmark, AlertTriangle, Megaphone, BarChart3, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
