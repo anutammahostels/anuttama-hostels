@@ -1,4 +1,5 @@
 import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
+import { LayoutProvider } from "@/contexts/LayoutContext";
 
 interface SuperAdminWrapperProps {
   children: React.ReactNode;
@@ -9,7 +10,11 @@ interface SuperAdminWrapperProps {
  * by stripping their original layout and using SuperAdminLayout instead.
  */
 const SuperAdminWrapper = ({ children }: SuperAdminWrapperProps) => {
-  return <SuperAdminLayout>{children}</SuperAdminLayout>;
+  return (
+    <SuperAdminLayout>
+      <LayoutProvider>{children}</LayoutProvider>
+    </SuperAdminLayout>
+  );
 };
 
 export default SuperAdminWrapper;

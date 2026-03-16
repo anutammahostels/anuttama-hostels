@@ -2,13 +2,20 @@ import { useState } from "react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { cn } from "@/lib/utils";
+import { useHasExternalLayout } from "@/contexts/LayoutContext";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const hasExternalLayout = useHasExternalLayout();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // If already inside SuperAdminLayout, skip rendering this layout
+  if (hasExternalLayout) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
