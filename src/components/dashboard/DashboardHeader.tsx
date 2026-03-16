@@ -35,18 +35,6 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
 
         {/* Right section */}
         <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3">
-          {/* Current Property Selector */}
-          {isLoading ? (
-            <Skeleton className="h-8 w-24 rounded-lg hidden sm:block" />
-          ) : (
-            <button className="hidden sm:flex items-center gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/50 transition-all group">
-              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              <span className="text-xs md:text-sm font-medium text-foreground truncate max-w-[80px] md:max-w-[120px]">
-                {propertyName}
-              </span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            </button>
-          )}
 
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative h-9 w-9 hover:bg-secondary rounded-lg">

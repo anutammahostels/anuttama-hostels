@@ -136,17 +136,9 @@ const Properties = () => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm text-muted-foreground">Occupancy</span>
-                      <span className="text-sm font-semibold">{property.occupancy}%</span>
-                    </div>
-                    <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full gradient-primary rounded-full"
-                        style={{ width: `${property.occupancy}%` }}
-                      />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Occupancy</span>
+                    <span className="text-sm font-semibold">{property.occupancy}%</span>
                   </div>
                   <Badge
                     variant={property.status === "active" ? "default" : "secondary"}
