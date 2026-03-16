@@ -1,10 +1,6 @@
-import { Bell, Search, Menu, Sun, Moon, ChevronDown } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
-import { useDashboard } from "@/hooks/useDashboard";
-import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -12,10 +8,8 @@ interface DashboardHeaderProps {
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const { profile } = useAuth();
-  const { property, isLoading } = useDashboard();
   
   const userInitial = profile?.full_name?.charAt(0) || profile?.email?.charAt(0) || 'U';
-  const propertyName = property?.name || 'Property';
 
   return (
     <header className="sticky top-0 z-30 h-14 md:h-16 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm">
@@ -31,35 +25,10 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             <Menu className="h-5 w-5" />
           </Button>
           
-          {/* Search - Hidden on mobile */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="w-48 lg:w-72 pl-9 h-9 bg-secondary/70 border-border/50 focus:border-primary focus:bg-background transition-all rounded-lg text-sm"
-            />
-          </div>
-
-          {/* Mobile Search Icon */}
-          <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden hover:bg-secondary">
-            <Search className="h-4 w-4" />
-          </Button>
         </div>
 
         {/* Right section */}
         <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3">
-          {/* Current Property Selector */}
-          {isLoading ? (
-            <Skeleton className="h-8 w-24 rounded-lg hidden sm:block" />
-          ) : (
-            <button className="hidden sm:flex items-center gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/50 transition-all group">
-              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              <span className="text-xs md:text-sm font-medium text-foreground truncate max-w-[80px] md:max-w-[120px]">
-                {propertyName}
-              </span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            </button>
-          )}
 
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative h-9 w-9 hover:bg-secondary rounded-lg">
