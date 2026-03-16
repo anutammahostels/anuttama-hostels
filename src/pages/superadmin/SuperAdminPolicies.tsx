@@ -1,4 +1,4 @@
-import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -86,7 +86,7 @@ const SuperAdminPolicies = () => {
   ) || [];
 
   return (
-    <SuperAdminLayout>
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
@@ -162,7 +162,7 @@ const SuperAdminPolicies = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

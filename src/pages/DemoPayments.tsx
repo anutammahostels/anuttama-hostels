@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -352,7 +352,7 @@ const DemoPayments = () => {
   ];
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -603,7 +603,7 @@ const DemoPayments = () => {
           onComplete={(method) => handlePaymentComplete(selectedInvoice.id, method)}
         />
       )}
-    </DashboardLayout>
+    </>
   );
 };
 

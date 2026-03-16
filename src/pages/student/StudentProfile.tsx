@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StudentLayout } from "@/components/student/StudentLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,7 @@ export default function StudentProfile() {
   };
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
@@ -164,6 +164,6 @@ export default function StudentProfile() {
           </Card>
         )}
       </div>
-    </StudentLayout>
+    </>
   );
 }

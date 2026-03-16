@@ -1,4 +1,4 @@
-import { StudentLayout } from "@/components/student/StudentLayout";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,7 +33,7 @@ export default function StudentInvoices() {
   const totalPaid = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total_amount, 0);
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">My Invoices</h1>
@@ -81,6 +81,6 @@ export default function StudentInvoices() {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

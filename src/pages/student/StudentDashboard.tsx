@@ -1,4 +1,4 @@
-import { StudentLayout } from "@/components/student/StudentLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,7 +89,7 @@ export default function StudentDashboard() {
   ];
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6">
         {/* Welcome */}
         <div>
@@ -248,6 +248,6 @@ export default function StudentDashboard() {
           </Card>
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

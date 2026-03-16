@@ -1,4 +1,4 @@
-import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +55,7 @@ const SuperAdminAttendance = () => {
   };
 
   return (
-    <SuperAdminLayout>
+    <>
       <div className="space-y-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -115,7 +115,7 @@ const SuperAdminAttendance = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

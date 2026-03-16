@@ -1,4 +1,4 @@
-import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Building2, Users, BedDouble, AlertTriangle, TrendingUp, IndianRupee } from "lucide-react";
@@ -72,7 +72,7 @@ const SuperAdminReports = () => {
   );
 
   return (
-    <SuperAdminLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
@@ -183,7 +183,7 @@ const SuperAdminReports = () => {
           </Card>
         </div>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

@@ -1,4 +1,4 @@
-import { StudentLayout } from "@/components/student/StudentLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,7 +43,7 @@ export default function StudentMess() {
   const activeSub = subscriptions.find((s) => s.status === "active");
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Mess Management</h1>
@@ -129,6 +129,6 @@ export default function StudentMess() {
           </div>
         )}
       </div>
-    </StudentLayout>
+    </>
   );
 }

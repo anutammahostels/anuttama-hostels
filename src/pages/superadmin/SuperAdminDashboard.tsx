@@ -1,4 +1,4 @@
-import { SuperAdminLayout } from "@/components/superadmin/SuperAdminLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Building2, Users, Landmark, AlertTriangle, Megaphone, BarChart3, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -47,7 +47,7 @@ const SuperAdminDashboard = () => {
   ];
 
   return (
-    <SuperAdminLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
@@ -120,7 +120,7 @@ const SuperAdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
-    </SuperAdminLayout>
+    </>
   );
 };
 

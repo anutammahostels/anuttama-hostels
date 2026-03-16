@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StudentLayout } from "@/components/student/StudentLayout";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export default function StudentComplaints() {
   };
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -157,6 +157,6 @@ export default function StudentComplaints() {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 }

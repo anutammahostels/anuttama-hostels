@@ -1,4 +1,4 @@
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { OccupancyChart } from "@/components/dashboard/OccupancyChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -32,7 +32,7 @@ const Dashboard = () => {
   const propertyName = property?.name || 'your property';
 
   return (
-    <DashboardLayout>
+    <>
       <div ref={containerRef} className="min-h-full">
         {/* Pull to refresh indicator - only on mobile */}
         {isMobile && (
@@ -94,7 +94,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 };
 
