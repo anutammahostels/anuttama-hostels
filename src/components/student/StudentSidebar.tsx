@@ -54,12 +54,10 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex-shrink-0 transition-transform group-hover:scale-105">
             <Home className="h-4 w-4 text-white" />
           </div>
-          {isMobile && (
-            <div className="flex flex-col">
-              <span className="font-bold text-sm text-white tracking-tight">Hostylia</span>
-              <span className="text-[9px] text-hostylia-slate -mt-0.5">Student Portal</span>
-            </div>
-          )}
+          <div className="flex flex-col">
+            <span className="font-bold text-sm text-white tracking-tight">Hostylia</span>
+            <span className="text-[9px] text-hostylia-slate -mt-0.5">Student Portal</span>
+          </div>
         </Link>
         {isMobile && (
           <button onClick={() => onOpenChange(false)} className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors">
@@ -68,13 +66,11 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
         )}
       </div>
 
-      {isMobile && (
-        <div className="px-3 py-2">
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold shadow-sm bg-blue-600 text-white">
-            Student
-          </span>
-        </div>
-      )}
+      <div className="px-3 py-2">
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold shadow-sm bg-blue-600 text-white">
+          Student
+        </span>
+      </div>
 
       <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
         {menuItems.map((item) => {
@@ -93,34 +89,25 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
               title={item.label}
             >
               <item.icon className={cn("h-4 w-4 flex-shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
-              {isMobile && <span className="text-sm font-medium">{item.label}</span>}
+              <span className="text-sm font-medium">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       <div className="p-2 border-t border-hostylia-navy-light/30">
-        <div className={cn("flex items-center gap-2 px-2 py-2 rounded-lg bg-hostylia-navy-light/30", isMobile ? "" : "justify-center")}>
+        <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-hostylia-navy-light/30">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 ring-2 ring-blue-500/30">
             <span className="text-white text-xs font-semibold uppercase">{userInitial}</span>
           </div>
-          {isMobile && (
-            <>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{userName}</p>
-                <p className="text-[10px] text-hostylia-slate truncate">Student</p>
-              </div>
-              <button onClick={handleSignOut} className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group" title="Sign out">
-                <LogOut className="h-4 w-4 text-hostylia-slate group-hover:text-white transition-colors" />
-              </button>
-            </>
-          )}
-        </div>
-        {!isMobile && (
-          <button onClick={handleSignOut} className="w-full mt-1 p-2 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group flex items-center justify-center" title="Sign out">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-white truncate">{userName}</p>
+            <p className="text-[10px] text-hostylia-slate truncate">Student</p>
+          </div>
+          <button onClick={handleSignOut} className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group" title="Sign out">
             <LogOut className="h-4 w-4 text-hostylia-slate group-hover:text-white transition-colors" />
           </button>
-        )}
+        </div>
       </div>
     </>
   );
@@ -128,7 +115,7 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
   return (
     <>
       {open && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-fade-in" onClick={() => onOpenChange(false)} />}
-      <aside className="fixed left-0 top-0 z-50 h-screen w-14 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col">
+      <aside className="fixed left-0 top-0 z-50 h-screen w-52 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col">
         <SidebarContent />
       </aside>
       <aside className={cn(
