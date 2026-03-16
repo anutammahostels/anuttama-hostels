@@ -31,19 +31,6 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             <Menu className="h-5 w-5" />
           </Button>
           
-          {/* Search - Hidden on mobile */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="w-48 lg:w-72 pl-9 h-9 bg-secondary/70 border-border/50 focus:border-primary focus:bg-background transition-all rounded-lg text-sm"
-            />
-          </div>
-
-          {/* Mobile Search Icon */}
-          <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden hover:bg-secondary">
-            <Search className="h-4 w-4" />
-          </Button>
         </div>
 
         {/* Right section */}
