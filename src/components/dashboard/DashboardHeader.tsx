@@ -1,10 +1,6 @@
-import { Bell, Menu, ChevronDown } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 import { useAuth } from "@/hooks/useAuth";
-import { useDashboard } from "@/hooks/useDashboard";
-import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
