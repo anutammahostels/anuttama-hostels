@@ -1,4 +1,4 @@
-import { Bell, Search, Menu, Sun, Moon, ChevronDown } from "lucide-react";
+import { Bell, Menu, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
