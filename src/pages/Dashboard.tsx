@@ -32,7 +32,7 @@ const Dashboard = () => {
   const propertyName = property?.name || 'your property';
 
   return (
-    <DashboardLayout>
+    <>
       <div ref={containerRef} className="min-h-full">
         {/* Pull to refresh indicator - only on mobile */}
         {isMobile && (
