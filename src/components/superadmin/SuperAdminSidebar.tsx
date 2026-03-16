@@ -16,7 +16,6 @@ import {
   LogOut,
   Bell,
   UserCog,
-  Eye,
   Megaphone,
   ClipboardList,
   KeyRound,
@@ -48,30 +47,34 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: "Hostel Admin",
+    title: "Property Management",
     items: [
       { icon: Building2, label: "Properties", path: "/superadmin/properties" },
-      { icon: Users, label: "Students", path: "/superadmin/students" },
       { icon: BedDouble, label: "Rooms & Beds", path: "/superadmin/rooms" },
+    ],
+  },
+  {
+    title: "Student Management",
+    items: [
+      { icon: Users, label: "Students", path: "/superadmin/students" },
+      { icon: ClipboardList, label: "Attendance", path: "/superadmin/attendance" },
       { icon: QrCode, label: "Gate Passes", path: "/superadmin/passes" },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
       { icon: UtensilsCrossed, label: "Mess Management", path: "/superadmin/mess" },
       { icon: Receipt, label: "Billing & Invoices", path: "/superadmin/billing" },
       { icon: Wrench, label: "Maintenance", path: "/superadmin/maintenance" },
       { icon: MessageSquareWarning, label: "Complaints", path: "/superadmin/complaints" },
       { icon: Megaphone, label: "Notices", path: "/superadmin/notices" },
-      { icon: ClipboardList, label: "Attendance", path: "/superadmin/attendance" },
+    ],
+  },
+  {
+    title: "Configuration",
+    items: [
       { icon: KeyRound, label: "Policy Engine", path: "/superadmin/policies" },
-    ],
-  },
-  {
-    title: "Student View",
-    items: [
-      { icon: Eye, label: "Student Dashboard", path: "/superadmin/student-view" },
-    ],
-  },
-  {
-    title: "System",
-    items: [
       { icon: Settings, label: "Settings", path: "/superadmin/settings" },
     ],
   },
