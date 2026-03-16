@@ -40,6 +40,9 @@ import StudentProfile from "./pages/student/StudentProfile";
 // Super Admin pages
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
 import SuperAdminUsers from "./pages/superadmin/SuperAdminUsers";
+import SuperAdminNotices from "./pages/superadmin/SuperAdminNotices";
+import SuperAdminAttendance from "./pages/superadmin/SuperAdminAttendance";
+import SuperAdminPolicies from "./pages/superadmin/SuperAdminPolicies";
 import SuperAdminWrapper from "./pages/superadmin/SuperAdminWrapper";
 
 const queryClient = new QueryClient();
