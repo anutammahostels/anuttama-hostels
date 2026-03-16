@@ -53,7 +53,7 @@ export default function StudentProfile() {
   };
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
