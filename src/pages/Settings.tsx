@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,9 +26,135 @@ import {
   AlertTriangle,
   Wifi,
   Save,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useProperties } from "@/hooks/useProperties";
+import { usePolicySettings } from "@/hooks/usePolicySettings";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useMutation } from "@tanstack/react-query";
 
 const Settings = () => {
+  const { user } = useAuth();
+  const { properties, updateProperty } = useProperties();
+  const { toast } = useToast();
+
+  // Use first property as default
+  const property = properties[0];
+  const propertyId = property?.id;
+
+  const { settings, getSetting, bulkSavePolicies, isLoading: policiesLoading } = usePolicySettings(propertyId);
+
+  // Policy state
+  const [mobileAllowed, setMobileAllowed] = useState(true);
+  const [curfewMode, setCurfewMode] = useState("grace");
+  const [curfewTime, setCurfewTime] = useState("22:00");
+  const [visitorGenderRestriction, setVisitorGenderRestriction] = useState(true);
+  const [parentApprovalGatePass, setParentApprovalGatePass] = useState(true);
+  const [wifiMacRegistration, setWifiMacRegistration] = useState(false);
+
+  // Property state
+  const [propertyName, setPropertyName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [timezone, setTimezone] = useState("asia-kolkata");
+  const [address, setAddress] = useState("");
+
+  // Notification state
+  const [lateEntrySms, setLateEntrySms] = useState(true);
+  const [gatePassNotif, setGatePassNotif] = useState(true);
+  const [paymentReminders, setPaymentReminders] = useState(true);
+  const [maintenanceUpdates, setMaintenanceUpdates] = useState(true);
+
+  // Billing state
+  const [latePaymentGrace, setLatePaymentGrace] = useState("5");
+  const [dailyLateFee, setDailyLateFee] = useState("50");
+  const [electricityRate, setElectricityRate] = useState("8");
+  const [messRebate, setMessRebate] = useState("50");
+  const [autoGenerateInvoices, setAutoGenerateInvoices] = useState(true);
+  const [includeElectricity, setIncludeElectricity] = useState(true);
+
+  // Load existing settings
+  useEffect(() => {
+    if (settings.length > 0) {
+      const get = (key: string, fallback: any) => {
+        const val = getSetting(key);
+        return val !== undefined ? val : fallback;
+      };
+      setMobileAllowed(get("mobile_allowed", true) as boolean);
+      setCurfewMode(get("curfew_mode", "grace") as string);
+      setCurfewTime(get("curfew_time", "22:00") as string);
+      setVisitorGenderRestriction(get("visitor_gender_restriction", true) as boolean);
+      setParentApprovalGatePass(get("parent_approval_gate_pass", true) as boolean);
+      setWifiMacRegistration(get("wifi_mac_registration", false) as boolean);
+      setLateEntrySms(get("late_entry_sms", true) as boolean);
+      setGatePassNotif(get("gate_pass_notification", true) as boolean);
+      setPaymentReminders(get("payment_reminders", true) as boolean);
+      setMaintenanceUpdates(get("maintenance_updates", true) as boolean);
+      setLatePaymentGrace(String(get("late_payment_grace_days", 5)));
+      setDailyLateFee(String(get("daily_late_fee", 50)));
+      setElectricityRate(String(get("electricity_rate", 8)));
+      setMessRebate(String(get("mess_rebate_per_meal", 50)));
+      setAutoGenerateInvoices(get("auto_generate_invoices", true) as boolean);
+      setIncludeElectricity(get("include_electricity", true) as boolean);
+    }
+  }, [settings]);
+
+  // Load property info
+  useEffect(() => {
+    if (property) {
+      setPropertyName(property.name || "");
+      setAddress(property.address || "");
+    }
+  }, [property]);
+
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveAll = async () => {
+    if (!propertyId) {
+      toast({ title: "No Property", description: "Please create a property first.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save property info
+      await updateProperty.mutateAsync({
+        id: propertyId,
+        name: propertyName,
+        address,
+      });
+
+      // Save all policy settings
+      const allSettings = [
+        { property_id: propertyId, setting_key: "mobile_allowed", setting_value: mobileAllowed },
+        { property_id: propertyId, setting_key: "curfew_mode", setting_value: curfewMode },
+        { property_id: propertyId, setting_key: "curfew_time", setting_value: curfewTime },
+        { property_id: propertyId, setting_key: "visitor_gender_restriction", setting_value: visitorGenderRestriction },
+        { property_id: propertyId, setting_key: "parent_approval_gate_pass", setting_value: parentApprovalGatePass },
+        { property_id: propertyId, setting_key: "wifi_mac_registration", setting_value: wifiMacRegistration },
+        { property_id: propertyId, setting_key: "late_entry_sms", setting_value: lateEntrySms },
+        { property_id: propertyId, setting_key: "gate_pass_notification", setting_value: gatePassNotif },
+        { property_id: propertyId, setting_key: "payment_reminders", setting_value: paymentReminders },
+        { property_id: propertyId, setting_key: "maintenance_updates", setting_value: maintenanceUpdates },
+        { property_id: propertyId, setting_key: "late_payment_grace_days", setting_value: Number(latePaymentGrace) },
+        { property_id: propertyId, setting_key: "daily_late_fee", setting_value: Number(dailyLateFee) },
+        { property_id: propertyId, setting_key: "electricity_rate", setting_value: Number(electricityRate) },
+        { property_id: propertyId, setting_key: "mess_rebate_per_meal", setting_value: Number(messRebate) },
+        { property_id: propertyId, setting_key: "auto_generate_invoices", setting_value: autoGenerateInvoices },
+        { property_id: propertyId, setting_key: "include_electricity", setting_value: includeElectricity },
+      ];
+
+      await bulkSavePolicies.mutateAsync(allSettings);
+      toast({ title: "Settings Saved", description: "All changes have been saved successfully." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -39,8 +166,8 @@ const Settings = () => {
               Configure your hostel policies and system preferences
             </p>
           </div>
-          <Button className="gradient-primary text-white">
-            <Save className="h-4 w-4 mr-2" />
+          <Button className="gradient-primary text-white" onClick={handleSaveAll} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Save All Changes
           </Button>
         </div>
@@ -55,8 +182,7 @@ const Settings = () => {
             </TabsTrigger>
             <TabsTrigger value="property" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Property</span>
-              <span className="sm:hidden">Property</span>
+              Property
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
@@ -85,11 +211,9 @@ const Settings = () => {
                 </div>
                 <CardDescription>
                   Configure rules that control UI and logic based on your facility type.
-                  These settings apply globally to all students.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Mobile Policy */}
                 <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-4">
                     <div className="p-2 rounded-lg bg-primary/10">
@@ -98,14 +222,13 @@ const Settings = () => {
                     <div>
                       <Label className="text-base font-medium">Mobile Phones Allowed</Label>
                       <p className="text-sm text-muted-foreground">
-                        If disabled, enables "Gadget Surrender Log" module. If enabled, shows "Wi-Fi MAC Registration"
+                        If disabled, enables "Gadget Surrender Log" module
                       </p>
                     </div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={mobileAllowed} onCheckedChange={setMobileAllowed} />
                 </div>
 
-                {/* Curfew Mode */}
                 <div className="p-4 rounded-lg bg-muted/50 space-y-4">
                   <div className="flex items-center gap-4">
                     <div className="p-2 rounded-lg bg-primary/10">
@@ -113,43 +236,25 @@ const Settings = () => {
                     </div>
                     <div className="flex-1">
                       <Label className="text-base font-medium">Curfew Mode</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Determines actions when students arrive late
-                      </p>
+                      <p className="text-sm text-muted-foreground">Determines actions when students arrive late</p>
                     </div>
                   </div>
-                  <Select defaultValue="grace">
+                  <Select value={curfewMode} onValueChange={setCurfewMode}>
                     <SelectTrigger className="w-full sm:w-[300px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="strict">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="destructive">Strict</Badge>
-                          <span>Auto SMS to parents + Log entry</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="grace">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-yellow-500/20 text-yellow-600">Grace</Badge>
-                          <span>15 min grace period, then SMS</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="open">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">Open</Badge>
-                          <span>Log entry only, no alerts</span>
-                        </div>
-                      </SelectItem>
+                      <SelectItem value="strict">Strict — Auto SMS + Log entry</SelectItem>
+                      <SelectItem value="grace">Grace — 15 min grace, then SMS</SelectItem>
+                      <SelectItem value="open">Open — Log entry only</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="flex items-center gap-4">
                     <Label>Curfew Time</Label>
-                    <Input type="time" defaultValue="22:00" className="w-32" />
+                    <Input type="time" value={curfewTime} onChange={(e) => setCurfewTime(e.target.value)} className="w-32" />
                   </div>
                 </div>
 
-                {/* Visitor Gender Restriction */}
                 <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-4">
                     <div className="p-2 rounded-lg bg-primary/10">
@@ -157,15 +262,12 @@ const Settings = () => {
                     </div>
                     <div>
                       <Label className="text-base font-medium">Visitor Gender Restriction</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Prevents booking male visitors into female blocks and vice versa
-                      </p>
+                      <p className="text-sm text-muted-foreground">Prevents booking male visitors into female blocks</p>
                     </div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={visitorGenderRestriction} onCheckedChange={setVisitorGenderRestriction} />
                 </div>
 
-                {/* Parent Approval for Gate Pass */}
                 <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-4">
                     <div className="p-2 rounded-lg bg-primary/10">
@@ -173,15 +275,12 @@ const Settings = () => {
                     </div>
                     <div>
                       <Label className="text-base font-medium">Require Parent Approval for Gate Pass</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Students must receive OTP approval from parents for gate passes
-                      </p>
+                      <p className="text-sm text-muted-foreground">Students must receive approval from parents</p>
                     </div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={parentApprovalGatePass} onCheckedChange={setParentApprovalGatePass} />
                 </div>
 
-                {/* Wi-Fi MAC Registration */}
                 <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-4">
                     <div className="p-2 rounded-lg bg-primary/10">
@@ -189,12 +288,10 @@ const Settings = () => {
                     </div>
                     <div>
                       <Label className="text-base font-medium">Wi-Fi MAC Registration</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Require students to register device MAC addresses for Wi-Fi access
-                      </p>
+                      <p className="text-sm text-muted-foreground">Require students to register device MAC addresses</p>
                     </div>
                   </div>
-                  <Switch />
+                  <Switch checked={wifiMacRegistration} onCheckedChange={setWifiMacRegistration} />
                 </div>
               </CardContent>
             </Card>
@@ -211,19 +308,11 @@ const Settings = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Property Name</Label>
-                    <Input defaultValue="Sunrise Student Hostel" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Contact Email</Label>
-                    <Input type="email" defaultValue="admin@sunrisehostel.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Contact Phone</Label>
-                    <Input defaultValue="+91 98765 43210" />
+                    <Input value={propertyName} onChange={(e) => setPropertyName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>Timezone</Label>
-                    <Select defaultValue="asia-kolkata">
+                    <Select value={timezone} onValueChange={setTimezone}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -237,7 +326,7 @@ const Settings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Address</Label>
-                  <Input defaultValue="123 University Road, Campus Area, City - 500001" />
+                  <Input value={address} onChange={(e) => setAddress(e.target.value)} />
                 </div>
               </CardContent>
             </Card>
@@ -256,7 +345,7 @@ const Settings = () => {
                     <Label>Late Entry SMS to Parents</Label>
                     <p className="text-sm text-muted-foreground">Send SMS when student enters after curfew</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={lateEntrySms} onCheckedChange={setLateEntrySms} />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between py-3">
@@ -264,7 +353,7 @@ const Settings = () => {
                     <Label>Gate Pass Approval Notification</Label>
                     <p className="text-sm text-muted-foreground">Notify parents when gate pass is requested</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={gatePassNotif} onCheckedChange={setGatePassNotif} />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between py-3">
@@ -272,7 +361,7 @@ const Settings = () => {
                     <Label>Payment Due Reminders</Label>
                     <p className="text-sm text-muted-foreground">Send reminders before due date</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={paymentReminders} onCheckedChange={setPaymentReminders} />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between py-3">
@@ -280,7 +369,7 @@ const Settings = () => {
                     <Label>Maintenance Ticket Updates</Label>
                     <p className="text-sm text-muted-foreground">Notify students on ticket status changes</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={maintenanceUpdates} onCheckedChange={setMaintenanceUpdates} />
                 </div>
               </CardContent>
             </Card>
@@ -311,7 +400,6 @@ const Settings = () => {
                         </div>
                         <p className="text-sm text-muted-foreground">{item.desc}</p>
                       </div>
-                      <Button variant="outline" size="sm">Configure</Button>
                     </div>
                   ))}
                 </div>
@@ -330,19 +418,19 @@ const Settings = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Late Payment Grace Period (Days)</Label>
-                    <Input type="number" defaultValue="5" />
+                    <Input type="number" value={latePaymentGrace} onChange={(e) => setLatePaymentGrace(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>Daily Late Fee (₹)</Label>
-                    <Input type="number" defaultValue="50" />
+                    <Input type="number" value={dailyLateFee} onChange={(e) => setDailyLateFee(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>Electricity Rate (₹/kWh)</Label>
-                    <Input type="number" defaultValue="8" />
+                    <Input type="number" value={electricityRate} onChange={(e) => setElectricityRate(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>Mess Rebate per Meal (₹)</Label>
-                    <Input type="number" defaultValue="50" />
+                    <Input type="number" value={messRebate} onChange={(e) => setMessRebate(e.target.value)} />
                   </div>
                 </div>
                 <Separator />
@@ -351,14 +439,14 @@ const Settings = () => {
                     <Label>Auto-generate Monthly Invoices</Label>
                     <p className="text-sm text-muted-foreground">Generate invoices on 1st of each month</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={autoGenerateInvoices} onCheckedChange={setAutoGenerateInvoices} />
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
                     <Label>Include Electricity in Invoice</Label>
                     <p className="text-sm text-muted-foreground">Auto-calculate from meter readings</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={includeElectricity} onCheckedChange={setIncludeElectricity} />
                 </div>
               </CardContent>
             </Card>

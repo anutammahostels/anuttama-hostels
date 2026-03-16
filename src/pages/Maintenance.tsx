@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -12,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Wrench,
   Plus,
@@ -25,100 +36,26 @@ import {
   Wind,
   Hammer,
   Image,
+  Loader2,
 } from "lucide-react";
-
-const tickets = [
-  {
-    id: "TKT-001",
-    title: "Leaking Tap in Bathroom",
-    description: "The tap in the bathroom is leaking continuously and wasting water",
-    room: "Block A - 101",
-    student: "Rahul Sharma",
-    category: "Plumbing",
-    priority: "medium",
-    status: "in-progress",
-    assignedTo: "Ramesh Kumar",
-    createdAt: "2024-01-14 10:30",
-    updatedAt: "2024-01-15 09:00",
-    hasImage: true,
-  },
-  {
-    id: "TKT-002",
-    title: "AC Not Working",
-    description: "Air conditioner is not cooling properly, making strange noises",
-    room: "Block B - 205",
-    student: "Priya Patel",
-    category: "Electrical",
-    priority: "high",
-    status: "open",
-    assignedTo: null,
-    createdAt: "2024-01-15 08:00",
-    updatedAt: "2024-01-15 08:00",
-    hasImage: true,
-  },
-  {
-    id: "TKT-003",
-    title: "Broken Window Latch",
-    description: "Window latch is broken, window won't close properly",
-    room: "Block A - 302",
-    student: "Amit Kumar",
-    category: "Carpentry",
-    priority: "low",
-    status: "resolved",
-    assignedTo: "Suresh Singh",
-    createdAt: "2024-01-12 14:00",
-    updatedAt: "2024-01-14 16:00",
-    hasImage: false,
-  },
-  {
-    id: "TKT-004",
-    title: "Ceiling Fan Making Noise",
-    description: "Ceiling fan is wobbling and making loud noise",
-    room: "Block C - 108",
-    student: "Sneha Reddy",
-    category: "Electrical",
-    priority: "medium",
-    status: "escalated",
-    assignedTo: "Vijay Electricals",
-    createdAt: "2024-01-13 11:00",
-    updatedAt: "2024-01-15 10:00",
-    hasImage: false,
-  },
-  {
-    id: "TKT-005",
-    title: "Blocked Drain",
-    description: "Bathroom drain is completely blocked",
-    room: "Block A - 401",
-    student: "Vikram Singh",
-    category: "Plumbing",
-    priority: "high",
-    status: "in-progress",
-    assignedTo: "Ramesh Kumar",
-    createdAt: "2024-01-15 07:00",
-    updatedAt: "2024-01-15 11:00",
-    hasImage: true,
-  },
-];
-
-const stats = [
-  { label: "Open Tickets", value: "12", icon: AlertTriangle, color: "text-yellow-500" },
-  { label: "In Progress", value: "8", icon: Clock, color: "text-blue-500" },
-  { label: "Resolved Today", value: "5", icon: CheckCircle, color: "text-green-500" },
-  { label: "Escalated", value: "2", icon: ArrowUpCircle, color: "text-red-500" },
-];
+import { useAuth } from "@/hooks/useAuth";
+import { useProperties } from "@/hooks/useProperties";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const getCategoryIcon = (category: string) => {
-  switch (category) {
-    case "Plumbing":
+  switch (category.toLowerCase()) {
+    case "plumbing":
       return <Droplets className="h-4 w-4 text-blue-500" />;
-    case "Electrical":
+    case "electrical":
       return <Zap className="h-4 w-4 text-yellow-500" />;
-    case "HVAC":
+    case "hvac":
       return <Wind className="h-4 w-4 text-cyan-500" />;
-    case "Carpentry":
+    case "carpentry":
       return <Hammer className="h-4 w-4 text-orange-500" />;
     default:
-      return <Wrench className="h-4 w-4 text-gray-500" />;
+      return <Wrench className="h-4 w-4 text-muted-foreground" />;
   }
 };
 
@@ -126,7 +63,7 @@ const getStatusBadge = (status: string) => {
   switch (status) {
     case "open":
       return <Badge className="bg-yellow-500/10 text-yellow-600">Open</Badge>;
-    case "in-progress":
+    case "in_progress":
       return <Badge className="bg-blue-500/10 text-blue-600">In Progress</Badge>;
     case "resolved":
       return <Badge className="bg-green-500/10 text-green-600">Resolved</Badge>;
@@ -151,6 +88,73 @@ const getPriorityBadge = (priority: string) => {
 };
 
 const Maintenance = () => {
+  const { user } = useAuth();
+  const { properties } = useProperties();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("plumbing");
+  const [priority, setPriority] = useState("medium");
+  const [propertyId, setPropertyId] = useState("");
+
+  const ticketsQuery = useQuery({
+    queryKey: ["maintenance_tickets", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("maintenance_tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const createTicket = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("maintenance_tickets").insert({
+        title,
+        description,
+        category,
+        priority,
+        property_id: propertyId,
+        reported_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance_tickets"] });
+      toast({ title: "Ticket Created", description: "Maintenance ticket has been submitted." });
+      setDialogOpen(false);
+      setTitle("");
+      setDescription("");
+      setCategory("plumbing");
+      setPriority("medium");
+      setPropertyId("");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const tickets = ticketsQuery.data || [];
+  const openCount = tickets.filter((t) => t.status === "open").length;
+  const inProgressCount = tickets.filter((t) => t.status === "in_progress").length;
+  const resolvedTodayCount = tickets.filter((t) => {
+    if (t.status !== "resolved" || !t.resolved_at) return false;
+    return new Date(t.resolved_at).toDateString() === new Date().toDateString();
+  }).length;
+  const escalatedCount = tickets.filter((t) => t.status === "escalated").length;
+
+  const stats = [
+    { label: "Open Tickets", value: String(openCount), icon: AlertTriangle, color: "text-yellow-500" },
+    { label: "In Progress", value: String(inProgressCount), icon: Clock, color: "text-blue-500" },
+    { label: "Resolved Today", value: String(resolvedTodayCount), icon: CheckCircle, color: "text-green-500" },
+    { label: "Escalated", value: String(escalatedCount), icon: ArrowUpCircle, color: "text-red-500" },
+  ];
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -158,11 +162,9 @@ const Maintenance = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Maintenance</h1>
-            <p className="text-muted-foreground">
-              Manage maintenance tickets and work orders
-            </p>
+            <p className="text-muted-foreground">Manage maintenance tickets and work orders</p>
           </div>
-          <Button className="gradient-primary text-white">
+          <Button className="gradient-primary text-white" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Ticket
           </Button>
@@ -202,134 +204,162 @@ const Maintenance = () => {
           </CardContent>
         </Card>
 
-        {/* Filters */}
-        <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search tickets..." className="pl-10" />
-              </div>
-              <Select defaultValue="all">
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="plumbing">Plumbing</SelectItem>
-                  <SelectItem value="electrical">Electrical</SelectItem>
-                  <SelectItem value="hvac">HVAC</SelectItem>
-                  <SelectItem value="carpentry">Carpentry</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select defaultValue="all">
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="escalated">Escalated</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tickets */}
+        {/* Tickets List */}
         <Tabs defaultValue="all">
           <TabsList>
             <TabsTrigger value="all">All Tickets</TabsTrigger>
             <TabsTrigger value="open">Open</TabsTrigger>
-            <TabsTrigger value="my-assigned">Assigned to Staff</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <div className="space-y-4">
-              {tickets.map((ticket) => (
-                <Card key={ticket.id} className="border-border/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                      {/* Main Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-mono text-muted-foreground">{ticket.id}</span>
-                          {getCategoryIcon(ticket.category)}
-                          <Badge variant="outline">{ticket.category}</Badge>
-                          {ticket.hasImage && (
-                            <Image className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                        <h3 className="font-semibold text-lg mb-1">{ticket.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span>{ticket.room}</span>
-                          <span>•</span>
-                          <span>Reported by {ticket.student}</span>
-                          <span>•</span>
-                          <span>{ticket.createdAt}</span>
-                        </div>
-                      </div>
-
-                      {/* Status & Assignment */}
-                      <div className="flex flex-wrap items-center gap-3 lg:flex-col lg:items-end">
-                        <div className="flex items-center gap-2">
-                          {getPriorityBadge(ticket.priority)}
-                          {getStatusBadge(ticket.status)}
-                        </div>
-                        {ticket.assignedTo ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                {ticket.assignedTo.split(" ").map(n => n[0]).join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">{ticket.assignedTo}</span>
+            {ticketsQuery.isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : tickets.length === 0 ? (
+              <Card className="border-border/50">
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  No maintenance tickets yet. Click "New Ticket" to create one.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {tickets.map((ticket) => (
+                  <Card key={ticket.id} className="border-border/50 hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            {getCategoryIcon(ticket.category)}
+                            <Badge variant="outline">{ticket.category}</Badge>
                           </div>
-                        ) : (
-                          <Button size="sm" variant="outline">
-                            Assign Staff
-                          </Button>
-                        )}
+                          <h3 className="font-semibold text-lg mb-1">{ticket.title}</h3>
+                          {ticket.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-1">{ticket.description}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {new Date(ticket.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {getPriorityBadge(ticket.priority || "medium")}
+                          {getStatusBadge(ticket.status || "open")}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="open" className="mt-6">
             <div className="space-y-4">
-              {tickets.filter(t => t.status === "open").map((ticket) => (
-                <Card key={ticket.id} className="border-border/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold">{ticket.title}</h3>
-                        <p className="text-sm text-muted-foreground">{ticket.room}</p>
-                      </div>
-                      <Button size="sm">Assign</Button>
-                    </div>
+              {tickets.filter((t) => t.status === "open").length === 0 ? (
+                <Card className="border-border/50">
+                  <CardContent className="p-6 text-center text-muted-foreground">
+                    No open tickets.
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                tickets
+                  .filter((t) => t.status === "open")
+                  .map((ticket) => (
+                    <Card key={ticket.id} className="border-border/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold">{ticket.title}</h3>
+                            <p className="text-sm text-muted-foreground">{ticket.category}</p>
+                          </div>
+                          {getPriorityBadge(ticket.priority || "medium")}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+              )}
             </div>
-          </TabsContent>
-
-          <TabsContent value="my-assigned" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-6">
-                <div className="text-center text-muted-foreground py-8">
-                  Staff-specific assigned tickets will be shown here
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* New Ticket Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Maintenance Ticket</DialogTitle>
+            <DialogDescription>Submit a new maintenance request.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Property</Label>
+              <Select value={propertyId} onValueChange={setPropertyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select property" />
+                </SelectTrigger>
+                <SelectContent>
+                  {properties.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Leaking tap in bathroom" />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the issue..." />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="plumbing">Plumbing</SelectItem>
+                    <SelectItem value="electrical">Electrical</SelectItem>
+                    <SelectItem value="hvac">HVAC</SelectItem>
+                    <SelectItem value="carpentry">Carpentry</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="gradient-primary text-white"
+              onClick={() => createTicket.mutate()}
+              disabled={!title || !propertyId || createTicket.isPending}
+            >
+              {createTicket.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Create Ticket
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
