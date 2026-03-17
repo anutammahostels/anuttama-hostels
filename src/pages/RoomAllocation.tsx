@@ -372,7 +372,7 @@ const RoomAllocation = () => {
                             <p className="text-sm text-muted-foreground mt-1 ml-4">
                               {getStudentName(bed.student_id)}
                             </p>
-                          ) : bed.status === 'available' && (
+                          ) : bed.status === 'vacant' && (
                             <p className="text-sm text-blue-500 mt-1 ml-4 flex items-center gap-1">
                               <UserPlus className="h-3 w-3" />
                               Click to assign
