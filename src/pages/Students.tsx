@@ -284,7 +284,7 @@ const Students = () => {
     try {
       const { error } = await supabase
         .from("beds")
-        .update({ student_id: null, status: "available" })
+        .update({ student_id: null, status: "vacant" })
         .eq("id", student.bed.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["students"] });

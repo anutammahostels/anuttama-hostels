@@ -344,7 +344,7 @@ const RoomAllocation = () => {
                           key={bed.id}
                           className={`p-3 rounded-lg border ${getBedStatusBg(bed.status, !!bed.student_id)} transition-colors`}
                           onClick={() => {
-                            if (!bed.student_id && bed.status === 'available') {
+                            if (!bed.student_id && bed.status === 'vacant') {
                               setAllocationDialog({ open: true, bedId: bed.id, roomNumber: room.room_number });
                             }
                           }}
