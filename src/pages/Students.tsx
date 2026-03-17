@@ -54,22 +54,22 @@ const Students = () => {
   const [selectedBedId, setSelectedBedId] = useState("");
 
   const { students, stats, isLoading, error, updateStudent } = useStudents();
-  const { rooms } = useRooms();
+  const { rooms, blocks } = useRooms();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get available beds from rooms
-  const availableBeds = rooms.flatMap(room =>
-    (room.beds || [])
-      .filter(bed => !bed.student_id && bed.status === "vacant")
-      .map(bed => ({
-        bedId: bed.id,
-        bedNumber: bed.bed_number,
-        roomNumber: room.room_number,
-        blockName: room.floor?.block?.name || "Block",
-        floorNumber: room.floor?.floor_number,
-      }))
-  );
+  // Derive cascading data for assign room dialog
+  const assignBlocks = blocks || [];
+  const assignFloors = rooms
+    .map(r => r.floor)
+    .filter((f): f is NonNullable<typeof f> => !!f && f.block?.id === selectedBlockId)
+    .filter((f, i, arr) => arr.findIndex(x => x.id === f.id) === i)
+    .sort((a, b) => (a.floor_number ?? 0) - (b.floor_number ?? 0));
+  const assignRooms = rooms
+    .filter(r => r.floor?.id === selectedFloorId)
+    .sort((a, b) => a.room_number.localeCompare(b.room_number));
+  const assignBeds = (assignRooms.find(r => r.id === selectedRoomId)?.beds || [])
+    .filter(bed => !bed.student_id && bed.status === "vacant");
 
   const parseCSV = (text: string) => {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
