@@ -174,7 +174,7 @@ const Settings = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="policies" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto p-1">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto p-1">
             <TabsTrigger value="policies" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Policy Engine</span>
@@ -188,11 +188,6 @@ const Settings = () => {
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">Notifications</span>
               <span className="sm:hidden">Alerts</span>
-            </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">User Roles</span>
-              <span className="sm:hidden">Roles</span>
             </TabsTrigger>
             <TabsTrigger value="billing" className="flex items-center gap-2">
               <SettingsIcon className="h-4 w-4" />
@@ -375,37 +370,6 @@ const Settings = () => {
             </Card>
           </TabsContent>
 
-          {/* Roles Tab */}
-          <TabsContent value="roles" className="space-y-6">
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle>User Roles & Permissions</CardTitle>
-                <CardDescription>Define access levels for different user types</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { role: "Super Admin", desc: "Full SaaS provider access", badge: "System" },
-                    { role: "Tenant Admin", desc: "Full hostel access, settings, reports", badge: "Admin" },
-                    { role: "Warden", desc: "Attendance, room inspections, approvals", badge: "Staff" },
-                    { role: "Security Guard", desc: "QR scanning, visitor logging only", badge: "Staff" },
-                    { role: "Student", desc: "Self-service portal access", badge: "User" },
-                    { role: "Parent", desc: "Read-only + approve actions", badge: "User" },
-                  ].map((item) => (
-                    <div key={item.role} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{item.role}</span>
-                          <Badge variant="outline">{item.badge}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* Billing Rules Tab */}
           <TabsContent value="billing" className="space-y-6">

@@ -97,10 +97,6 @@ const MessManagement = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Mark Absence
-            </Button>
             <Button className="gradient-primary text-white">
               <Plus className="h-4 w-4 mr-2" />
               Update Menu
@@ -132,7 +128,6 @@ const MessManagement = () => {
           <TabsList>
             <TabsTrigger value="menu">Weekly Menu</TabsTrigger>
             <TabsTrigger value="rebates">Rebate Requests</TabsTrigger>
-            <TabsTrigger value="attendance">Meal Attendance</TabsTrigger>
           </TabsList>
 
           <TabsContent value="menu" className="mt-6">
@@ -269,15 +264,6 @@ const MessManagement = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="attendance" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-6">
-                <div className="text-center text-muted-foreground py-8">
-                  Meal attendance tracking and reports will be shown here
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </>
