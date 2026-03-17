@@ -364,6 +364,10 @@ const Students = () => {
               className="hidden"
               onChange={handleBulkUpload}
             />
+            <Button variant="outline" onClick={downloadTemplate}>
+              <Download className="h-4 w-4 mr-2" />
+              Download Template
+            </Button>
             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 mr-2" />
               Bulk Upload
