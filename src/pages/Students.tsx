@@ -260,6 +260,9 @@ const Students = () => {
   // Assign room handlers
   const openAssignRoom = (student: StudentWithProfile) => {
     setAssigningStudent(student);
+    setSelectedBlockId("");
+    setSelectedFloorId("");
+    setSelectedRoomId("");
     setSelectedBedId("");
     setAssignRoomOpen(true);
   };
