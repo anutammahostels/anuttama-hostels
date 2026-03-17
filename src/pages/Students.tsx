@@ -833,22 +833,70 @@ const Students = () => {
               Select a bed for {assigningStudent?.profile?.full_name || "student"}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            {availableBeds.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No available beds. Please add rooms and beds first.</p>
-            ) : (
-              <Select value={selectedBedId} onValueChange={setSelectedBedId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a bed..." />
-                </SelectTrigger>
-                <SelectContent className="bg-popover max-h-60">
-                  {availableBeds.map(bed => (
-                    <SelectItem key={bed.bedId} value={bed.bedId}>
-                      {bed.blockName} - Room {bed.roomNumber} - Bed {bed.bedNumber} (Floor {bed.floorNumber})
-                    </SelectItem>
+          <div className="py-4 space-y-4">
+            {/* Block */}
+            <div className="space-y-1.5">
+              <Label>Block</Label>
+              <Select value={selectedBlockId} onValueChange={(v) => { setSelectedBlockId(v); setSelectedFloorId(""); setSelectedRoomId(""); setSelectedBedId(""); }}>
+                <SelectTrigger><SelectValue placeholder="Select block..." /></SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {assignBlocks.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Floor */}
+            {selectedBlockId && (
+              <div className="space-y-1.5">
+                <Label>Floor</Label>
+                <Select value={selectedFloorId} onValueChange={(v) => { setSelectedFloorId(v); setSelectedRoomId(""); setSelectedBedId(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Select floor..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {assignFloors.map(f => (
+                      <SelectItem key={f.id} value={f.id}>Floor {f.floor_number}{f.name ? ` - ${f.name}` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {assignFloors.length === 0 && <p className="text-xs text-muted-foreground">No floors in this block</p>}
+              </div>
+            )}
+
+            {/* Room */}
+            {selectedFloorId && (
+              <div className="space-y-1.5">
+                <Label>Room</Label>
+                <Select value={selectedRoomId} onValueChange={(v) => { setSelectedRoomId(v); setSelectedBedId(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Select room..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {assignRooms.map(r => (
+                      <SelectItem key={r.id} value={r.id}>Room {r.room_number} ({r.room_type})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {assignRooms.length === 0 && <p className="text-xs text-muted-foreground">No rooms on this floor</p>}
+              </div>
+            )}
+
+            {/* Bed */}
+            {selectedRoomId && (
+              <div className="space-y-1.5">
+                <Label>Bed</Label>
+                <Select value={selectedBedId} onValueChange={setSelectedBedId}>
+                  <SelectTrigger><SelectValue placeholder="Select bed..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {assignBeds.map(bed => (
+                      <SelectItem key={bed.id} value={bed.id}>Bed {bed.bed_number}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {assignBeds.length === 0 && <p className="text-xs text-muted-foreground">No vacant beds in this room</p>}
+              </div>
+            )}
+
+            {!assignBlocks.length && (
+              <p className="text-sm text-muted-foreground text-center py-4">No blocks found. Please add property structure first.</p>
             )}
           </div>
           <DialogFooter>
