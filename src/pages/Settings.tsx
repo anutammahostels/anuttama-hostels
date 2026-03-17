@@ -189,11 +189,6 @@ const Settings = () => {
               <span className="hidden sm:inline">Notifications</span>
               <span className="sm:hidden">Alerts</span>
             </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">User Roles</span>
-              <span className="sm:hidden">Roles</span>
-            </TabsTrigger>
             <TabsTrigger value="billing" className="flex items-center gap-2">
               <SettingsIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Billing Rules</span>
