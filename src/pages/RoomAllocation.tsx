@@ -167,7 +167,7 @@ const RoomAllocation = () => {
         await createBed.mutateAsync({
           room_id: room.id,
           bed_number: i.toString(),
-          status: 'available',
+          status: 'vacant',
         });
       }
 
