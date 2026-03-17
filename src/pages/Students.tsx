@@ -54,12 +54,16 @@ const Students = () => {
   const [selectedBedId, setSelectedBedId] = useState("");
 
   const { students, stats, isLoading, error, updateStudent } = useStudents();
-  const { rooms, blocks } = useRooms();
+  const { rooms } = useRooms();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Derive cascading data for assign room dialog
-  const assignBlocks = blocks || [];
+  // Derive cascading data for assign room dialog - extract unique blocks from rooms data
+  const assignBlocks = rooms
+    .map(r => r.floor?.block)
+    .filter((b): b is NonNullable<typeof b> => !!b)
+    .filter((b, i, arr) => arr.findIndex(x => x.id === b.id) === i)
+    .sort((a, b) => a.name.localeCompare(b.name));
   const assignFloors = rooms
     .map(r => r.floor)
     .filter((f): f is NonNullable<typeof f> => !!f && f.block?.id === selectedBlockId)
