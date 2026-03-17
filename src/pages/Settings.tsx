@@ -174,7 +174,7 @@ const Settings = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="policies" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto p-1">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto p-1">
             <TabsTrigger value="policies" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Policy Engine</span>
