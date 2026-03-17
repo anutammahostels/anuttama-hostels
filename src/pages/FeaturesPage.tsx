@@ -359,9 +359,7 @@ const FeaturesPage = () => {
           </div>
         </div>
       </section>
-
-      <Footer />
-    </div>
+    </>
   );
 };
 

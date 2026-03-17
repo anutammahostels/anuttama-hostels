@@ -280,9 +280,7 @@ const Solutions = () => {
           </div>
         </div>
       </section>
-
-      <Footer />
-    </div>
+    </>
   );
 };
 
