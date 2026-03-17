@@ -282,7 +282,7 @@ export function useRooms(propertyId?: string) {
       acc + (room.beds?.filter(bed => bed.student_id)?.length || 0), 0
     ) || 0,
     availableBeds: roomsQuery.data?.reduce((acc, room) => 
-      acc + (room.beds?.filter(bed => !bed.student_id && bed.status === 'available')?.length || 0), 0
+      acc + (room.beds?.filter(bed => !bed.student_id && bed.status === 'vacant')?.length || 0), 0
     ) || 0,
   };
 
