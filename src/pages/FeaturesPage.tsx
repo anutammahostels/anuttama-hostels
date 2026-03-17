@@ -111,9 +111,7 @@ const testimonials = [
 
 const FeaturesPage = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
+    <>
       {/* Hero */}
       <section className="pt-32 pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
