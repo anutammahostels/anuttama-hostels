@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardLayoutRoute } from "@/components/dashboard/DashboardLayoutRoute";
+import { LandingLayout } from "@/components/landing/LandingLayout";
 import { StudentLayoutRoute } from "@/components/student/StudentLayoutRoute";
 import { SuperAdminLayoutRoute } from "@/components/superadmin/SuperAdminLayoutRoute";
 import { LayoutProvider } from "@/contexts/LayoutContext";
