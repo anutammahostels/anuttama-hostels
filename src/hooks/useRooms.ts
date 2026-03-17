@@ -172,7 +172,7 @@ export function useRooms(propertyId?: string) {
     mutationFn: async (input: { room_id: string; bed_number: string; status?: string }) => {
       const { data, error } = await supabase
         .from('beds')
-        .insert({ ...input, status: input.status || 'available' })
+        .insert({ ...input, status: input.status || 'vacant' })
         .select()
         .single();
       if (error) throw error;
