@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 const getBedStatusColor = (status: string | null) => {
   switch (status) {
     case "occupied": return "bg-green-500";
-    case "available": return "bg-blue-500";
+    case "vacant": return "bg-blue-500";
     case "reserved": return "bg-yellow-500";
     case "maintenance": return "bg-red-500";
     default: return "bg-gray-500";
