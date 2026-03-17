@@ -58,7 +58,7 @@ const Students = () => {
   // Get available beds from rooms
   const availableBeds = rooms.flatMap(room =>
     (room.beds || [])
-      .filter(bed => !bed.student_id && bed.status === "available")
+      .filter(bed => !bed.student_id && bed.status === "vacant")
       .map(bed => ({
         bedId: bed.id,
         bedNumber: bed.bed_number,

@@ -28,7 +28,7 @@ const getBedStatusBg = (status: string | null, hasStudent: boolean) => {
   if (hasStudent) return "bg-green-500/10 border-green-500/30";
   switch (status) {
     case "occupied": return "bg-green-500/10 border-green-500/30";
-    case "available": return "bg-blue-500/10 border-blue-500/30 cursor-pointer hover:bg-blue-500/20";
+    case "vacant": return "bg-blue-500/10 border-blue-500/30 cursor-pointer hover:bg-blue-500/20";
     case "reserved": return "bg-yellow-500/10 border-yellow-500/30";
     case "maintenance": return "bg-red-500/10 border-red-500/30";
     default: return "bg-gray-500/10";
