@@ -48,6 +48,9 @@ const Students = () => {
   // Assign room state
   const [assignRoomOpen, setAssignRoomOpen] = useState(false);
   const [assigningStudent, setAssigningStudent] = useState<StudentWithProfile | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState("");
+  const [selectedFloorId, setSelectedFloorId] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedBedId, setSelectedBedId] = useState("");
 
   const { students, stats, isLoading, error, updateStudent } = useStudents();
