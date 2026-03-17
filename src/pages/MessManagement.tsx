@@ -128,7 +128,6 @@ const MessManagement = () => {
           <TabsList>
             <TabsTrigger value="menu">Weekly Menu</TabsTrigger>
             <TabsTrigger value="rebates">Rebate Requests</TabsTrigger>
-            <TabsTrigger value="attendance">Meal Attendance</TabsTrigger>
           </TabsList>
 
           <TabsContent value="menu" className="mt-6">
