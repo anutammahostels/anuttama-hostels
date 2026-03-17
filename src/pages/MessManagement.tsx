@@ -97,10 +97,6 @@ const MessManagement = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Mark Absence
-            </Button>
             <Button className="gradient-primary text-white">
               <Plus className="h-4 w-4 mr-2" />
               Update Menu
