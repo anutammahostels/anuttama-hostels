@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
 import { 
   Building2, QrCode, UtensilsCrossed, Receipt, Wrench, Settings2, 
   Users, Bell, BarChart3, Wallet, UserCheck, ArrowRight, Check,

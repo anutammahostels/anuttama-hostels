@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { 
   Target, Eye, Users, Award, Heart, Lightbulb, Shield, Zap,
