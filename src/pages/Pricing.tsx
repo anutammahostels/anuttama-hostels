@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { 
   Check, ArrowRight, Sparkles, Shield, Zap, HeadphonesIcon, Clock, 
@@ -99,9 +97,7 @@ const testimonials = [
 
 const Pricing = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
+    <>
       {/* Hero */}
       <section className="pt-32 pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
@@ -327,9 +323,7 @@ const Pricing = () => {
           </div>
         </div>
       </section>
-
-      <Footer />
-    </div>
+    </>
   );
 };
 

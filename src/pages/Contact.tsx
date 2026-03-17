@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,9 +44,7 @@ const faqs = [
 
 const Contact = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
+    <>
       {/* Hero */}
       <section className="pt-24 md:pt-32 pb-12 md:pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
@@ -298,9 +294,7 @@ const Contact = () => {
           </div>
         </div>
       </section>
-
-      <Footer />
-    </div>
+    </>
   );
 };
 

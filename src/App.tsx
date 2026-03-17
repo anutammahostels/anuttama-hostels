@@ -7,10 +7,12 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardLayoutRoute } from "@/components/dashboard/DashboardLayoutRoute";
+import { LandingLayout } from "@/components/landing/LandingLayout";
 import { StudentLayoutRoute } from "@/components/student/StudentLayoutRoute";
 import { SuperAdminLayoutRoute } from "@/components/superadmin/SuperAdminLayoutRoute";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 
+import Pricing from "./pages/Pricing";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -58,13 +60,18 @@ const App = () => (
         <ScrollToTop />
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
+            {/* Landing pages - shared Navbar/Footer layout */}
+            <Route element={<LandingLayout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/solutions" element={<Solutions />} />
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+            </Route>
+
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/solutions" element={<Solutions />} />
-            <Route path="/features" element={<FeaturesPage />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
 
             {/* Admin / Staff Dashboard - shared layout */}
             <Route element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden']}><DashboardLayoutRoute /></ProtectedRoute>}>

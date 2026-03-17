@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
 import { 
   Building2, QrCode, UtensilsCrossed, Receipt, Wrench, Settings2, 
   Users, Bell, BarChart3, Wallet, UserCheck, ArrowRight, Check,
@@ -113,9 +111,7 @@ const testimonials = [
 
 const FeaturesPage = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
+    <>
       {/* Hero */}
       <section className="pt-32 pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
@@ -363,9 +359,7 @@ const FeaturesPage = () => {
           </div>
         </div>
       </section>
-
-      <Footer />
-    </div>
+    </>
   );
 };
 
