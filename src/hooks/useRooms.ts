@@ -249,7 +249,7 @@ export function useRooms(propertyId?: string) {
     mutationFn: async (bedId: string) => {
       const { data, error } = await supabase
         .from('beds')
-        .update({ student_id: null, status: 'available' })
+        .update({ student_id: null, status: 'vacant' })
         .eq('id', bedId)
         .select()
         .single();
