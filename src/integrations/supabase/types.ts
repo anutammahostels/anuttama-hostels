@@ -95,6 +95,13 @@ export type Database = {
             referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "beds_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
         ]
       }
       blocks: {

@@ -48,6 +48,9 @@ const Students = () => {
   // Assign room state
   const [assignRoomOpen, setAssignRoomOpen] = useState(false);
   const [assigningStudent, setAssigningStudent] = useState<StudentWithProfile | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState("");
+  const [selectedFloorId, setSelectedFloorId] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedBedId, setSelectedBedId] = useState("");
 
   const { students, stats, isLoading, error, updateStudent } = useStudents();
@@ -55,18 +58,22 @@ const Students = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get available beds from rooms
-  const availableBeds = rooms.flatMap(room =>
-    (room.beds || [])
-      .filter(bed => !bed.student_id && bed.status === "vacant")
-      .map(bed => ({
-        bedId: bed.id,
-        bedNumber: bed.bed_number,
-        roomNumber: room.room_number,
-        blockName: room.floor?.block?.name || "Block",
-        floorNumber: room.floor?.floor_number,
-      }))
-  );
+  // Derive cascading data for assign room dialog - extract unique blocks from rooms data
+  const assignBlocks = rooms
+    .map(r => r.floor?.block)
+    .filter((b): b is NonNullable<typeof b> => !!b)
+    .filter((b, i, arr) => arr.findIndex(x => x.id === b.id) === i)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const assignFloors = rooms
+    .map(r => r.floor)
+    .filter((f): f is NonNullable<typeof f> => !!f && f.block?.id === selectedBlockId)
+    .filter((f, i, arr) => arr.findIndex(x => x.id === f.id) === i)
+    .sort((a, b) => (a.floor_number ?? 0) - (b.floor_number ?? 0));
+  const assignRooms = rooms
+    .filter(r => r.floor?.id === selectedFloorId)
+    .sort((a, b) => a.room_number.localeCompare(b.room_number));
+  const assignBeds = (assignRooms.find(r => r.id === selectedRoomId)?.beds || [])
+    .filter(bed => !bed.student_id && bed.status === "vacant");
 
   const parseCSV = (text: string) => {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -257,6 +264,9 @@ const Students = () => {
   // Assign room handlers
   const openAssignRoom = (student: StudentWithProfile) => {
     setAssigningStudent(student);
+    setSelectedBlockId("");
+    setSelectedFloorId("");
+    setSelectedRoomId("");
     setSelectedBedId("");
     setAssignRoomOpen(true);
   };
@@ -827,22 +837,70 @@ const Students = () => {
               Select a bed for {assigningStudent?.profile?.full_name || "student"}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            {availableBeds.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No available beds. Please add rooms and beds first.</p>
-            ) : (
-              <Select value={selectedBedId} onValueChange={setSelectedBedId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a bed..." />
-                </SelectTrigger>
-                <SelectContent className="bg-popover max-h-60">
-                  {availableBeds.map(bed => (
-                    <SelectItem key={bed.bedId} value={bed.bedId}>
-                      {bed.blockName} - Room {bed.roomNumber} - Bed {bed.bedNumber} (Floor {bed.floorNumber})
-                    </SelectItem>
+          <div className="py-4 space-y-4">
+            {/* Block */}
+            <div className="space-y-1.5">
+              <Label>Block</Label>
+              <Select value={selectedBlockId} onValueChange={(v) => { setSelectedBlockId(v); setSelectedFloorId(""); setSelectedRoomId(""); setSelectedBedId(""); }}>
+                <SelectTrigger><SelectValue placeholder="Select block..." /></SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {assignBlocks.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Floor */}
+            {selectedBlockId && (
+              <div className="space-y-1.5">
+                <Label>Floor</Label>
+                <Select value={selectedFloorId} onValueChange={(v) => { setSelectedFloorId(v); setSelectedRoomId(""); setSelectedBedId(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Select floor..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {assignFloors.map(f => (
+                      <SelectItem key={f.id} value={f.id}>Floor {f.floor_number}{f.name ? ` - ${f.name}` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {assignFloors.length === 0 && <p className="text-xs text-muted-foreground">No floors in this block</p>}
+              </div>
+            )}
+
+            {/* Room */}
+            {selectedFloorId && (
+              <div className="space-y-1.5">
+                <Label>Room</Label>
+                <Select value={selectedRoomId} onValueChange={(v) => { setSelectedRoomId(v); setSelectedBedId(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Select room..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {assignRooms.map(r => (
+                      <SelectItem key={r.id} value={r.id}>Room {r.room_number} ({r.room_type})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {assignRooms.length === 0 && <p className="text-xs text-muted-foreground">No rooms on this floor</p>}
+              </div>
+            )}
+
+            {/* Bed */}
+            {selectedRoomId && (
+              <div className="space-y-1.5">
+                <Label>Bed</Label>
+                <Select value={selectedBedId} onValueChange={setSelectedBedId}>
+                  <SelectTrigger><SelectValue placeholder="Select bed..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {assignBeds.map(bed => (
+                      <SelectItem key={bed.id} value={bed.id}>Bed {bed.bed_number}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {assignBeds.length === 0 && <p className="text-xs text-muted-foreground">No vacant beds in this room</p>}
+              </div>
+            )}
+
+            {!assignBlocks.length && (
+              <p className="text-sm text-muted-foreground text-center py-4">No blocks found. Please add property structure first.</p>
             )}
           </div>
           <DialogFooter>
