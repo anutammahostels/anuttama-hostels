@@ -12,6 +12,7 @@ import { StudentLayoutRoute } from "@/components/student/StudentLayoutRoute";
 import { SuperAdminLayoutRoute } from "@/components/superadmin/SuperAdminLayoutRoute";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 
+import Pricing from "./pages/Pricing";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
