@@ -58,7 +58,7 @@ const Students = () => {
   // Get available beds from rooms
   const availableBeds = rooms.flatMap(room =>
     (room.beds || [])
-      .filter(bed => !bed.student_id && bed.status === "available")
+      .filter(bed => !bed.student_id && bed.status === "vacant")
       .map(bed => ({
         bedId: bed.id,
         bedNumber: bed.bed_number,
@@ -284,7 +284,7 @@ const Students = () => {
     try {
       const { error } = await supabase
         .from("beds")
-        .update({ student_id: null, status: "available" })
+        .update({ student_id: null, status: "vacant" })
         .eq("id", student.bed.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["students"] });

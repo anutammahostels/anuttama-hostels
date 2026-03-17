@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 const getBedStatusColor = (status: string | null) => {
   switch (status) {
     case "occupied": return "bg-green-500";
-    case "available": return "bg-blue-500";
+    case "vacant": return "bg-blue-500";
     case "reserved": return "bg-yellow-500";
     case "maintenance": return "bg-red-500";
     default: return "bg-gray-500";
@@ -28,7 +28,7 @@ const getBedStatusBg = (status: string | null, hasStudent: boolean) => {
   if (hasStudent) return "bg-green-500/10 border-green-500/30";
   switch (status) {
     case "occupied": return "bg-green-500/10 border-green-500/30";
-    case "available": return "bg-blue-500/10 border-blue-500/30 cursor-pointer hover:bg-blue-500/20";
+    case "vacant": return "bg-blue-500/10 border-blue-500/30 cursor-pointer hover:bg-blue-500/20";
     case "reserved": return "bg-yellow-500/10 border-yellow-500/30";
     case "maintenance": return "bg-red-500/10 border-red-500/30";
     default: return "bg-gray-500/10";
@@ -344,7 +344,7 @@ const RoomAllocation = () => {
                           key={bed.id}
                           className={`p-3 rounded-lg border ${getBedStatusBg(bed.status, !!bed.student_id)} transition-colors`}
                           onClick={() => {
-                            if (!bed.student_id && bed.status === 'available') {
+                            if (!bed.student_id && bed.status === 'vacant') {
                               setAllocationDialog({ open: true, bedId: bed.id, roomNumber: room.room_number });
                             }
                           }}
