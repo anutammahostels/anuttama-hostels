@@ -264,15 +264,6 @@ const MessManagement = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="attendance" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-6">
-                <div className="text-center text-muted-foreground py-8">
-                  Meal attendance tracking and reports will be shown here
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </>
