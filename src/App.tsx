@@ -83,6 +83,7 @@ const App = () => (
               <Route path="/dashboard/passes" element={<GatePasses />} />
               <Route path="/dashboard/mess" element={<MessManagement />} />
               <Route path="/dashboard/billing" element={<Billing />} />
+              <Route path="/dashboard/payroll" element={<Payroll />} />
               <Route path="/dashboard/maintenance" element={<Maintenance />} />
               <Route path="/dashboard/complaints" element={<Complaints />} />
               <Route path="/dashboard/settings" element={<Settings />} />

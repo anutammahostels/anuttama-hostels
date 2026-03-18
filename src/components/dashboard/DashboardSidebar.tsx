@@ -44,7 +44,7 @@ const allMenuItems: MenuItem[] = [
   { icon: QrCode, label: "Gate Passes", shortLabel: "Passes", path: "/dashboard/passes" },
   { icon: UtensilsCrossed, label: "Mess", shortLabel: "Mess", path: "/dashboard/mess" },
   { icon: Receipt, label: "Billing", shortLabel: "Bills", path: "/dashboard/billing" },
-  
+  { icon: Briefcase, label: "Payroll", shortLabel: "Payroll", path: "/dashboard/payroll", roles: ['super_admin', 'tenant_admin'] },
   { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/dashboard/maintenance" },
   { icon: MessageSquareWarning, label: "Complaints", shortLabel: "Compl.", path: "/dashboard/complaints" },
   { icon: Settings, label: "Settings", shortLabel: "Settings", path: "/dashboard/settings" },
