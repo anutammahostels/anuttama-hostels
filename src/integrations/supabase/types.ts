@@ -196,6 +196,65 @@ export type Database = {
           },
         ]
       }
+      employees: {
+        Row: {
+          bank_account: string | null
+          bank_name: string | null
+          created_at: string
+          date_of_joining: string | null
+          department: string | null
+          designation: string
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          property_id: string
+          salary_amount: number
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_account?: string | null
+          bank_name?: string | null
+          created_at?: string
+          date_of_joining?: string | null
+          department?: string | null
+          designation: string
+          email?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          property_id: string
+          salary_amount?: number
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_account?: string | null
+          bank_name?: string | null
+          created_at?: string
+          date_of_joining?: string | null
+          department?: string | null
+          designation?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          property_id?: string
+          salary_amount?: number
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       floors: {
         Row: {
           block_id: string
@@ -631,6 +690,66 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      payroll_records: {
+        Row: {
+          allowances: number | null
+          basic_salary: number
+          created_at: string
+          deductions: number | null
+          employee_id: string
+          generated_at: string | null
+          id: string
+          month: string
+          net_salary: number
+          notes: string | null
+          property_id: string
+          status: string | null
+        }
+        Insert: {
+          allowances?: number | null
+          basic_salary?: number
+          created_at?: string
+          deductions?: number | null
+          employee_id: string
+          generated_at?: string | null
+          id?: string
+          month: string
+          net_salary?: number
+          notes?: string | null
+          property_id: string
+          status?: string | null
+        }
+        Update: {
+          allowances?: number | null
+          basic_salary?: number
+          created_at?: string
+          deductions?: number | null
+          employee_id?: string
+          generated_at?: string | null
+          id?: string
+          month?: string
+          net_salary?: number
+          notes?: string | null
+          property_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_records_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       policy_settings: {
         Row: {
