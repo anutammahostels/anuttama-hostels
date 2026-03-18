@@ -7,7 +7,7 @@ import {
   QrCode,
   UtensilsCrossed,
   Receipt,
-  
+  Briefcase,
   Wrench,
   MessageSquareWarning,
   Settings,

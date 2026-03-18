@@ -30,6 +30,7 @@ import Billing from "./pages/Billing";
 import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
 import Complaints from "./pages/Complaints";
+import Payroll from "./pages/Payroll";
 import NotFound from "./pages/NotFound";
 
 // Student pages
