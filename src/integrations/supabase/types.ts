@@ -205,12 +205,14 @@ export type Database = {
           department: string | null
           designation: string
           email: string | null
+          esi_number: string | null
           full_name: string
           id: string
           phone: string | null
           property_id: string
           salary_amount: number
           status: string | null
+          uan_number: string | null
           updated_at: string
         }
         Insert: {
@@ -221,12 +223,14 @@ export type Database = {
           department?: string | null
           designation: string
           email?: string | null
+          esi_number?: string | null
           full_name: string
           id?: string
           phone?: string | null
           property_id: string
           salary_amount?: number
           status?: string | null
+          uan_number?: string | null
           updated_at?: string
         }
         Update: {
@@ -237,12 +241,14 @@ export type Database = {
           department?: string | null
           designation?: string
           email?: string | null
+          esi_number?: string | null
           full_name?: string
           id?: string
           phone?: string | null
           property_id?: string
           salary_amount?: number
           status?: string | null
+          uan_number?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -696,43 +702,82 @@ export type Database = {
           allowances: number | null
           basic_salary: number
           created_at: string
+          da: number | null
           deductions: number | null
           employee_id: string
+          esi_employee: number | null
+          esi_employer: number | null
           generated_at: string | null
+          gross_salary: number | null
+          hra: number | null
           id: string
+          medical_allowance: number | null
           month: string
           net_salary: number
           notes: string | null
+          other_allowance: number | null
+          other_deduction: number | null
+          pf_employee: number | null
+          pf_employer: number | null
+          professional_tax: number | null
           property_id: string
           status: string | null
+          tds: number | null
+          travel_allowance: number | null
         }
         Insert: {
           allowances?: number | null
           basic_salary?: number
           created_at?: string
+          da?: number | null
           deductions?: number | null
           employee_id: string
+          esi_employee?: number | null
+          esi_employer?: number | null
           generated_at?: string | null
+          gross_salary?: number | null
+          hra?: number | null
           id?: string
+          medical_allowance?: number | null
           month: string
           net_salary?: number
           notes?: string | null
+          other_allowance?: number | null
+          other_deduction?: number | null
+          pf_employee?: number | null
+          pf_employer?: number | null
+          professional_tax?: number | null
           property_id: string
           status?: string | null
+          tds?: number | null
+          travel_allowance?: number | null
         }
         Update: {
           allowances?: number | null
           basic_salary?: number
           created_at?: string
+          da?: number | null
           deductions?: number | null
           employee_id?: string
+          esi_employee?: number | null
+          esi_employer?: number | null
           generated_at?: string | null
+          gross_salary?: number | null
+          hra?: number | null
           id?: string
+          medical_allowance?: number | null
           month?: string
           net_salary?: number
           notes?: string | null
+          other_allowance?: number | null
+          other_deduction?: number | null
+          pf_employee?: number | null
+          pf_employer?: number | null
+          professional_tax?: number | null
           property_id?: string
           status?: string | null
+          tds?: number | null
+          travel_allowance?: number | null
         }
         Relationships: [
           {
