@@ -133,7 +133,7 @@ const Payroll = () => {
         .eq("property_id", selectedPropertyId)
         .order("full_name");
       if (error) throw error;
-      return data as Employee[];
+      return data as unknown as Employee[];
     },
     enabled: !!selectedPropertyId,
   });
@@ -149,7 +149,7 @@ const Payroll = () => {
         .eq("property_id", selectedPropertyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as PayrollRecord[];
+      return data as unknown as PayrollRecord[];
     },
     enabled: !!selectedPropertyId,
   });
