@@ -404,12 +404,8 @@ const Billing = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="bg-popover">
-                                    <DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleDownloadPdf(invoice)}>
                                       <FileText className="h-4 w-4 mr-2" />
-                                      View Invoice
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                      <Download className="h-4 w-4 mr-2" />
                                       Download PDF
                                     </DropdownMenuItem>
                                     <DropdownMenuItem>
