@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, CheckCircle2, Building2, Users, Shield, Star, TrendingUp, Clock, Zap } from "lucide-react";
+import { ArrowRight, Play, CheckCircle2, Building2, Users, Shield, Star, TrendingUp, Clock, Zap, IndianRupee } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroBuilding from "@/assets/hero-building.jpg";
 import { DashboardMockup } from "./DashboardMockup";
@@ -61,7 +61,7 @@ export const Hero = () => {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
               </span>
               <span className="text-xs lg:text-sm font-medium text-white/80">
-                🎉 7-Day Free Trial — No Credit Card
+                Starting at just ₹2/student/day
               </span>
               <ArrowRight className="h-3 w-3 lg:h-4 lg:w-4 text-white/50 group-hover:translate-x-1 transition-transform" />
             </div>
@@ -77,7 +77,7 @@ export const Hero = () => {
           {/* Subtitle */}
           <p className="text-center text-base lg:text-xl text-white/60 max-w-3xl mx-auto mb-6 lg:mb-8 animate-slide-up stagger-1 leading-relaxed px-2">
             The all-in-one SaaS platform for hostels, boarding schools, and co-living spaces. 
-            <span className="text-white/80 font-medium"> Automate operations, ensure compliance, and delight stakeholders.</span>
+            <span className="text-white/80 font-medium"> Payroll, billing, gate passes, Excel reports — all automated.</span>
           </p>
 
           {/* CTA Buttons */}
@@ -87,26 +87,27 @@ export const Hero = () => {
                 size="lg"
                 className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary text-white px-6 lg:px-8 py-5 lg:py-6 text-base lg:text-lg shadow-2xl hover:shadow-primary/25 hover:scale-105 transition-all duration-500 gap-2 rounded-xl group"
               >
-                Start Free Trial
+                Get Started
                 <ArrowRight className="h-4 w-4 lg:h-5 lg:w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Button 
-              variant="outline"
-              size="lg"
-              className="w-full sm:w-auto border-white/20 bg-white/5 text-white hover:bg-white/10 px-6 lg:px-8 py-5 lg:py-6 text-base lg:text-lg transition-all duration-300 gap-2 rounded-xl backdrop-blur-sm group"
-            >
-              <Play className="h-4 w-4 lg:h-5 lg:w-5 fill-current group-hover:scale-110 transition-transform" />
-              Watch Demo
-            </Button>
+            <Link to="/contact">
+              <Button 
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto border-white/20 bg-white/5 text-white hover:bg-white/10 px-6 lg:px-8 py-5 lg:py-6 text-base lg:text-lg transition-all duration-300 gap-2 rounded-xl backdrop-blur-sm group"
+              >
+                Contact Sales
+              </Button>
+            </Link>
           </div>
 
           {/* Trust indicators */}
           <div className="flex flex-wrap justify-center gap-4 lg:gap-8 mb-10 lg:mb-16 animate-slide-up stagger-3">
             {[
-              { icon: CheckCircle2, label: "Free Trial" },
-              { icon: Shield, label: "Secure" },
-              { icon: Users, label: "500+ Properties" },
+              { icon: IndianRupee, label: "₹2/Student/Day" },
+              { icon: Shield, label: "Enterprise Secure" },
+              { icon: Zap, label: "Excel & PDF Exports" },
               { icon: Star, label: "4.9 Rating" },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-1.5 lg:gap-2 text-white/50 hover:text-white/80 transition-colors">

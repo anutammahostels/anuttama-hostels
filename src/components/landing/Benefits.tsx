@@ -17,7 +17,7 @@ const benefits = [
   {
     icon: Clock,
     title: "Save 20+ Hours Weekly",
-    description: "Automate billing, attendance, and gate passes. Free your staff for what matters.",
+    description: "Automate payroll, billing, attendance, gate passes, and Excel exports.",
     stat: "20+",
     statLabel: "Hours Saved",
     gradient: "from-blue-500 to-cyan-500",
@@ -25,7 +25,7 @@ const benefits = [
   {
     icon: TrendingDown,
     title: "Reduce Costs by 40%",
-    description: "Digital workflows eliminate paper, reduce errors, and cut administrative overhead.",
+    description: "Digital workflows, automated payslips, and refund processing cut overhead.",
     stat: "40%",
     statLabel: "Cost Reduction",
     gradient: "from-secondary to-emerald-500",
@@ -107,7 +107,7 @@ export const Benefits = () => {
 
           {/* Right - Benefits cards */}
           <div className="grid grid-cols-2 gap-2 lg:gap-4">
-            {benefits.slice(0, 4).map((benefit, index) => (
+            {benefits.slice(0, 4).map((benefit) => (
               <div 
                 key={benefit.title}
                 className="group p-3 lg:p-6 rounded-lg lg:rounded-2xl bg-card border border-border hover:border-primary/20 hover:shadow-xl transition-all duration-500 hover:-translate-y-0.5 lg:hover:-translate-y-1"
@@ -165,13 +165,13 @@ export const Benefits = () => {
 
         {/* CTA */}
         <div className="text-center mt-10 lg:mt-16">
-          <Link to="/onboarding">
+          <Link to="/pricing">
             <Button size="lg" className="gap-2 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 text-sm lg:text-base px-5 lg:px-8 py-4 lg:py-6">
-              Start Your Free Trial <ArrowRight className="h-3 w-3 lg:h-4 lg:w-4" />
+              View Pricing <ArrowRight className="h-3 w-3 lg:h-4 lg:w-4" />
             </Button>
           </Link>
           <p className="text-xs lg:text-sm text-muted-foreground mt-3 lg:mt-4">
-            No credit card required • 7-day free trial
+            Starting at just ₹2/student/day
           </p>
         </div>
       </div>

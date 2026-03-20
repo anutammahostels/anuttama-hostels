@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, CheckCircle2, Zap, Clock, Shield, Gift, Star } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Clock, Shield, IndianRupee, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import campusImage from "@/assets/campus-aerial.jpg";
 
@@ -36,9 +36,9 @@ export const CTA = () => {
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3 lg:px-5 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-6 lg:mb-8 animate-fade-in">
-            <Gift className="h-3 w-3 lg:h-4 lg:w-4 text-secondary" />
+            <IndianRupee className="h-3 w-3 lg:h-4 lg:w-4 text-secondary" />
             <span className="text-xs lg:text-sm font-medium text-white/80">
-              Get 2 months free on annual plans
+              Starting at just ₹2/student/day
             </span>
             <Sparkles className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-400" />
           </div>
@@ -51,14 +51,14 @@ export const CTA = () => {
 
           <p className="text-sm lg:text-xl text-white/60 mb-6 lg:mb-10 max-w-2xl mx-auto">
             Join <span className="text-white font-semibold">500+ properties</span> saving 
-            <span className="text-secondary"> 20+ hours weekly</span>.
+            <span className="text-secondary"> 20+ hours weekly</span> with automated payroll, billing & exports.
           </p>
 
           {/* Benefits grid */}
           <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-6 lg:mb-10">
             {[
-              { icon: Clock, label: "7-Day Trial", desc: "Full access" },
-              { icon: Shield, label: "No Card", desc: "Risk-free" },
+              { icon: IndianRupee, label: "₹2/Student/Day", desc: "All features" },
+              { icon: Shield, label: "Secure & Reliable", desc: "99.9% uptime" },
               { icon: Zap, label: "15 min Setup", desc: "Start instantly" },
             ].map((benefit) => (
               <div key={benefit.label} className="p-2 lg:p-4 rounded-lg lg:rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
@@ -76,7 +76,7 @@ export const CTA = () => {
                 size="lg"
                 className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary text-white px-6 lg:px-10 py-5 lg:py-7 text-sm lg:text-lg shadow-2xl hover:shadow-primary/25 hover:scale-105 transition-all duration-500 gap-2 rounded-xl group"
               >
-                Start Free Trial
+                Get Started
                 <ArrowRight className="h-4 w-4 lg:h-5 lg:w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
@@ -86,7 +86,7 @@ export const CTA = () => {
                 size="lg"
                 className="w-full sm:w-auto border-white/20 bg-white/5 text-white hover:bg-white/10 px-6 lg:px-10 py-5 lg:py-7 text-sm lg:text-lg transition-all duration-300 rounded-xl"
               >
-                Schedule Demo
+                Contact Sales
               </Button>
             </Link>
           </div>

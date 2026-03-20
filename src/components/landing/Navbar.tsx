@@ -21,7 +21,7 @@ export const Navbar = () => {
     { label: "Home", href: "/" },
     { label: "Solutions", href: "/solutions" },
     { label: "Features", href: "/features" },
-    
+    { label: "Pricing", href: "/pricing" },
     { label: "About", href: "/about" },
     { label: "Contact", href: "/contact" },
   ];
@@ -85,7 +85,7 @@ export const Navbar = () => {
                 size="sm"
                 className="bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 gap-2"
               >
-                Start Free Trial
+                Get Started
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -133,7 +133,7 @@ export const Navbar = () => {
               </Link>
               <Link to="/onboarding" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button className="w-full bg-gradient-to-r from-primary to-secondary">
-                  Start Free Trial
+                  Get Started
                 </Button>
               </Link>
             </div>

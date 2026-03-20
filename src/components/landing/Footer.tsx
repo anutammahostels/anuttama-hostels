@@ -5,7 +5,7 @@ import { HostyliaLogo } from "@/components/brand/HostyliaLogo";
 const footerLinks = {
   Product: [
     { label: "Features", href: "/features" },
-    
+    { label: "Pricing", href: "/pricing" },
     { label: "Solutions", href: "/solutions" },
   ],
   Company: [
@@ -115,7 +115,7 @@ export const Footer = () => {
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
           <p className="text-xs md:text-sm text-white/30 text-center md:text-left">
-            © 2025 Hostylia. All rights reserved.
+            © 2026 Hostylia. All rights reserved.
           </p>
           <div className="flex items-center gap-4 md:gap-6">
             <Link to="#" className="text-xs md:text-sm text-white/30 hover:text-white transition-colors">
