@@ -810,7 +810,8 @@ const Billing = () => {
                         (parseFloat(defaultRoomRent) || 0) +
                         (parseFloat(defaultMessCharges) || 0) +
                         (parseFloat(defaultElectricity) || 0) +
-                        (parseFloat(defaultOtherCharges) || 0)
+                        (parseFloat(defaultOtherCharges) || 0) -
+                        (parseFloat(defaultDiscount) || 0)
                       )}
                     </span>
                   </div>
