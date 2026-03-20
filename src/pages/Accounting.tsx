@@ -116,7 +116,7 @@ export default function Accounting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      logAudit("CREATE", "transaction", null, { amount: txnForm.amount, type: txnForm.transaction_type });
+      
       setShowTransactionDialog(false);
       setTxnForm({ account_id: "", transaction_type: "expense", amount: "", date: format(new Date(), "yyyy-MM-dd"), description: "", reference_number: "", category: "", payment_mode: "cash" });
       toast({ title: "Transaction Recorded" });
