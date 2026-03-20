@@ -320,12 +320,20 @@ const Students = () => {
     }
   };
 
-  // Filter students based on search
+  // Filter students based on search and filters
+  const activeFilterCount = [filterStatus, filterCourse, filterYear, filterRoom].filter(f => f !== "all").length;
+
   const filteredStudents = students.filter(student => {
     const name = student.profile?.full_name?.toLowerCase() || "";
     const rollNumber = student.roll_number?.toLowerCase() || "";
     const query = searchQuery.toLowerCase();
-    return name.includes(query) || rollNumber.includes(query);
+    const matchesSearch = name.includes(query) || rollNumber.includes(query);
+    const matchesStatus = filterStatus === "all" || student.status === filterStatus;
+    const matchesCourse = filterCourse === "all" || student.course === filterCourse;
+    const matchesYear = filterYear === "all" || student.year?.toString() === filterYear;
+    const matchesRoom = filterRoom === "all" || 
+      (filterRoom === "allocated" ? !!student.bed : !student.bed);
+    return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
   });
 
   const getStatusColor = (status: string | null) => {
