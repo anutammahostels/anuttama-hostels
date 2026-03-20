@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plus, TrendingUp, TrendingDown, BookOpen, ClipboardList, BarChart3,
+  Plus, TrendingUp, TrendingDown, BookOpen, ClipboardList,
   IndianRupee, ArrowUpRight, ArrowDownRight, Calendar, Download
 } from "lucide-react";
 import { format } from "date-fns";
