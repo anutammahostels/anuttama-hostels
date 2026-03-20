@@ -1,4 +1,4 @@
-import { Plus, QrCode, UserPlus, Receipt, Wrench, FileText, Send, LucideIcon } from "lucide-react";
+import { QrCode, UserPlus, Receipt, Wrench, FileText, Send, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -70,10 +70,6 @@ export const QuickActions = () => {
     <div className="rounded-xl md:rounded-2xl border border-border/50 bg-card p-3 md:p-6 shadow-sm">
       <div className="flex items-center justify-between mb-3 md:mb-6">
         <h3 className="font-bold text-sm md:text-lg text-card-foreground">Quick Actions</h3>
-        <Button variant="ghost" size="sm" className="text-hostylia-forest hover:text-hostylia-forest-light hover:bg-hostylia-forest/10 text-xs md:text-sm h-7 md:h-9 px-2 md:px-3">
-          <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-          <span className="hidden sm:inline">Customize</span>
-        </Button>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 md:gap-3">

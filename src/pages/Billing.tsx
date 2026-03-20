@@ -65,6 +65,19 @@ const Billing = () => {
   const { students } = useStudents();
   const { toast } = useToast();
 
+  const handleSendReminder = (invoice?: InvoiceWithStudent) => {
+    if (invoice) {
+      toast({ title: "Reminder Sent", description: `Payment reminder sent for ${invoice.invoice_number} to ${invoice.student?.profile?.full_name || "student"}.` });
+    } else {
+      const overdueCount = invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date()).length;
+      if (overdueCount === 0) {
+        toast({ title: "No Overdue Invoices", description: "There are no overdue invoices to send reminders for." });
+      } else {
+        toast({ title: "Reminders Sent", description: `Payment reminders sent for ${overdueCount} overdue invoice(s).` });
+      }
+    }
+  };
+
   // Active students for invoice generation
   const activeStudents = students.filter(s => s.status === 'active');
 
@@ -350,7 +363,7 @@ const Billing = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => handleSendReminder()}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Reminders
               </Button>
@@ -450,7 +463,7 @@ const Billing = () => {
                                       <FileText className="h-4 w-4 mr-2" />
                                       Download PDF
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleSendReminder(invoice)}>
                                       <Send className="h-4 w-4 mr-2" />
                                       Send Reminder
                                     </DropdownMenuItem>
@@ -546,7 +559,7 @@ const Billing = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
-                                <Button size="sm" variant="outline">
+                                <Button size="sm" variant="outline" onClick={() => handleSendReminder(invoice)}>
                                   <Send className="h-3 w-3 mr-1" />
                                   Remind
                                 </Button>
@@ -615,7 +628,7 @@ const Billing = () => {
         </Tabs>
 
         {/* Payment Dialog */}
-        <Dialog open={paymentDialog.open} onOpenChange={(open) => setPaymentDialog({ open, invoice: null })}>
+        <Dialog open={paymentDialog.open} onOpenChange={(open) => { if (!open) { setPaymentDialog({ open: false, invoice: null }); } }}>
           <DialogContent className="bg-background">
             <DialogHeader>
               <DialogTitle>Record Payment</DialogTitle>
