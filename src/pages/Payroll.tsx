@@ -332,7 +332,7 @@ const Payroll = () => {
   const generatePayslipPDF = (record: PayrollRecord) => {
     const emp = record.employees;
     const empName = emp?.full_name || "Unknown";
-    const totalDeductions = Number(record.pf_employee || 0) + Number(record.esi_employee || 0) + Number(record.professional_tax || 0) + Number(record.tds || 0) + Number(record.other_deduction || 0);
+    const totalDeductions = Number(record.pf_employee || 0) + Number(record.esi_employee || 0) + Number(record.lwf || 0) + Number(record.salary_advance || 0) + Number(record.professional_tax || 0) + Number(record.tds || 0) + Number(record.tds_194c || 0) + Number(record.tds_194j || 0) + Number(record.other_deduction || 0);
 
     const htmlContent = `<!DOCTYPE html><html><head><title>Payslip - ${empName} - ${record.month}</title>
 <style>
@@ -342,16 +342,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#1a1a2e;font-siz
 .header h1{font-size:24px;color:#16697a;margin-bottom:2px}
 .header .subtitle{color:#666;font-size:12px}
 .badge{display:inline-block;background:#16697a;color:white;padding:3px 14px;border-radius:20px;font-size:11px;margin-top:8px}
-.emp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.emp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
 .emp-item{display:flex;gap:6px}
-.emp-item .label{color:#888;min-width:100px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px}
-.emp-item .value{font-weight:600}
+.emp-item .label{color:#888;min-width:90px;font-size:10px;text-transform:uppercase;letter-spacing:0.5px}
+.emp-item .value{font-weight:600;font-size:12px}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
 .section h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#16697a;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e0e0e0}
 table{width:100%;border-collapse:collapse}
-td{padding:6px 0;font-size:13px}
+td{padding:5px 0;font-size:12px}
 td:last-child{text-align:right;font-weight:600}
-.total-row{border-top:2px solid #16697a;font-weight:700;font-size:14px}
+.total-row{border-top:2px solid #16697a;font-weight:700;font-size:13px}
 .total-row td{padding-top:10px}
 .net-box{background:#e8f4f8;border:2px solid #16697a;border-radius:8px;padding:16px;text-align:center;margin-bottom:16px}
 .net-box .amount{font-size:24px;font-weight:800;color:#16697a}
@@ -368,35 +368,43 @@ td:last-child{text-align:right;font-weight:600}
   <span class="badge">PAYSLIP — ${record.month}</span>
 </div>
 <div class="emp-grid">
+  <div class="emp-item"><span class="label">Emp No.</span><span class="value">${(emp as any)?.employee_number || 'N/A'}</span></div>
   <div class="emp-item"><span class="label">Employee</span><span class="value">${empName}</span></div>
+  <div class="emp-item"><span class="label">Gender</span><span class="value">${(emp as any)?.gender || 'N/A'}</span></div>
   <div class="emp-item"><span class="label">Designation</span><span class="value">${emp?.designation || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Department</span><span class="value">${emp?.department || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Date of Joining</span><span class="value">${emp?.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">UAN Number</span><span class="value">${emp?.uan_number || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">ESI Number</span><span class="value">${emp?.esi_number || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Bank</span><span class="value">${emp?.bank_name || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Account No.</span><span class="value">${emp?.bank_account || 'N/A'}</span></div>
+  <div class="emp-item"><span class="label">Work Location</span><span class="value">${(emp as any)?.work_location || 'N/A'}</span></div>
+  <div class="emp-item"><span class="label">DOJ</span><span class="value">${emp?.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : 'N/A'}</span></div>
+  <div class="emp-item"><span class="label">Total Days</span><span class="value">${record.total_days || 30}</span></div>
+  <div class="emp-item"><span class="label">LOP</span><span class="value">${record.lop || 0}</span></div>
+  <div class="emp-item"><span class="label">Days Worked</span><span class="value">${record.days_worked || 30}</span></div>
 </div>
 <div class="two-col">
   <div class="section">
     <h3>Earnings</h3>
     <table>
       <tr><td>Basic Salary</td><td>₹${fmt(record.basic_salary)}</td></tr>
-      <tr><td>HRA</td><td>₹${fmt(record.hra)}</td></tr>
-      <tr><td>Dearness Allowance</td><td>₹${fmt(record.da)}</td></tr>
-      <tr><td>Travel Allowance</td><td>₹${fmt(record.travel_allowance)}</td></tr>
-      <tr><td>Medical Allowance</td><td>₹${fmt(record.medical_allowance)}</td></tr>
-      <tr><td>Other Allowance</td><td>₹${fmt(record.other_allowance)}</td></tr>
+      <tr><td>House Rent Allowance</td><td>₹${fmt(record.hra)}</td></tr>
+      <tr><td>Special Allowance</td><td>₹${fmt(record.special_allowance)}</td></tr>
+      <tr><td>Professional Fees</td><td>₹${fmt(record.professional_fees)}</td></tr>
+      <tr><td>Contract Fees</td><td>₹${fmt(record.contract_fees)}</td></tr>
+      <tr><td>Other Additions</td><td>₹${fmt(record.other_additions)}</td></tr>
+      <tr><td>OT</td><td>₹${fmt(record.ot)}</td></tr>
+      <tr><td>Incentives</td><td>₹${fmt(record.incentives)}</td></tr>
+      <tr><td>Bonus</td><td>₹${fmt(record.bonus)}</td></tr>
       <tr class="total-row"><td>Gross Salary</td><td>₹${fmt(record.gross_salary)}</td></tr>
     </table>
   </div>
   <div class="section">
     <h3>Deductions</h3>
     <table>
-      <tr><td>PF (Employee)</td><td>₹${fmt(record.pf_employee)}</td></tr>
-      <tr><td>ESI (Employee)</td><td>₹${fmt(record.esi_employee)}</td></tr>
+      <tr><td>Employee PF @ 12%</td><td>₹${fmt(record.pf_employee)}</td></tr>
+      <tr><td>Employee ESI @ 0.75%</td><td>₹${fmt(record.esi_employee)}</td></tr>
+      <tr><td>LWF</td><td>₹${fmt(record.lwf)}</td></tr>
+      <tr><td>Salary Advance</td><td>₹${fmt(record.salary_advance)}</td></tr>
       <tr><td>Professional Tax</td><td>₹${fmt(record.professional_tax)}</td></tr>
-      <tr><td>TDS</td><td>₹${fmt(record.tds)}</td></tr>
+      <tr><td>Income Tax (TDS)</td><td>₹${fmt(record.tds)}</td></tr>
+      <tr><td>TDS 194C</td><td>₹${fmt(record.tds_194c)}</td></tr>
+      <tr><td>TDS 194J</td><td>₹${fmt(record.tds_194j)}</td></tr>
       <tr><td>Other Deductions</td><td>₹${fmt(record.other_deduction)}</td></tr>
       <tr class="total-row"><td>Total Deductions</td><td>₹${fmt(totalDeductions)}</td></tr>
     </table>
@@ -408,8 +416,8 @@ td:last-child{text-align:right;font-weight:600}
 </div>
 <div class="employer-box">
   <h4>Employer Contributions (Not deducted from salary)</h4>
-  <div class="row"><span>PF (Employer — 12% of Basic)</span><span>₹${fmt(record.pf_employer)}</span></div>
-  <div class="row"><span>ESI (Employer — 3.25% of Gross)</span><span>₹${fmt(record.esi_employer)}</span></div>
+  <div class="row"><span>Employer PF @ 12%</span><span>₹${fmt(record.pf_employer)}</span></div>
+  <div class="row"><span>Employer ESI @ 3.25%</span><span>₹${fmt(record.esi_employer)}</span></div>
 </div>
 ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</strong> ${record.notes}</p>` : ''}
 <div class="footer">
