@@ -1,8 +1,12 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -21,9 +25,19 @@ import {
   Leaf,
   Drumstick,
   Clock,
+  Pencil,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-const weeklyMenu = [
+type MealData = { items: string; type: string };
+type DayMenu = {
+  day: string;
+  breakfast: MealData;
+  lunch: MealData;
+  dinner: MealData;
+};
+
+const defaultWeeklyMenu: DayMenu[] = [
   {
     day: "Monday",
     breakfast: { items: "Poha, Boiled Eggs, Bread & Butter, Milk", type: "veg" },
@@ -75,7 +89,7 @@ const rebateRequests = [
   { id: 4, student: "Sneha Reddy", dates: "Jan 19-21", meals: 9, amount: 450, status: "pending" },
 ];
 
-const stats = [
+const statsData = [
   { label: "Today's Expected", value: "1,180", icon: Users, color: "text-primary" },
   { label: "Marked Absent", value: "67", icon: TrendingDown, color: "text-orange-500" },
   { label: "Monthly Rebates", value: "₹24,500", icon: IndianRupee, color: "text-green-500" },
@@ -84,6 +98,42 @@ const stats = [
 
 const MessManagement = () => {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const { toast } = useToast();
+
+  const [weeklyMenu, setWeeklyMenu] = useState<DayMenu[]>(defaultWeeklyMenu);
+  const [editDialog, setEditDialog] = useState(false);
+  const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ breakfast: "", lunch: "", dinner: "" });
+
+  const openEditDay = (day: string) => {
+    const menu = weeklyMenu.find(m => m.day === day);
+    if (menu) {
+      setEditForm({
+        breakfast: menu.breakfast.items,
+        lunch: menu.lunch.items,
+        dinner: menu.dinner.items,
+      });
+      setEditingDay(day);
+      setEditDialog(true);
+    }
+  };
+
+  const handleSaveMenu = () => {
+    if (!editingDay) return;
+    setWeeklyMenu(prev => prev.map(m =>
+      m.day === editingDay
+        ? {
+            ...m,
+            breakfast: { ...m.breakfast, items: editForm.breakfast },
+            lunch: { ...m.lunch, items: editForm.lunch },
+            dinner: { ...m.dinner, items: editForm.dinner },
+          }
+        : m
+    ));
+    setEditDialog(false);
+    setEditingDay(null);
+    toast({ title: "Menu updated", description: `${editingDay}'s menu has been updated.` });
+  };
 
   return (
     <>
@@ -96,17 +146,11 @@ const MessManagement = () => {
               Weekly menu, attendance and rebate management
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button className="gradient-primary text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Update Menu
-            </Button>
-          </div>
         </div>
 
         {/* Stats */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
+          {statsData.map((stat) => (
             <Card key={stat.label} className="border-border/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -134,10 +178,16 @@ const MessManagement = () => {
             {/* Today's Menu Highlight */}
             <Card className="border-border/50 mb-6 bg-gradient-to-r from-primary/5 to-transparent">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UtensilsCrossed className="h-5 w-5 text-primary" />
-                  Today's Menu - {today}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <UtensilsCrossed className="h-5 w-5 text-primary" />
+                    Today's Menu - {today}
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => openEditDay(today)}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit Today
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {weeklyMenu.filter(m => m.day === today).map((menu) => (
@@ -174,6 +224,7 @@ const MessManagement = () => {
                         <TableHead>Breakfast (7:30 - 9:00)</TableHead>
                         <TableHead>Lunch (12:30 - 14:00)</TableHead>
                         <TableHead>Dinner (19:30 - 21:00)</TableHead>
+                        <TableHead className="w-[60px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -204,6 +255,11 @@ const MessManagement = () => {
                               <Drumstick className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
                               <span className="text-sm">{menu.dinner.items}</span>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDay(menu.day)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -263,9 +319,48 @@ const MessManagement = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
         </Tabs>
       </div>
+
+      {/* Edit Menu Dialog */}
+      <Dialog open={editDialog} onOpenChange={setEditDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit {editingDay}'s Menu</DialogTitle>
+            <DialogDescription>Update the meals for {editingDay}. Separate items with commas.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>🌅 Breakfast</Label>
+              <Input
+                value={editForm.breakfast}
+                onChange={(e) => setEditForm(f => ({ ...f, breakfast: e.target.value }))}
+                placeholder="e.g. Poha, Boiled Eggs, Bread & Butter, Milk"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>☀️ Lunch</Label>
+              <Input
+                value={editForm.lunch}
+                onChange={(e) => setEditForm(f => ({ ...f, lunch: e.target.value }))}
+                placeholder="e.g. Rice, Dal, Paneer, Roti, Salad"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>🌙 Dinner</Label>
+              <Input
+                value={editForm.dinner}
+                onChange={(e) => setEditForm(f => ({ ...f, dinner: e.target.value }))}
+                placeholder="e.g. Rice, Chicken Curry, Roti, Raita"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveMenu}>Save Menu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -330,14 +330,14 @@ const RoomAllocation = () => {
                       <BedDouble className="h-5 w-5 text-primary" />
                       Room {room.room_number}
                     </CardTitle>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
                         {room.floor?.block?.name || "Block"} - F{room.floor?.floor_number}
                       </Badge>
                       {room.beds?.every(bed => !bed.student_id) && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                            <Button variant="outline" size="icon" className="h-8 w-8 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
