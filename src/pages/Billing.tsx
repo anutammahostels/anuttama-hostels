@@ -59,13 +59,21 @@ const Billing = () => {
   const [defaultMessCharges, setDefaultMessCharges] = useState("3000");
   const [defaultElectricity, setDefaultElectricity] = useState("500");
   const [defaultOtherCharges, setDefaultOtherCharges] = useState("0");
+  const [defaultDiscount, setDefaultDiscount] = useState("0");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateProgress, setGenerateProgress] = useState(0);
   const [generateResults, setGenerateResults] = useState<{ success: number; failed: number } | null>(null);
 
-  const { invoices, stats, isLoading, recordPayment, createInvoice } = useInvoices();
+  // Refund dialog state
+  const [refundDialog, setRefundDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundMethod, setRefundMethod] = useState("cash");
+
+  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund } = useInvoices();
   const { students } = useStudents();
+  const { properties } = useProperties();
   const { toast } = useToast();
 
   const handleSendReminder = (invoice?: InvoiceWithStudent) => {
