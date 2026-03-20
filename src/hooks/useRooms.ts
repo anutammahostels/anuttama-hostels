@@ -326,5 +326,6 @@ export function useRooms(propertyId?: string) {
     updateRoom,
     assignBed,
     vacateBed,
+    deleteRoom,
   };
 }

@@ -334,6 +334,32 @@ const RoomAllocation = () => {
                       <Badge variant="outline" className="text-xs">
                         {room.floor?.block?.name || "Block"} - F{room.floor?.floor_number}
                       </Badge>
+                      {room.beds?.every(bed => !bed.student_id) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Room {room.room_number}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the room and all its beds. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteRoom.mutate(room.id)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
