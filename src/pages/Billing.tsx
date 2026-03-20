@@ -798,6 +798,10 @@ const Billing = () => {
                       <Label>Other Charges</Label>
                       <Input type="number" value={defaultOtherCharges} onChange={(e) => setDefaultOtherCharges(e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Discount (₹)</Label>
+                      <Input type="number" value={defaultDiscount} onChange={(e) => setDefaultDiscount(e.target.value)} />
+                    </div>
                   </div>
                   <div className="mt-3 p-3 bg-muted/50 rounded-lg flex justify-between">
                     <span className="text-sm text-muted-foreground">Total per student:</span>
