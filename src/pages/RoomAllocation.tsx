@@ -334,32 +334,41 @@ const RoomAllocation = () => {
                       <Badge variant="outline" className="text-xs">
                         {room.floor?.block?.name || "Block"} - F{room.floor?.floor_number}
                       </Badge>
-                      {room.beds?.every(bed => !bed.student_id) && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-8 w-8 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Room {room.room_number}?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete the room and all its beds. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                onClick={() => deleteRoom.mutate(room.id)}
+                      {(() => {
+                        const allVacant = room.beds?.every(bed => !bed.student_id);
+                        return (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-40 disabled:pointer-events-none"
+                                disabled={!allVacant}
+                                title={allVacant ? "Delete room" : "Vacate all beds first"}
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Room {room.room_number}?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete the room and all its beds. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  onClick={() => deleteRoom.mutate(room.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardHeader>
