@@ -202,6 +202,9 @@ const Payroll = () => {
         bank_name: formData.bank_name || null,
         uan_number: formData.uan_number || null,
         esi_number: formData.esi_number || null,
+        employee_number: formData.employee_number || null,
+        gender: formData.gender || null,
+        work_location: formData.work_location || null,
       };
       if (formData.id) {
         const { error } = await supabase.from("employees").update(payload).eq("id", formData.id);
