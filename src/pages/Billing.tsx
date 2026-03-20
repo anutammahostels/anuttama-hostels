@@ -363,7 +363,7 @@ const Billing = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => handleSendReminder()}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Reminders
               </Button>
