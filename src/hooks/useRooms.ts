@@ -274,6 +274,31 @@ export function useRooms(propertyId?: string) {
     },
   });
 
+  const deleteRoom = useMutation({
+    mutationFn: async (roomId: string) => {
+      // Delete all beds first
+      const { error: bedsError } = await supabase
+        .from('beds')
+        .delete()
+        .eq('room_id', roomId);
+      if (bedsError) throw bedsError;
+
+      // Then delete the room
+      const { error } = await supabase
+        .from('rooms')
+        .delete()
+        .eq('id', roomId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      toast({ title: 'Room Deleted', description: 'Room and its beds have been removed.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Calculate stats
   const stats = {
     totalRooms: roomsQuery.data?.length || 0,
