@@ -141,14 +141,6 @@ export default function Accounting() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const logAudit = async (action: string, entityType: string, entityId: string | null, details: any) => {
-    try {
-      await supabase.from("audit_logs").insert({
-        property_id: propertyId, user_id: user?.id, action, entity_type: entityType,
-        entity_id: entityId, details,
-      } as any);
-    } catch {}
-  };
 
   // Computed stats
   const totalIncome = transactions.filter(t => t.transaction_type === "income").reduce((s, t) => s + Number(t.amount), 0);
