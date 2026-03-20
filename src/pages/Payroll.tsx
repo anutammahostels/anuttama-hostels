@@ -494,6 +494,10 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                       <Input required type="number" min="0" value={empForm.salary_amount} onChange={e => setEmpForm(p => ({ ...p, salary_amount: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
+                      <Label>Work Location</Label>
+                      <Input value={empForm.work_location} onChange={e => setEmpForm(p => ({ ...p, work_location: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
                       <Label>Bank Name</Label>
                       <Input value={empForm.bank_name} onChange={e => setEmpForm(p => ({ ...p, bank_name: e.target.value }))} />
                     </div>
