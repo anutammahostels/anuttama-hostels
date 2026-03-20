@@ -282,6 +282,7 @@ const Payroll = () => {
       designation: emp.designation, department: emp.department || "",
       salary_amount: String(emp.salary_amount), bank_account: emp.bank_account || "",
       bank_name: emp.bank_name || "", uan_number: emp.uan_number || "", esi_number: emp.esi_number || "",
+      employee_number: (emp as any).employee_number || "", gender: (emp as any).gender || "", work_location: (emp as any).work_location || "",
     });
     setEmpDialogOpen(true);
   };
