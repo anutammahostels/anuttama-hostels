@@ -212,9 +212,36 @@ const Billing = () => {
             <p className="text-muted-foreground">Manage invoices, payments, and collections</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => {
+              if (invoices.length === 0) return;
+              const headers = ["Invoice #", "Student", "Roll No", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
+              const rows = invoices.map(inv => [
+                inv.invoice_number,
+                inv.student?.profile?.full_name || "",
+                inv.student?.roll_number || "",
+                inv.billing_month,
+                inv.room_rent || 0,
+                inv.mess_charges || 0,
+                inv.electricity_charges || 0,
+                inv.other_charges || 0,
+                inv.total_amount,
+                inv.paid_amount || 0,
+                inv.total_amount - (inv.paid_amount || 0),
+                inv.due_date,
+                inv.status || "",
+                inv.payment_method || "",
+                inv.payment_date || "",
+              ]);
+              const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `invoices-${format(new Date(), "yyyy-MM-dd")}.csv`; a.click();
+              URL.revokeObjectURL(url);
+              toast({ title: "Exported", description: `${invoices.length} invoices exported as CSV` });
+            }}>
               <Download className="h-4 w-4 mr-2" />
-              Export
+              Export CSV
             </Button>
             <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
               <Plus className="h-4 w-4 mr-2" />
