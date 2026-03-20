@@ -200,8 +200,8 @@ export default function Accounting() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Accounting & Auditing</h1>
-          <p className="text-muted-foreground text-sm">Manage finances, ledger entries, and audit trail</p>
+          <h1 className="text-2xl font-bold text-foreground">Accounting</h1>
+          <p className="text-muted-foreground text-sm">Manage finances and ledger entries</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={propertyId} onValueChange={setSelectedProperty}>
