@@ -127,12 +127,17 @@ const Payroll = () => {
 
   // Payroll generation dialog
   const [payrollDialogOpen, setPayrollDialogOpen] = useState(false);
-  const [payrollForm, setPayrollForm] = useState({
+  const defaultPayrollForm = {
     employee_id: "", month: format(new Date(), "yyyy-MM"),
-    hra: "0", da: "0", travel_allowance: "0", medical_allowance: "0", other_allowance: "0",
+    hra: "0", special_allowance: "0", professional_fees: "0", contract_fees: "0",
+    other_additions: "0", ot: "0", incentives: "0", bonus: "0",
     pf_enabled: true, esi_enabled: true,
-    professional_tax: "200", tds: "0", other_deduction: "0", notes: "",
-  });
+    lwf: "0", salary_advance: "0", professional_tax: "200", tds: "0",
+    tds_194c: "0", tds_194j: "0", other_deduction: "0",
+    total_days: "30", lop: "0",
+    notes: "",
+  };
+  const [payrollForm, setPayrollForm] = useState(defaultPayrollForm);
 
   // Fetch employees
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
