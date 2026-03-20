@@ -194,7 +194,8 @@ const Billing = () => {
       const messCharges = parseFloat(defaultMessCharges) || 0;
       const electricity = parseFloat(defaultElectricity) || 0;
       const otherCharges = parseFloat(defaultOtherCharges) || 0;
-      const totalAmount = roomRent + messCharges + electricity + otherCharges;
+      const discount = parseFloat(defaultDiscount) || 0;
+      const totalAmount = roomRent + messCharges + electricity + otherCharges - discount;
 
       const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${(i + 1 + invoices.length).toString().padStart(4, '0')}`;
 
@@ -208,6 +209,7 @@ const Billing = () => {
           mess_charges: messCharges,
           electricity_charges: electricity,
           other_charges: otherCharges,
+          discounts: discount,
           total_amount: totalAmount,
           status: 'pending',
         });
