@@ -1,39 +1,69 @@
 
 
-## Add Delete Room, Delete Student, and Student Filters
+## Comprehensive Billing, Payroll & Reporting Enhancements
 
-### Changes
+### 1. Excel Export (All Data Pages)
 
-#### 1. Add `deleteRoom` mutation to `useRooms.ts`
-- Add a mutation that deletes all beds for a room first, then deletes the room itself
-- Invalidates rooms query on success
+Add Excel (.xlsx) export alongside existing CSV/PDF exports using the `xlsx` npm package (SheetJS) on the following pages:
+- **Billing** — Export invoices as .xlsx
+- **Payroll** — Export payroll records as .xlsx
+- **Accounting** — Export transactions/journal entries as .xlsx
+- **Student Receivables Report** (new, see below)
 
-#### 2. Add Delete Room button to `src/pages/RoomAllocation.tsx`
-- Add a `Trash2` icon button in each room card header (next to the block/floor badge)
-- Show a confirmation AlertDialog before deleting
-- Only allow deletion if all beds in the room are vacant (no students assigned)
+### 2. Discount During Invoice Creation
 
-#### 3. Add `deleteStudent` mutation to `useStudents.ts`
-- Mutation that vacates the student's bed (if any), then deletes the student record
-- Note: This deletes the student record only, not the auth user (would need an edge function for full cleanup)
+The `invoices` table already has a `discounts` column. Changes needed:
+- **`src/pages/Billing.tsx`** — Add a "Discount (₹)" input field in the Generate Invoices dialog, subtract discount from `total_amount` calculation
+- Show discount column in invoice table and PDF invoice
 
-#### 4. Add Delete Student option to `src/pages/Students.tsx`
-- Add "Delete Student" dropdown item (red/destructive) in both mobile and desktop dropdown menus
-- Show confirmation AlertDialog before deleting
-- Vacate bed if assigned before deletion
+### 3. Refund Mechanism
 
-#### 5. Implement working Filters in `src/pages/Students.tsx`
-- Replace the non-functional "Filters" button with a Popover containing filter controls:
-  - **Status**: Select (All / Active / On Leave / Inactive)
-  - **Course**: Select populated from unique courses in data
-  - **Year**: Select (All / 1 / 2 / 3 / 4)
-  - **Room Status**: Select (All / Allocated / Not Allocated)
-- Update `filteredStudents` logic to apply all active filters alongside search
-- Show active filter count badge on the Filters button
+- **DB Migration**: Create a `refunds` table (id, invoice_id, student_id, property_id, amount, reason, refund_method, status, processed_by, created_at)
+- **`src/pages/Billing.tsx`** — Add "Process Refund" option in invoice dropdown menu; opens dialog to enter refund amount, reason, and method
+- **`src/hooks/useInvoices.ts`** — Add `processRefund` mutation that inserts into refunds table and updates invoice paid_amount
 
-### Files to Edit
-1. `src/hooks/useRooms.ts` — Add `deleteRoom` mutation
-2. `src/hooks/useStudents.ts` — Add `deleteStudent` mutation
-3. `src/pages/RoomAllocation.tsx` — Add delete button + confirmation dialog per room card
-4. `src/pages/Students.tsx` — Add delete option in dropdown, replace Filter button with working Popover filters
+### 4. Student Receivables Report
+
+- **New page**: `src/pages/Receivables.tsx` with route `/dashboard/receivables`
+- Columns: Student Name, Roll No, Gross Receivable, Discounts, Amount Received, Payment Mode, Net Receivable
+- Summary row with totals
+- Export to Excel and PDF
+- Add sidebar link under Billing section
+
+### 5. Enhanced Payroll Fields
+
+**DB Migration** — Add columns to `employees` table:
+- `employee_number` (text), `gender` (text), `work_location` (text)
+
+**DB Migration** — Add columns to `payroll_records` table:
+- `special_allowance`, `professional_fees`, `contract_fees`, `other_additions`, `ot`, `incentives`, `bonus` (all numeric, default 0) — Earnings
+- `lwf`, `salary_advance`, `tds_194c`, `tds_194j` (all numeric, default 0) — Deductions
+- `total_days` (integer, default 30), `lop` (integer, default 0), `days_worked` (integer, default 30)
+
+**`src/pages/Payroll.tsx`** changes:
+- Employee form: Add Employee Number, Gender, Work Location fields
+- Payroll generation form: Add all new earning fields (Special Allowance, Professional Fees, Contract Fees, Other Additions, OT, Incentives, Bonus) and deduction fields (LWF, Salary Advance, TDS 194C, TDS 194J) plus Total Days, LOP, Days Worked
+- Update gross/net salary calculations to include new fields
+- Update payslip PDF template with all new fields matching the required layout
+- Add Excel export for payroll records
+
+### Files to Create/Edit
+
+| File | Action |
+|------|--------|
+| `package.json` | Add `xlsx` dependency |
+| DB Migration | `refunds` table + new columns on `employees` and `payroll_records` |
+| `src/pages/Billing.tsx` | Discount field, refund dialog, Excel export |
+| `src/hooks/useInvoices.ts` | Add refund mutation |
+| `src/pages/Payroll.tsx` | New fields in forms, updated calculations, updated payslip PDF, Excel export |
+| `src/pages/Receivables.tsx` | New receivables report page |
+| `src/pages/Accounting.tsx` | Excel export button |
+| `src/App.tsx` | Add receivables route |
+| `src/components/dashboard/DashboardSidebar.tsx` | Add receivables link |
+
+### Technical Notes
+- Excel export uses SheetJS (`xlsx` package) for proper .xlsx generation with formatting
+- Refunds table has RLS policies for admin-only access
+- Payroll calculations updated: Gross = Basic + HRA + Special Allowance + Professional Fees + Contract Fees + Other Additions + OT + Incentives + Bonus; Total Deductions = PF + ESI + LWF + Salary Advance + PT + TDS + TDS 194C + TDS 194J + Other Deduction; Days Worked = Total Days - LOP; effective salary prorated by days worked
+- ESI employer rate updated to 3.25% per requirement
 
