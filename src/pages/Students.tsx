@@ -55,10 +55,23 @@ const Students = () => {
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedBedId, setSelectedBedId] = useState("");
 
-  const { students, stats, isLoading, error, updateStudent } = useStudents();
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCourse, setFilterCourse] = useState("all");
+  const [filterYear, setFilterYear] = useState("all");
+  const [filterRoom, setFilterRoom] = useState("all");
+  const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
+
+  const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Derive unique courses for filter
+  const uniqueCourses = useMemo(() => {
+    const courses = students.map(s => s.course).filter((c): c is string => !!c);
+    return [...new Set(courses)].sort();
+  }, [students]);
 
   // Derive cascading data for assign room dialog - extract unique blocks from rooms data
   const assignBlocks = rooms
