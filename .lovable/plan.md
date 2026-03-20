@@ -1,36 +1,72 @@
 
 
-## Update Payroll Form, Calculations & Payslip to Match Requirements
+## Landing Page Overhaul + New Pricing Model
 
-### Gap Analysis
+### What Changes
 
-**Current state** vs **Required**:
+**1. Pricing — 2 Plans Only**
+- **Plan 1: "Growth"** — ₹2/student/day with core features (Property Management, Room Allocation, Billing with Discounts & Refunds, Gate Pass, Mess, Maintenance, Attendance, Student Portal, Excel & PDF Exports, Payroll with Payslips, Receivables Report)
+- **Plan 2: "Enterprise"** — Custom pricing with everything in Growth + Unlimited properties, Custom integrations, Dedicated account manager, SLA guarantee, On-premise option, Priority support, Training & onboarding
+- Remove old 3-tier Starter/Professional/Enterprise plans
 
-| Area | Current | Required |
-|------|---------|----------|
-| Earnings fields | HRA, DA, Travel, Medical, Other Allowance | HRA, Special Allowance, Professional Fees, Contract Fees, Other Additions, OT, Incentives, Bonus |
-| Deduction fields | PF, ESI, PT, TDS, Other Deduction | PF, ESI, LWF, Salary Advance, PT, Income Tax (TDS), TDS 194C, TDS 194J, Other Deduction |
-| Attendance | Not tracked | Total Days, LOP, Days Worked |
-| Payslip general info | Name, Designation, Department, DOJ, UAN, ESI | Employee Number, Name, Gender, Designation, Work Location, DOJ, Total Days, LOP, Days Worked |
-| Gross calculation | Basic + HRA + DA + Travel + Medical + Other | Basic + HRA + Special Allowance + Professional Fees + Contract Fees + Other Additions + OT + Incentives + Bonus |
-| Net calculation | Gross - (PF + ESI + PT + TDS + Other) | Prorated by days worked; deductions include LWF, Salary Advance, TDS 194C, TDS 194J |
+**2. Hero Section Update**
+- Replace "7-Day Free Trial — No Credit Card" badge with "Starting at just ₹2/student/day"
+- Change CTA from "Start Free Trial" to "Get Started" / "Contact Sales"
+- Update trust indicators to reflect new features (Excel Reports, Payroll, Refunds)
 
-DB columns already exist — no migration needed.
+**3. Features Section — Updated Feature List**
+Reflect all newly built features:
+- Smart Policy Engine (existing)
+- Property & Room Management (existing)
+- Digital Gate Pass (existing)
+- Mess Management (existing)
+- **Billing, Discounts & Refunds** (updated — highlight discount during invoice, refund on student exit)
+- Maintenance Tickets (existing)
+- **Payroll & Payslips** (new — full salary components, PDF payslips)
+- **Student Receivables Report** (new — gross/discount/received/net)
+- **Excel & PDF Exports** (new — all data pages)
+- **Attendance & Admissions** (existing but highlight)
 
-### Changes to `src/pages/Payroll.tsx`
+**4. Benefits Section**
+- Keep structure, update copy to mention new capabilities (Excel exports, payroll automation, refund processing)
 
-1. **Update `PayrollRecord` interface** — add all new fields (special_allowance, professional_fees, contract_fees, other_additions, ot, incentives, bonus, lwf, salary_advance, tds_194c, tds_194j, total_days, lop, days_worked)
+**5. Pricing Section (`src/pages/Pricing.tsx`)**
+- Complete rewrite: 2 cards side by side
+- Growth card: ₹2/student/day, full feature list
+- Enterprise card: "Contact Sales", custom features
+- Update FAQ to match new pricing model
+- Remove old testimonials from pricing page (already on homepage)
 
-2. **Update `payrollForm` state** — replace DA/Travel/Medical with new earning fields; add LWF, Salary Advance, TDS 194C, TDS 194J; add total_days, lop
+**6. Navbar**
+- Add "Pricing" link back to nav (currently missing from navLinks)
 
-3. **Update `payrollCalc`** — new gross = Basic + HRA + Special Allowance + Professional Fees + Contract Fees + Other Additions + OT + Incentives + Bonus; new total deductions = PF + ESI + LWF + Salary Advance + PT + TDS + TDS 194C + TDS 194J + Other Deduction; days_worked = total_days - lop; net = (gross - totalDeductions) prorated if needed
+**7. Footer**
+- Add Pricing link under Product
+- Update year to 2026
 
-4. **Update Generate Payroll form UI** — replace old earning inputs with new ones; add LWF/Salary Advance/TDS 194C/TDS 194J inputs; add Total Days/LOP/Days Worked row
+**8. CTA Section**
+- Replace "free trial" messaging with "Starting at ₹2/student/day"
+- Update CTAs to "Get Started" and "Contact Sales"
 
-5. **Update mutation** — save all new fields to DB
+**9. Mobile Responsiveness**
+- Already largely responsive, but audit all new sections for compact mobile layout
+- Ensure pricing cards stack vertically on mobile with proper spacing
 
-6. **Update payslip PDF** — show Employee Number, Gender, Work Location, Total Days, LOP, Days Worked in general info section; earnings table shows all new components; deductions table shows all new components including LWF, Salary Advance, TDS 194C, TDS 194J
+### Files to Edit
 
-### File
-- `src/pages/Payroll.tsx` — single file, full rewrite of form/calc/PDF sections
+| File | Changes |
+|------|---------|
+| `src/components/landing/Hero.tsx` | Update badge, CTA text, trust indicators |
+| `src/components/landing/Features.tsx` | Add Payroll, Receivables, Excel Export, update Billing feature |
+| `src/components/landing/Benefits.tsx` | Update copy referencing new features, remove "free trial" CTA |
+| `src/components/landing/CTA.tsx` | Replace trial messaging with pricing-focused CTA |
+| `src/components/landing/Navbar.tsx` | Add Pricing to navLinks |
+| `src/components/landing/Footer.tsx` | Add Pricing link, update year |
+| `src/pages/Pricing.tsx` | Full rewrite — 2 plans (₹2/student/day + Enterprise) |
+| `src/pages/Index.tsx` | No structural change (sections stay the same) |
+
+### Pricing Card Design
+- Growth plan: White card with green accent, prominent "₹2" price, "/student/day" suffix, full checklist of 15+ features
+- Enterprise plan: Dark gradient card, "Custom" price, "Contact Sales" CTA, premium features list
+- Growth card highlighted as "Most Popular"
 
