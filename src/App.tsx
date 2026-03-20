@@ -31,6 +31,8 @@ import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
 import Complaints from "./pages/Complaints";
 import Payroll from "./pages/Payroll";
+import Accounting from "./pages/Accounting";
+import Admissions from "./pages/Admissions";
 import NotFound from "./pages/NotFound";
 
 // Student pages
