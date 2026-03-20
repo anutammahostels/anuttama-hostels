@@ -450,32 +450,6 @@ export default function Accounting() {
           </Card>
         </TabsContent>
 
-        {/* Audit Trail Tab */}
-        <TabsContent value="audit">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead><TableHead>Action</TableHead><TableHead>Entity</TableHead><TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {auditLogs.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No audit logs yet. Actions will be logged automatically.</TableCell></TableRow>
-                  ) : auditLogs.map(log => (
-                    <TableRow key={log.id}>
-                      <TableCell className="text-sm whitespace-nowrap">{format(new Date(log.created_at), "dd MMM yyyy, hh:mm a")}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs">{log.action}</Badge></TableCell>
-                      <TableCell className="text-sm capitalize">{log.entity_type}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[300px] truncate">{log.details ? JSON.stringify(log.details) : "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
