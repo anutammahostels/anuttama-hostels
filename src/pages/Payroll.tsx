@@ -459,6 +459,21 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                       <Input required value={empForm.full_name} onChange={e => setEmpForm(p => ({ ...p, full_name: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
+                      <Label>Employee Number</Label>
+                      <Input value={empForm.employee_number} onChange={e => setEmpForm(p => ({ ...p, employee_number: e.target.value }))} placeholder="e.g. EMP001" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gender</Label>
+                      <Select value={empForm.gender} onValueChange={v => setEmpForm(p => ({ ...p, gender: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label>Email</Label>
                       <Input type="email" value={empForm.email} onChange={e => setEmpForm(p => ({ ...p, email: e.target.value }))} />
                     </div>
