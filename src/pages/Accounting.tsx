@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plus, TrendingUp, TrendingDown, BookOpen, ClipboardList, BarChart3,
+  Plus, TrendingUp, TrendingDown, BookOpen, ClipboardList,
   IndianRupee, ArrowUpRight, ArrowDownRight, Calendar, Download
 } from "lucide-react";
 import { format } from "date-fns";
@@ -34,10 +34,6 @@ type JournalEntry = {
   id: string; property_id: string; entry_number: string; date: string;
   description: string; debit_account_id: string; credit_account_id: string;
   amount: number; reference: string | null; created_by: string | null; created_at: string;
-};
-type AuditLog = {
-  id: string; property_id: string; user_id: string | null; action: string;
-  entity_type: string; entity_id: string | null; details: any; created_at: string;
 };
 
 const ACCOUNT_TYPES = ['income', 'expense', 'asset', 'liability'] as const;
@@ -94,15 +90,6 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
-  const { data: auditLogs = [] } = useQuery({
-    queryKey: ["audit_logs", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("audit_logs").select("*").eq("property_id", propertyId).order("created_at", { ascending: false }).limit(100);
-      if (error) throw error;
-      return data as AuditLog[];
-    },
-    enabled: !!propertyId,
-  });
 
   // Mutations
   const createAccount = useMutation({
@@ -112,7 +99,7 @@ export default function Accounting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      logAudit("CREATE", "account", null, { name: accountForm.name });
+      
       setShowAccountDialog(false);
       setAccountForm({ name: "", code: "", account_type: "expense", description: "" });
       toast({ title: "Account Created" });
@@ -129,7 +116,7 @@ export default function Accounting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      logAudit("CREATE", "transaction", null, { amount: txnForm.amount, type: txnForm.transaction_type });
+      
       setShowTransactionDialog(false);
       setTxnForm({ account_id: "", transaction_type: "expense", amount: "", date: format(new Date(), "yyyy-MM-dd"), description: "", reference_number: "", category: "", payment_mode: "cash" });
       toast({ title: "Transaction Recorded" });
@@ -146,7 +133,7 @@ export default function Accounting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal_entries"] });
-      logAudit("CREATE", "journal_entry", null, { entry: journalForm.entry_number });
+      
       setShowJournalDialog(false);
       setJournalForm({ entry_number: "", date: format(new Date(), "yyyy-MM-dd"), description: "", debit_account_id: "", credit_account_id: "", amount: "", reference: "" });
       toast({ title: "Journal Entry Created" });
@@ -154,14 +141,6 @@ export default function Accounting() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const logAudit = async (action: string, entityType: string, entityId: string | null, details: any) => {
-    try {
-      await supabase.from("audit_logs").insert({
-        property_id: propertyId, user_id: user?.id, action, entity_type: entityType,
-        entity_id: entityId, details,
-      } as any);
-    } catch {}
-  };
 
   // Computed stats
   const totalIncome = transactions.filter(t => t.transaction_type === "income").reduce((s, t) => s + Number(t.amount), 0);
@@ -221,8 +200,8 @@ export default function Accounting() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Accounting & Auditing</h1>
-          <p className="text-muted-foreground text-sm">Manage finances, ledger entries, and audit trail</p>
+          <h1 className="text-2xl font-bold text-foreground">Accounting</h1>
+          <p className="text-muted-foreground text-sm">Manage finances and ledger entries</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={propertyId} onValueChange={setSelectedProperty}>
@@ -278,7 +257,7 @@ export default function Accounting() {
             <TabsTrigger value="transactions" className="gap-1"><TrendingUp className="h-3.5 w-3.5" />Transactions</TabsTrigger>
             <TabsTrigger value="ledger" className="gap-1"><BookOpen className="h-3.5 w-3.5" />Ledger</TabsTrigger>
             <TabsTrigger value="accounts" className="gap-1"><ClipboardList className="h-3.5 w-3.5" />Accounts</TabsTrigger>
-            <TabsTrigger value="audit" className="gap-1"><BarChart3 className="h-3.5 w-3.5" />Audit Trail</TabsTrigger>
+            
           </TabsList>
           <div className="flex gap-2 flex-wrap">
             {activeTab === "transactions" && (
@@ -471,32 +450,6 @@ export default function Accounting() {
           </Card>
         </TabsContent>
 
-        {/* Audit Trail Tab */}
-        <TabsContent value="audit">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead><TableHead>Action</TableHead><TableHead>Entity</TableHead><TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {auditLogs.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No audit logs yet. Actions will be logged automatically.</TableCell></TableRow>
-                  ) : auditLogs.map(log => (
-                    <TableRow key={log.id}>
-                      <TableCell className="text-sm whitespace-nowrap">{format(new Date(log.created_at), "dd MMM yyyy, hh:mm a")}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs">{log.action}</Badge></TableCell>
-                      <TableCell className="text-sm capitalize">{log.entity_type}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[300px] truncate">{log.details ? JSON.stringify(log.details) : "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
