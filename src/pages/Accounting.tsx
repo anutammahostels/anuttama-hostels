@@ -99,7 +99,7 @@ export default function Accounting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      logAudit("CREATE", "account", null, { name: accountForm.name });
+      
       setShowAccountDialog(false);
       setAccountForm({ name: "", code: "", account_type: "expense", description: "" });
       toast({ title: "Account Created" });
