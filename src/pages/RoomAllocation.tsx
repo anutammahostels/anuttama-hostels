@@ -58,7 +58,7 @@ const RoomAllocation = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { property } = useDashboard();
-  const { rooms, blocks, floors, stats, isLoading, assignBed, vacateBed, createBlock, createFloor, createRoom, createBed } = useRooms(property?.id);
+  const { rooms, blocks, floors, stats, isLoading, assignBed, vacateBed, createBlock, createFloor, createRoom, createBed, deleteRoom } = useRooms(property?.id);
   const { students } = useStudents();
   const { toast } = useToast();
 
