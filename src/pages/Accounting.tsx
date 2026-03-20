@@ -19,6 +19,7 @@ import {
   IndianRupee, ArrowUpRight, ArrowDownRight, Calendar, Download
 } from "lucide-react";
 import { format } from "date-fns";
+import { exportToExcel } from "@/lib/exportExcel";
 
 type Account = {
   id: string; property_id: string; name: string; code: string | null;
