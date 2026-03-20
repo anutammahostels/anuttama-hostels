@@ -293,6 +293,7 @@ const Billing = () => {
             <TabsTrigger value="invoices">All Invoices</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="overdue">Overdue</TabsTrigger>
+            <TabsTrigger value="payments">Payment History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
