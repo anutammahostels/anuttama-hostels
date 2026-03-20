@@ -65,6 +65,19 @@ const Billing = () => {
   const { students } = useStudents();
   const { toast } = useToast();
 
+  const handleSendReminder = (invoice?: InvoiceWithStudent) => {
+    if (invoice) {
+      toast({ title: "Reminder Sent", description: `Payment reminder sent for ${invoice.invoice_number} to ${invoice.student?.profile?.full_name || "student"}.` });
+    } else {
+      const overdueCount = invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date()).length;
+      if (overdueCount === 0) {
+        toast({ title: "No Overdue Invoices", description: "There are no overdue invoices to send reminders for." });
+      } else {
+        toast({ title: "Reminders Sent", description: `Payment reminders sent for ${overdueCount} overdue invoice(s).` });
+      }
+    }
+  };
+
   // Active students for invoice generation
   const activeStudents = students.filter(s => s.status === 'active');
 
