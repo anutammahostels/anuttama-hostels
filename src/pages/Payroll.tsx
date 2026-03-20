@@ -181,25 +181,38 @@ const Payroll = () => {
   const payrollCalc = useMemo(() => {
     const basic = selectedEmployee?.salary_amount || 0;
     const hra = parseFloat(payrollForm.hra) || 0;
-    const da = parseFloat(payrollForm.da) || 0;
-    const travel = parseFloat(payrollForm.travel_allowance) || 0;
-    const medical = parseFloat(payrollForm.medical_allowance) || 0;
-    const otherAllow = parseFloat(payrollForm.other_allowance) || 0;
-    const gross = basic + hra + da + travel + medical + otherAllow;
+    const specialAllowance = parseFloat(payrollForm.special_allowance) || 0;
+    const professionalFees = parseFloat(payrollForm.professional_fees) || 0;
+    const contractFees = parseFloat(payrollForm.contract_fees) || 0;
+    const otherAdditions = parseFloat(payrollForm.other_additions) || 0;
+    const ot = parseFloat(payrollForm.ot) || 0;
+    const incentives = parseFloat(payrollForm.incentives) || 0;
+    const bonus = parseFloat(payrollForm.bonus) || 0;
+    const gross = basic + hra + specialAllowance + professionalFees + contractFees + otherAdditions + ot + incentives + bonus;
 
     const pfEmployee = payrollForm.pf_enabled ? Math.round(basic * 0.12) : 0;
     const pfEmployer = payrollForm.pf_enabled ? Math.round(basic * 0.12) : 0;
     const esiEmployee = payrollForm.esi_enabled && gross <= 21000 ? Math.round(gross * 0.0075) : 0;
     const esiEmployer = payrollForm.esi_enabled && gross <= 21000 ? Math.round(gross * 0.0325) : 0;
+    const lwf = parseFloat(payrollForm.lwf) || 0;
+    const salaryAdvance = parseFloat(payrollForm.salary_advance) || 0;
     const pt = parseFloat(payrollForm.professional_tax) || 0;
     const tds = parseFloat(payrollForm.tds) || 0;
+    const tds194c = parseFloat(payrollForm.tds_194c) || 0;
+    const tds194j = parseFloat(payrollForm.tds_194j) || 0;
     const otherDed = parseFloat(payrollForm.other_deduction) || 0;
 
-    const totalDeductions = pfEmployee + esiEmployee + pt + tds + otherDed;
-    const totalAllowances = hra + da + travel + medical + otherAllow;
-    const net = gross - totalDeductions;
+    const totalDeductions = pfEmployee + esiEmployee + lwf + salaryAdvance + pt + tds + tds194c + tds194j + otherDed;
+    const totalDays = parseInt(payrollForm.total_days) || 30;
+    const lop = parseInt(payrollForm.lop) || 0;
+    const daysWorked = totalDays - lop;
+    const net = Math.round((gross - totalDeductions) * (daysWorked / totalDays));
 
-    return { basic, hra, da, travel, medical, otherAllow, gross, pfEmployee, pfEmployer, esiEmployee, esiEmployer, pt, tds, otherDed, totalDeductions, totalAllowances, net };
+    return {
+      basic, hra, specialAllowance, professionalFees, contractFees, otherAdditions, ot, incentives, bonus, gross,
+      pfEmployee, pfEmployer, esiEmployee, esiEmployer, lwf, salaryAdvance, pt, tds, tds194c, tds194j, otherDed,
+      totalDeductions, totalDays, lop, daysWorked, net,
+    };
   }, [selectedEmployee, payrollForm]);
 
   // Create/Update employee
