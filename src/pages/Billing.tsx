@@ -511,6 +511,12 @@ const Billing = () => {
                                         Record Payment
                                       </DropdownMenuItem>
                                     )}
+                                    {(invoice.paid_amount || 0) > 0 && (
+                                      <DropdownMenuItem onClick={() => { setRefundDialog({ open: true, invoice }); setRefundAmount(String(invoice.paid_amount || 0)); }} className="text-destructive">
+                                        <Undo2 className="h-4 w-4 mr-2" />
+                                        Process Refund
+                                      </DropdownMenuItem>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
