@@ -90,15 +90,6 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
-  const { data: auditLogs = [] } = useQuery({
-    queryKey: ["audit_logs", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("audit_logs").select("*").eq("property_id", propertyId).order("created_at", { ascending: false }).limit(100);
-      if (error) throw error;
-      return data as AuditLog[];
-    },
-    enabled: !!propertyId,
-  });
 
   // Mutations
   const createAccount = useMutation({
