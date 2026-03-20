@@ -257,7 +257,8 @@ export default function Accounting() {
             <TabsTrigger value="transactions" className="gap-1"><TrendingUp className="h-3.5 w-3.5" />Transactions</TabsTrigger>
             <TabsTrigger value="ledger" className="gap-1"><BookOpen className="h-3.5 w-3.5" />Ledger</TabsTrigger>
             <TabsTrigger value="accounts" className="gap-1"><ClipboardList className="h-3.5 w-3.5" />Accounts</TabsTrigger>
-            
+            <TabsTrigger value="collections" className="gap-1"><IndianRupee className="h-3.5 w-3.5" />Fee Collections</TabsTrigger>
+            <TabsTrigger value="pnl" className="gap-1"><TrendingDown className="h-3.5 w-3.5" />P&L</TabsTrigger>
           </TabsList>
           <div className="flex gap-2 flex-wrap">
             {activeTab === "transactions" && (

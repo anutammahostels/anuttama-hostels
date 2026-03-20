@@ -568,6 +568,50 @@ const Billing = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="payments" className="mt-6">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Payment History</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Amount Paid</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No payments recorded yet</TableCell>
+                        </TableRow>
+                      ) : (
+                        invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).map((invoice) => (
+                          <TableRow key={invoice.id}>
+                            <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
+                            <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
+                            <TableCell className="text-green-600 font-semibold">{formatCurrency(invoice.paid_amount || 0)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs capitalize">{invoice.payment_method || "N/A"}</Badge>
+                            </TableCell>
+                            <TableCell>{invoice.payment_date ? format(new Date(invoice.payment_date), "MMM d, yyyy") : "—"}</TableCell>
+                            <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* Payment Dialog */}
