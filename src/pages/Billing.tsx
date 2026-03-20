@@ -628,7 +628,7 @@ const Billing = () => {
         </Tabs>
 
         {/* Payment Dialog */}
-        <Dialog open={paymentDialog.open} onOpenChange={(open) => setPaymentDialog({ open, invoice: null })}>
+        <Dialog open={paymentDialog.open} onOpenChange={(open) => { if (!open) { setPaymentDialog({ open: false, invoice: null }); } }}>
           <DialogContent className="bg-background">
             <DialogHeader>
               <DialogTitle>Record Payment</DialogTitle>
