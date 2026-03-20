@@ -12,11 +12,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle, Undo2 } from "lucide-react";
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
 import { useStudents } from "@/hooks/useStudents";
+import { useProperties } from "@/hooks/useProperties";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const getStatusBadge = (status: string | null) => {
   switch (status) {
