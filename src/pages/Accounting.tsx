@@ -133,7 +133,7 @@ export default function Accounting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal_entries"] });
-      logAudit("CREATE", "journal_entry", null, { entry: journalForm.entry_number });
+      
       setShowJournalDialog(false);
       setJournalForm({ entry_number: "", date: format(new Date(), "yyyy-MM-dd"), description: "", debit_account_id: "", credit_account_id: "", amount: "", reference: "" });
       toast({ title: "Journal Entry Created" });
