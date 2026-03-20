@@ -19,6 +19,7 @@ import {
   UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus,
 } from "lucide-react";
 import { format } from "date-fns";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Employee {
   id: string;
@@ -111,6 +112,7 @@ const Payroll = () => {
   const [empForm, setEmpForm] = useState({
     full_name: "", email: "", phone: "", designation: "", department: "",
     salary_amount: "", bank_account: "", bank_name: "", uan_number: "", esi_number: "",
+    employee_number: "", gender: "", work_location: "",
   });
 
   // Payroll generation dialog
@@ -200,6 +202,9 @@ const Payroll = () => {
         bank_name: formData.bank_name || null,
         uan_number: formData.uan_number || null,
         esi_number: formData.esi_number || null,
+        employee_number: formData.employee_number || null,
+        gender: formData.gender || null,
+        work_location: formData.work_location || null,
       };
       if (formData.id) {
         const { error } = await supabase.from("employees").update(payload).eq("id", formData.id);
@@ -271,7 +276,7 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const resetEmpForm = () => setEmpForm({ full_name: "", email: "", phone: "", designation: "", department: "", salary_amount: "", bank_account: "", bank_name: "", uan_number: "", esi_number: "" });
+  const resetEmpForm = () => setEmpForm({ full_name: "", email: "", phone: "", designation: "", department: "", salary_amount: "", bank_account: "", bank_name: "", uan_number: "", esi_number: "", employee_number: "", gender: "", work_location: "" });
 
   const openEditEmployee = (emp: Employee) => {
     setEditingEmployee(emp);
@@ -280,6 +285,7 @@ const Payroll = () => {
       designation: emp.designation, department: emp.department || "",
       salary_amount: String(emp.salary_amount), bank_account: emp.bank_account || "",
       bank_name: emp.bank_name || "", uan_number: emp.uan_number || "", esi_number: emp.esi_number || "",
+      employee_number: (emp as any).employee_number || "", gender: (emp as any).gender || "", work_location: (emp as any).work_location || "",
     });
     setEmpDialogOpen(true);
   };
@@ -453,6 +459,21 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                       <Input required value={empForm.full_name} onChange={e => setEmpForm(p => ({ ...p, full_name: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
+                      <Label>Employee Number</Label>
+                      <Input value={empForm.employee_number} onChange={e => setEmpForm(p => ({ ...p, employee_number: e.target.value }))} placeholder="e.g. EMP001" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gender</Label>
+                      <Select value={empForm.gender} onValueChange={v => setEmpForm(p => ({ ...p, gender: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label>Email</Label>
                       <Input type="email" value={empForm.email} onChange={e => setEmpForm(p => ({ ...p, email: e.target.value }))} />
                     </div>
@@ -471,6 +492,10 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                     <div className="space-y-2">
                       <Label>Monthly Salary (₹) *</Label>
                       <Input required type="number" min="0" value={empForm.salary_amount} onChange={e => setEmpForm(p => ({ ...p, salary_amount: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Work Location</Label>
+                      <Input value={empForm.work_location} onChange={e => setEmpForm(p => ({ ...p, work_location: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
                       <Label>Bank Name</Label>
@@ -556,7 +581,16 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
 
         {/* Payroll Records Tab */}
         <TabsContent value="payroll" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => {
+              if (payrollRecords.length === 0) return;
+              exportToExcel(payrollRecords.map(r => ({
+                "Employee": (r.employees as any)?.full_name || "", "Month": r.month,
+                "Basic": r.basic_salary, "HRA": r.hra, "DA": r.da, "Gross": r.gross_salary,
+                "PF (Emp)": r.pf_employee, "ESI (Emp)": r.esi_employee, "PT": r.professional_tax,
+                "TDS": r.tds, "Total Deductions": r.deductions, "Net Salary": r.net_salary, "Status": r.status,
+              })), `payroll-${format(new Date(), "yyyy-MM-dd")}`, "Payroll");
+            }}><Download className="h-4 w-4 mr-2" />Export Excel</Button>
             <Dialog open={payrollDialogOpen} onOpenChange={setPayrollDialogOpen}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" /> Generate Payroll</Button>

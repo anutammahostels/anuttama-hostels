@@ -19,6 +19,7 @@ import {
   IndianRupee, ArrowUpRight, ArrowDownRight, Calendar, Download
 } from "lucide-react";
 import { format } from "date-fns";
+import { exportToExcel } from "@/lib/exportExcel";
 
 type Account = {
   id: string; property_id: string; name: string; code: string | null;
@@ -371,7 +372,17 @@ export default function Accounting() {
                 </DialogContent>
               </Dialog>
             )}
-            <Button size="sm" variant="outline" onClick={generateReport}><Download className="h-4 w-4 mr-1" />Export Report</Button>
+            <Button size="sm" variant="outline" onClick={() => {
+              const data = activeTab === "transactions" ? transactions.map(t => ({
+                Date: format(new Date(t.date), "dd/MM/yyyy"), Type: t.transaction_type, Account: getAccountName(t.account_id),
+                Category: t.category || "", Description: t.description || "", Mode: t.payment_mode || "", Amount: Number(t.amount),
+              })) : activeTab === "ledger" ? journalEntries.map(j => ({
+                Date: format(new Date(j.date), "dd/MM/yyyy"), "Entry #": j.entry_number, Description: j.description,
+                "Debit Account": getAccountName(j.debit_account_id), "Credit Account": getAccountName(j.credit_account_id), Amount: Number(j.amount),
+              })) : [];
+              if (data.length > 0) exportToExcel(data, `accounting-${activeTab}-${format(new Date(), "yyyy-MM-dd")}`, activeTab);
+            }}><Download className="h-4 w-4 mr-1" />Export Excel</Button>
+            <Button size="sm" variant="outline" onClick={generateReport}><Download className="h-4 w-4 mr-1" />Export PDF</Button>
           </div>
         </div>
 

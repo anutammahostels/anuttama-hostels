@@ -12,11 +12,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle, Undo2 } from "lucide-react";
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
 import { useStudents } from "@/hooks/useStudents";
+import { useProperties } from "@/hooks/useProperties";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const getStatusBadge = (status: string | null) => {
   switch (status) {
@@ -56,13 +59,21 @@ const Billing = () => {
   const [defaultMessCharges, setDefaultMessCharges] = useState("3000");
   const [defaultElectricity, setDefaultElectricity] = useState("500");
   const [defaultOtherCharges, setDefaultOtherCharges] = useState("0");
+  const [defaultDiscount, setDefaultDiscount] = useState("0");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateProgress, setGenerateProgress] = useState(0);
   const [generateResults, setGenerateResults] = useState<{ success: number; failed: number } | null>(null);
 
-  const { invoices, stats, isLoading, recordPayment, createInvoice } = useInvoices();
+  // Refund dialog state
+  const [refundDialog, setRefundDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundMethod, setRefundMethod] = useState("cash");
+
+  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund } = useInvoices();
   const { students } = useStudents();
+  const { properties } = useProperties();
   const { toast } = useToast();
 
   const handleSendReminder = (invoice?: InvoiceWithStudent) => {
@@ -183,7 +194,8 @@ const Billing = () => {
       const messCharges = parseFloat(defaultMessCharges) || 0;
       const electricity = parseFloat(defaultElectricity) || 0;
       const otherCharges = parseFloat(defaultOtherCharges) || 0;
-      const totalAmount = roomRent + messCharges + electricity + otherCharges;
+      const discount = parseFloat(defaultDiscount) || 0;
+      const totalAmount = roomRent + messCharges + electricity + otherCharges - discount;
 
       const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${(i + 1 + invoices.length).toString().padStart(4, '0')}`;
 
@@ -197,6 +209,7 @@ const Billing = () => {
           mess_charges: messCharges,
           electricity_charges: electricity,
           other_charges: otherCharges,
+          discounts: discount,
           total_amount: totalAmount,
           status: 'pending',
         });
@@ -269,7 +282,31 @@ const Billing = () => {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => {
               if (invoices.length === 0) return;
-              const headers = ["Invoice #", "Student", "Roll No", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
+              exportToExcel(invoices.map(inv => ({
+                "Invoice #": inv.invoice_number,
+                "Student": inv.student?.profile?.full_name || "",
+                "Roll No": inv.student?.roll_number || "",
+                "Billing Month": inv.billing_month,
+                "Room Rent": inv.room_rent || 0,
+                "Mess": inv.mess_charges || 0,
+                "Electricity": inv.electricity_charges || 0,
+                "Other": inv.other_charges || 0,
+                "Discount": inv.discounts || 0,
+                "Total": inv.total_amount,
+                "Paid": inv.paid_amount || 0,
+                "Balance": inv.total_amount - (inv.paid_amount || 0),
+                "Due Date": inv.due_date,
+                "Status": inv.status || "",
+                "Payment Method": inv.payment_method || "",
+              })), `invoices-${format(new Date(), "yyyy-MM-dd")}`, "Invoices");
+              toast({ title: "Exported", description: `${invoices.length} invoices exported as Excel` });
+            }}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button variant="outline" onClick={() => {
+              if (invoices.length === 0) return;
+              const headers = ["Invoice #", "Student", "Roll No", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Discount", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
               const rows = invoices.map(inv => [
                 inv.invoice_number,
                 inv.student?.profile?.full_name || "",
@@ -279,6 +316,7 @@ const Billing = () => {
                 inv.mess_charges || 0,
                 inv.electricity_charges || 0,
                 inv.other_charges || 0,
+                inv.discounts || 0,
                 inv.total_amount,
                 inv.paid_amount || 0,
                 inv.total_amount - (inv.paid_amount || 0),
@@ -471,6 +509,12 @@ const Billing = () => {
                                       <DropdownMenuItem onClick={() => setPaymentDialog({ open: true, invoice })}>
                                         <IndianRupee className="h-4 w-4 mr-2" />
                                         Record Payment
+                                      </DropdownMenuItem>
+                                    )}
+                                    {(invoice.paid_amount || 0) > 0 && (
+                                      <DropdownMenuItem onClick={() => { setRefundDialog({ open: true, invoice }); setRefundAmount(String(invoice.paid_amount || 0)); }} className="text-destructive">
+                                        <Undo2 className="h-4 w-4 mr-2" />
+                                        Process Refund
                                       </DropdownMenuItem>
                                     )}
                                   </DropdownMenuContent>
@@ -754,6 +798,10 @@ const Billing = () => {
                       <Label>Other Charges</Label>
                       <Input type="number" value={defaultOtherCharges} onChange={(e) => setDefaultOtherCharges(e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Discount (₹)</Label>
+                      <Input type="number" value={defaultDiscount} onChange={(e) => setDefaultDiscount(e.target.value)} />
+                    </div>
                   </div>
                   <div className="mt-3 p-3 bg-muted/50 rounded-lg flex justify-between">
                     <span className="text-sm text-muted-foreground">Total per student:</span>
@@ -762,7 +810,8 @@ const Billing = () => {
                         (parseFloat(defaultRoomRent) || 0) +
                         (parseFloat(defaultMessCharges) || 0) +
                         (parseFloat(defaultElectricity) || 0) +
-                        (parseFloat(defaultOtherCharges) || 0)
+                        (parseFloat(defaultOtherCharges) || 0) -
+                        (parseFloat(defaultDiscount) || 0)
                       )}
                     </span>
                   </div>
@@ -816,6 +865,60 @@ const Billing = () => {
                 </DialogFooter>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+        {/* Refund Dialog */}
+        <Dialog open={refundDialog.open} onOpenChange={(open) => { if (!open) setRefundDialog({ open: false, invoice: null }); }}>
+          <DialogContent className="bg-background">
+            <DialogHeader>
+              <DialogTitle>Process Refund</DialogTitle>
+              <DialogDescription>Refund for invoice {refundDialog.invoice?.invoice_number}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between"><span className="text-muted-foreground">Student:</span><span className="font-medium">{refundDialog.invoice?.student?.profile?.full_name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Paid Amount:</span><span className="font-medium">{formatCurrency(refundDialog.invoice?.paid_amount || 0)}</span></div>
+              </div>
+              <div className="space-y-2">
+                <Label>Refund Amount (₹)</Label>
+                <Input type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} max={refundDialog.invoice?.paid_amount || 0} />
+              </div>
+              <div className="space-y-2">
+                <Label>Reason</Label>
+                <Textarea value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. Student exit, overpayment..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Refund Method</Label>
+                <Select value={refundMethod} onValueChange={setRefundMethod}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="upi">UPI</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRefundDialog({ open: false, invoice: null })}>Cancel</Button>
+              <Button variant="destructive" disabled={!refundAmount || !refundReason || processRefund.isPending} onClick={async () => {
+                if (!refundDialog.invoice) return;
+                const propertyId = properties?.[0]?.id || "";
+                await processRefund.mutateAsync({
+                  invoiceId: refundDialog.invoice.id,
+                  studentId: refundDialog.invoice.student_id,
+                  propertyId,
+                  amount: parseFloat(refundAmount),
+                  reason: refundReason,
+                  refundMethod,
+                });
+                setRefundDialog({ open: false, invoice: null });
+                setRefundAmount(""); setRefundReason(""); setRefundMethod("cash");
+              }}>
+                {processRefund.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Process Refund"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

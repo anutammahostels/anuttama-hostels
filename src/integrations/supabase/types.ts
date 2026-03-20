@@ -394,8 +394,10 @@ export type Database = {
           department: string | null
           designation: string
           email: string | null
+          employee_number: string | null
           esi_number: string | null
           full_name: string
+          gender: string | null
           id: string
           phone: string | null
           property_id: string
@@ -403,6 +405,7 @@ export type Database = {
           status: string | null
           uan_number: string | null
           updated_at: string
+          work_location: string | null
         }
         Insert: {
           bank_account?: string | null
@@ -412,8 +415,10 @@ export type Database = {
           department?: string | null
           designation: string
           email?: string | null
+          employee_number?: string | null
           esi_number?: string | null
           full_name: string
+          gender?: string | null
           id?: string
           phone?: string | null
           property_id: string
@@ -421,6 +426,7 @@ export type Database = {
           status?: string | null
           uan_number?: string | null
           updated_at?: string
+          work_location?: string | null
         }
         Update: {
           bank_account?: string | null
@@ -430,8 +436,10 @@ export type Database = {
           department?: string | null
           designation?: string
           email?: string | null
+          employee_number?: string | null
           esi_number?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
           phone?: string | null
           property_id?: string
@@ -439,6 +447,7 @@ export type Database = {
           status?: string | null
           uan_number?: string | null
           updated_at?: string
+          work_location?: string | null
         }
         Relationships: [
           {
@@ -1021,8 +1030,11 @@ export type Database = {
         Row: {
           allowances: number | null
           basic_salary: number
+          bonus: number | null
+          contract_fees: number | null
           created_at: string
           da: number | null
+          days_worked: number | null
           deductions: number | null
           employee_id: string
           esi_employee: number | null
@@ -1031,25 +1043,39 @@ export type Database = {
           gross_salary: number | null
           hra: number | null
           id: string
+          incentives: number | null
+          lop: number | null
+          lwf: number | null
           medical_allowance: number | null
           month: string
           net_salary: number
           notes: string | null
+          ot: number | null
+          other_additions: number | null
           other_allowance: number | null
           other_deduction: number | null
           pf_employee: number | null
           pf_employer: number | null
+          professional_fees: number | null
           professional_tax: number | null
           property_id: string
+          salary_advance: number | null
+          special_allowance: number | null
           status: string | null
           tds: number | null
+          tds_194c: number | null
+          tds_194j: number | null
+          total_days: number | null
           travel_allowance: number | null
         }
         Insert: {
           allowances?: number | null
           basic_salary?: number
+          bonus?: number | null
+          contract_fees?: number | null
           created_at?: string
           da?: number | null
+          days_worked?: number | null
           deductions?: number | null
           employee_id: string
           esi_employee?: number | null
@@ -1058,25 +1084,39 @@ export type Database = {
           gross_salary?: number | null
           hra?: number | null
           id?: string
+          incentives?: number | null
+          lop?: number | null
+          lwf?: number | null
           medical_allowance?: number | null
           month: string
           net_salary?: number
           notes?: string | null
+          ot?: number | null
+          other_additions?: number | null
           other_allowance?: number | null
           other_deduction?: number | null
           pf_employee?: number | null
           pf_employer?: number | null
+          professional_fees?: number | null
           professional_tax?: number | null
           property_id: string
+          salary_advance?: number | null
+          special_allowance?: number | null
           status?: string | null
           tds?: number | null
+          tds_194c?: number | null
+          tds_194j?: number | null
+          total_days?: number | null
           travel_allowance?: number | null
         }
         Update: {
           allowances?: number | null
           basic_salary?: number
+          bonus?: number | null
+          contract_fees?: number | null
           created_at?: string
           da?: number | null
+          days_worked?: number | null
           deductions?: number | null
           employee_id?: string
           esi_employee?: number | null
@@ -1085,18 +1125,29 @@ export type Database = {
           gross_salary?: number | null
           hra?: number | null
           id?: string
+          incentives?: number | null
+          lop?: number | null
+          lwf?: number | null
           medical_allowance?: number | null
           month?: string
           net_salary?: number
           notes?: string | null
+          ot?: number | null
+          other_additions?: number | null
           other_allowance?: number | null
           other_deduction?: number | null
           pf_employee?: number | null
           pf_employer?: number | null
+          professional_fees?: number | null
           professional_tax?: number | null
           property_id?: string
+          salary_advance?: number | null
+          special_allowance?: number | null
           status?: string | null
           tds?: number | null
+          tds_194c?: number | null
+          tds_194j?: number | null
+          total_days?: number | null
           travel_allowance?: number | null
         }
         Relationships: [
@@ -1236,6 +1287,67 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          processed_by: string | null
+          property_id: string
+          reason: string | null
+          refund_method: string | null
+          status: string | null
+          student_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          processed_by?: string | null
+          property_id: string
+          reason?: string | null
+          refund_method?: string | null
+          status?: string | null
+          student_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          processed_by?: string | null
+          property_id?: string
+          reason?: string | null
+          refund_method?: string | null
+          status?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
