@@ -1,4 +1,4 @@
-import { Plus, QrCode, UserPlus, Receipt, Wrench, FileText, Send, LucideIcon } from "lucide-react";
+import { QrCode, UserPlus, Receipt, Wrench, FileText, Send, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
