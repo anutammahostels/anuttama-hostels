@@ -19,6 +19,7 @@ import {
   UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus,
 } from "lucide-react";
 import { format } from "date-fns";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Employee {
   id: string;
