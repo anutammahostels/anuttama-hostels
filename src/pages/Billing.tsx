@@ -559,7 +559,7 @@ const Billing = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
-                                <Button size="sm" variant="outline">
+                                <Button size="sm" variant="outline" onClick={() => handleSendReminder(invoice)}>
                                   <Send className="h-3 w-3 mr-1" />
                                   Remind
                                 </Button>
