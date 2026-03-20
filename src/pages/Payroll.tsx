@@ -632,9 +632,14 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
               if (payrollRecords.length === 0) return;
               exportToExcel(payrollRecords.map(r => ({
                 "Employee": (r.employees as any)?.full_name || "", "Month": r.month,
-                "Basic": r.basic_salary, "HRA": r.hra, "DA": r.da, "Gross": r.gross_salary,
-                "PF (Emp)": r.pf_employee, "ESI (Emp)": r.esi_employee, "PT": r.professional_tax,
-                "TDS": r.tds, "Total Deductions": r.deductions, "Net Salary": r.net_salary, "Status": r.status,
+                "Basic": r.basic_salary, "HRA": r.hra, "Special Allowance": r.special_allowance,
+                "Professional Fees": r.professional_fees, "Contract Fees": r.contract_fees,
+                "Other Additions": r.other_additions, "OT": r.ot, "Incentives": r.incentives, "Bonus": r.bonus,
+                "Gross": r.gross_salary, "PF (Emp)": r.pf_employee, "ESI (Emp)": r.esi_employee,
+                "LWF": r.lwf, "Salary Advance": r.salary_advance, "PT": r.professional_tax,
+                "TDS": r.tds, "TDS 194C": r.tds_194c, "TDS 194J": r.tds_194j,
+                "Total Deductions": r.deductions, "Total Days": r.total_days, "LOP": r.lop,
+                "Days Worked": r.days_worked, "Net Salary": r.net_salary, "Status": r.status,
               })), `payroll-${format(new Date(), "yyyy-MM-dd")}`, "Payroll");
             }}><Download className="h-4 w-4 mr-2" />Export Excel</Button>
             <Dialog open={payrollDialogOpen} onOpenChange={setPayrollDialogOpen}>
