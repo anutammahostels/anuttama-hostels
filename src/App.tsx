@@ -33,6 +33,7 @@ import Complaints from "./pages/Complaints";
 import Payroll from "./pages/Payroll";
 import Accounting from "./pages/Accounting";
 import Admissions from "./pages/Admissions";
+import Receivables from "./pages/Receivables";
 import NotFound from "./pages/NotFound";
 
 // Student pages
