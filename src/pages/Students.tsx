@@ -1015,6 +1015,34 @@ const Students = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Student Confirmation */}
+      <AlertDialog open={!!deleteConfirmStudent} onOpenChange={(open) => { if (!open) setDeleteConfirmStudent(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {deleteConfirmStudent?.profile?.full_name || "this student"} from the system.
+              {deleteConfirmStudent?.bed && " Their bed assignment will also be vacated."}
+              {" "}This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirmStudent) {
+                  deleteStudent.mutate(deleteConfirmStudent.id);
+                  setDeleteConfirmStudent(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
