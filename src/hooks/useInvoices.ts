@@ -124,7 +124,6 @@ export function useInvoices(studentId?: string) {
       studentId?: string;
       propertyId?: string;
     }) => {
-      // First get current invoice
       const { data: current, error: fetchError } = await supabase
         .from('invoices')
         .select('paid_amount, total_amount, student_id')
@@ -150,13 +149,10 @@ export function useInvoices(studentId?: string) {
       
       if (error) throw error;
 
-      // Also insert into payments table for audit trail
       const sId = payStudentId || current.student_id;
       if (sId) {
-        // Get a property_id from the student if not provided
         let pId = propertyId;
         if (!pId) {
-          // Try to get from existing data or skip
           const { data: bedData } = await supabase
             .from('beds')
             .select('room_id, rooms(floor_id, floors(block_id, blocks(property_id)))')
@@ -191,7 +187,62 @@ export function useInvoices(studentId?: string) {
     },
   });
 
-  // Calculate stats
+  const processRefund = useMutation({
+    mutationFn: async ({
+      invoiceId,
+      studentId: refundStudentId,
+      propertyId: refundPropertyId,
+      amount,
+      reason,
+      refundMethod,
+    }: {
+      invoiceId: string;
+      studentId: string;
+      propertyId: string;
+      amount: number;
+      reason: string;
+      refundMethod: string;
+    }) => {
+      // Insert refund record
+      const { error: refundError } = await supabase.from('refunds').insert({
+        invoice_id: invoiceId,
+        student_id: refundStudentId,
+        property_id: refundPropertyId,
+        amount,
+        reason,
+        refund_method: refundMethod,
+        status: 'processed',
+        processed_by: user?.id || null,
+      });
+      if (refundError) throw refundError;
+
+      // Update invoice paid_amount (reduce)
+      const { data: current, error: fetchError } = await supabase
+        .from('invoices')
+        .select('paid_amount, total_amount')
+        .eq('id', invoiceId)
+        .single();
+      if (fetchError) throw fetchError;
+
+      const newPaid = Math.max(0, (current.paid_amount || 0) - amount);
+      const newStatus = newPaid <= 0 ? 'pending' : newPaid >= current.total_amount ? 'paid' : 'partial';
+      
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({ paid_amount: newPaid, status: newStatus })
+        .eq('id', invoiceId);
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['refunds'] });
+      toast({ title: 'Refund Processed', description: 'Refund has been processed successfully.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const stats = {
     totalInvoices: invoicesQuery.data?.length || 0,
     totalAmount: invoicesQuery.data?.reduce((acc, inv) => acc + inv.total_amount, 0) || 0,
@@ -213,5 +264,6 @@ export function useInvoices(studentId?: string) {
     createInvoice,
     updateInvoice,
     recordPayment,
+    processRefund,
   };
 }
