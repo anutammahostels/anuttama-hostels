@@ -463,7 +463,7 @@ const Billing = () => {
                                       <FileText className="h-4 w-4 mr-2" />
                                       Download PDF
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleSendReminder(invoice)}>
                                       <Send className="h-4 w-4 mr-2" />
                                       Send Reminder
                                     </DropdownMenuItem>
