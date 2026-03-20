@@ -1,35 +1,39 @@
 
 
-## Fix All Bugs and Non-Working Buttons Across Dashboard
+## Add Delete Room, Delete Student, and Student Filters
 
-### Issues Found
+### Changes
 
-1. **"Send Reminders" button in Billing page (line 353)** — does nothing when clicked, no onClick handler
-2. **"Remind" button in Billing overdue tab (line 549-551)** — does nothing, no onClick handler
-3. **"Send Reminder" dropdown item in Billing invoice actions (line 453-456)** — does nothing, no onClick handler
-4. **"Customize" button in QuickActions (line 73-76)** — does nothing, purely decorative
-5. **Billing payment dialog clears invoice on close** — when `onOpenChange` fires with `false`, it sets invoice to null immediately (line 618), which can cause a flash before dialog closes
-6. **Accounting: `account_type` cast issue** — inserting with `as any` on accounts; the `account_type` column is `USER-DEFINED` (enum), but form sends a plain string — this may fail silently
+#### 1. Add `deleteRoom` mutation to `useRooms.ts`
+- Add a mutation that deletes all beds for a room first, then deletes the room itself
+- Invalidates rooms query on success
 
-### Plan
+#### 2. Add Delete Room button to `src/pages/RoomAllocation.tsx`
+- Add a `Trash2` icon button in each room card header (next to the block/floor badge)
+- Show a confirmation AlertDialog before deleting
+- Only allow deletion if all beds in the room are vacant (no students assigned)
 
-#### 1. Fix "Send Reminders" / "Remind" buttons in Billing (`src/pages/Billing.tsx`)
-- Add a `handleSendReminder` function that shows a toast notification saying "Reminder sent" (placeholder for future email/notification integration)
-- Wire it to all 3 reminder buttons (bulk Send Reminders button, individual Remind button on overdue tab, and Send Reminder dropdown item)
+#### 3. Add `deleteStudent` mutation to `useStudents.ts`
+- Mutation that vacates the student's bed (if any), then deletes the student record
+- Note: This deletes the student record only, not the auth user (would need an edge function for full cleanup)
 
-#### 2. Fix "Customize" button in QuickActions (`src/components/dashboard/QuickActions.tsx`)
-- Remove the non-functional "Customize" button entirely since there's no customization feature — it misleads users
+#### 4. Add Delete Student option to `src/pages/Students.tsx`
+- Add "Delete Student" dropdown item (red/destructive) in both mobile and desktop dropdown menus
+- Show confirmation AlertDialog before deleting
+- Vacate bed if assigned before deletion
 
-#### 3. Fix Billing payment dialog close behavior (`src/pages/Billing.tsx`)
-- Don't clear invoice immediately on `onOpenChange(false)` — only clear after dialog transition completes, or keep invoice data until explicitly closed
-
-#### 4. Validate all other pages have working buttons
-- Admissions: All buttons work (New Admission, Approve, Reject, Enroll, View) ✅
-- Accounting: All buttons work (Add Transaction, Journal Entry, Add Account, Export Report) ✅
-- Student Invoices: Pay Now and Download work ✅
-- Dashboard Stats, PendingApprovals, RecentActivity: All functional ✅
+#### 5. Implement working Filters in `src/pages/Students.tsx`
+- Replace the non-functional "Filters" button with a Popover containing filter controls:
+  - **Status**: Select (All / Active / On Leave / Inactive)
+  - **Course**: Select populated from unique courses in data
+  - **Year**: Select (All / 1 / 2 / 3 / 4)
+  - **Room Status**: Select (All / Allocated / Not Allocated)
+- Update `filteredStudents` logic to apply all active filters alongside search
+- Show active filter count badge on the Filters button
 
 ### Files to Edit
-1. `src/pages/Billing.tsx` — Add reminder handler, fix dialog close
-2. `src/components/dashboard/QuickActions.tsx` — Remove non-functional Customize button
+1. `src/hooks/useRooms.ts` — Add `deleteRoom` mutation
+2. `src/hooks/useStudents.ts` — Add `deleteStudent` mutation
+3. `src/pages/RoomAllocation.tsx` — Add delete button + confirmation dialog per room card
+4. `src/pages/Students.tsx` — Add delete option in dropdown, replace Filter button with working Popover filters
 
