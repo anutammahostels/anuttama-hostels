@@ -13,7 +13,10 @@ import {
   UserCheck,
   ArrowRight,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  FileSpreadsheet,
+  ClipboardList,
+  CalendarCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -30,8 +33,8 @@ const features = [
   },
   {
     icon: Building2,
-    title: "Property Management",
-    description: "Full hierarchy management: Property → Block → Floor → Room → Bed with visual layouts and real-time status.",
+    title: "Property & Room Management",
+    description: "Full hierarchy: Property → Block → Floor → Room → Bed with visual layouts and real-time occupancy.",
     gradient: "from-primary to-blue-500",
     benefits: ["Visual bed grids", "Drag-drop allocation", "Condition tracking"],
   },
@@ -51,10 +54,10 @@ const features = [
   },
   {
     icon: Receipt,
-    title: "Billing & Invoicing",
-    description: "Automated invoicing, sub-metering integration, late fee management, and multi-mode payments.",
+    title: "Billing, Discounts & Refunds",
+    description: "Automated invoicing with discount application, refund processing on student exit, and multi-mode payments.",
     gradient: "from-pink-500 to-rose-500",
-    benefits: ["Auto-invoicing", "Payment tracking", "Receipt generation"],
+    benefits: ["Invoice discounts", "Refund processing", "Payment tracking"],
   },
   {
     icon: Wrench,
@@ -63,21 +66,48 @@ const features = [
     gradient: "from-cyan-500 to-teal-500",
     benefits: ["Photo uploads", "SLA monitoring", "Vendor management"],
   },
+  {
+    icon: Wallet,
+    title: "Payroll & Payslips",
+    description: "Full salary components — HRA, PF, ESI, TDS, incentives. Generate PDF payslips with one click.",
+    gradient: "from-emerald-500 to-green-600",
+    benefits: ["9+ earning components", "PDF payslips", "Auto-calculations"],
+  },
+  {
+    icon: BarChart3,
+    title: "Student Receivables Report",
+    description: "Track gross fees, discounts applied, amounts received, and net outstanding per student in real time.",
+    gradient: "from-indigo-500 to-blue-600",
+    benefits: ["Gross/Net tracking", "Discount analysis", "Outstanding alerts"],
+  },
+  {
+    icon: FileSpreadsheet,
+    title: "Excel & PDF Exports",
+    description: "Export any data — students, invoices, payroll, attendance — to Excel or PDF with one click.",
+    gradient: "from-amber-500 to-orange-600",
+    benefits: ["One-click export", "All data pages", "Formatted reports"],
+  },
+  {
+    icon: CalendarCheck,
+    title: "Attendance & Admissions",
+    description: "Digital attendance with daily marking, LOP tracking, and streamlined admission workflows.",
+    gradient: "from-rose-500 to-pink-600",
+    benefits: ["Daily attendance", "Admission pipeline", "LOP tracking"],
+  },
 ];
 
 const roles = [
   { icon: Shield, label: "Super Admin", desc: "Platform control", color: "bg-violet-500" },
   { icon: Building2, label: "Owner", desc: "Multi-property", color: "bg-primary" },
-  { icon: UserCheck, label: "Manager", desc: "Operations", color: "bg-secondary" },
-  { icon: Users, label: "Warden", desc: "Block level", color: "bg-orange-500" },
-  { icon: Wallet, label: "Accountant", desc: "Finances", color: "bg-pink-500" },
-  { icon: Bell, label: "Student", desc: "Self-service", color: "bg-cyan-500" },
-  { icon: BarChart3, label: "Parent", desc: "Monitoring", color: "bg-amber-500" },
+  { icon: UserCheck, label: "Warden", desc: "Block level", color: "bg-secondary" },
+  { icon: Users, label: "Student", desc: "Self-service", color: "bg-orange-500" },
+  { icon: ClipboardList, label: "Security", desc: "Gate passes", color: "bg-pink-500" },
+  { icon: Bell, label: "Parent", desc: "Monitoring", color: "bg-cyan-500" },
 ];
 
 export const Features = () => {
   return (
-    <section id="features" className="py-24 bg-muted/30 relative overflow-hidden">
+    <section id="features" className="py-16 lg:py-24 bg-muted/30 relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 right-0 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
@@ -86,74 +116,69 @@ export const Features = () => {
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-16 max-w-3xl mx-auto">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary text-sm font-medium mb-4">
-            <Sparkles className="h-4 w-4" />
+        <div className="text-center mb-10 lg:mb-16 max-w-3xl mx-auto">
+          <span className="inline-flex items-center gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full bg-secondary/10 text-secondary text-xs lg:text-sm font-medium mb-3 lg:mb-4">
+            <Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />
             Comprehensive Features
           </span>
-          <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-4">
+          <h2 className="text-2xl lg:text-5xl font-bold text-foreground mb-3 lg:mb-4">
             Everything for
             <span className="text-gradient"> Modern Residential Management</span>
           </h2>
-          <p className="text-muted-foreground text-lg">
-            A complete suite of tools designed specifically for hostels, boarding schools, and co-living spaces.
+          <p className="text-muted-foreground text-sm lg:text-lg">
+            A complete suite of tools — billing, payroll, exports, and more.
             <span className="font-medium text-foreground"> Save 20+ hours weekly </span> with intelligent automation.
           </p>
         </div>
 
         {/* Features grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-16 lg:mb-20">
-          {features.map((feature, index) => (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4 mb-10 lg:mb-20">
+          {features.map((feature) => (
             <div
               key={feature.title}
-              className="group relative rounded-xl lg:rounded-2xl bg-card border border-border p-4 lg:p-6 transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 lg:hover:-translate-y-2 hover:border-primary/20 overflow-hidden"
+              className="group relative rounded-xl bg-card border border-border p-3 lg:p-5 transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 hover:border-primary/20 overflow-hidden"
             >
               {/* Gradient glow on hover */}
               <div className={`absolute -top-16 -right-16 w-32 h-32 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 blur-3xl transition-opacity duration-500`} />
               
               {/* Icon */}
-              <div className={`inline-flex p-2.5 lg:p-3 rounded-lg lg:rounded-xl bg-gradient-to-br ${feature.gradient} mb-3 lg:mb-4 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
-                <feature.icon className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
+              <div className={`inline-flex p-2 lg:p-2.5 rounded-lg bg-gradient-to-br ${feature.gradient} mb-2 lg:mb-3 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
+                <feature.icon className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-white" />
               </div>
               
               {/* Content */}
-              <h3 className="text-base lg:text-lg font-semibold text-foreground mb-1.5 lg:mb-2 group-hover:text-primary transition-colors">
+              <h3 className="text-xs lg:text-sm font-semibold text-foreground mb-1 lg:mb-1.5 group-hover:text-primary transition-colors leading-tight">
                 {feature.title}
               </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-3 lg:mb-4 line-clamp-2 lg:line-clamp-none">
+              <p className="text-muted-foreground text-[10px] lg:text-xs leading-relaxed mb-2 lg:mb-3 line-clamp-2">
                 {feature.description}
               </p>
 
               {/* Benefits list */}
-              <div className="space-y-1.5 lg:space-y-2">
+              <div className="space-y-1">
                 {feature.benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-1.5 lg:gap-2 text-xs lg:text-sm">
-                    <CheckCircle2 className="h-3 w-3 lg:h-4 lg:w-4 text-secondary flex-shrink-0" />
+                  <div key={benefit} className="flex items-center gap-1 lg:gap-1.5 text-[10px] lg:text-xs">
+                    <CheckCircle2 className="h-2.5 w-2.5 lg:h-3 lg:w-3 text-secondary flex-shrink-0" />
                     <span className="text-foreground">{benefit}</span>
                   </div>
                 ))}
-              </div>
-
-              {/* Learn more link */}
-              <div className="mt-3 lg:mt-4 pt-3 lg:pt-4 border-t border-border flex items-center gap-2 text-primary font-medium text-sm opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                Learn more <ArrowRight className="h-3 w-3 lg:h-4 lg:w-4" />
               </div>
             </div>
           ))}
         </div>
 
         {/* Feature images showcase */}
-        <div className="grid md:grid-cols-2 gap-4 lg:gap-8 mb-12 lg:mb-20">
+        <div className="grid grid-cols-2 gap-3 lg:gap-8 mb-10 lg:mb-20">
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl lg:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <img 
               src={hostelRoomImage} 
               alt="Modern hostel room" 
-              className="relative rounded-xl lg:rounded-3xl w-full h-48 lg:h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
+              className="relative rounded-xl lg:rounded-3xl w-full h-36 lg:h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
             />
-            <div className="absolute bottom-3 left-3 right-3 lg:bottom-4 lg:left-4 lg:right-4 p-3 lg:p-4 rounded-lg lg:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
-              <p className="font-semibold text-foreground text-sm lg:text-base">Smart Room Management</p>
-              <p className="text-xs lg:text-sm text-muted-foreground line-clamp-1 lg:line-clamp-none">Visual bed allocation and real-time occupancy</p>
+            <div className="absolute bottom-2 left-2 right-2 lg:bottom-4 lg:left-4 lg:right-4 p-2 lg:p-4 rounded-lg lg:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
+              <p className="font-semibold text-foreground text-xs lg:text-base">Smart Room Management</p>
+              <p className="text-[10px] lg:text-sm text-muted-foreground line-clamp-1">Visual bed allocation and real-time occupancy</p>
             </div>
           </div>
           <div className="relative group">
@@ -161,25 +186,25 @@ export const Features = () => {
             <img 
               src={messCafeteriaImage} 
               alt="Hostel mess cafeteria" 
-              className="relative rounded-xl lg:rounded-3xl w-full h-48 lg:h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
+              className="relative rounded-xl lg:rounded-3xl w-full h-36 lg:h-64 object-cover border border-border shadow-lg group-hover:shadow-2xl transition-all duration-500"
             />
-            <div className="absolute bottom-3 left-3 right-3 lg:bottom-4 lg:left-4 lg:right-4 p-3 lg:p-4 rounded-lg lg:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
-              <p className="font-semibold text-foreground text-sm lg:text-base">Integrated Mess System</p>
-              <p className="text-xs lg:text-sm text-muted-foreground line-clamp-1 lg:line-clamp-none">Menu planning, smart rebates, and nutrition</p>
+            <div className="absolute bottom-2 left-2 right-2 lg:bottom-4 lg:left-4 lg:right-4 p-2 lg:p-4 rounded-lg lg:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-sm border border-border">
+              <p className="font-semibold text-foreground text-xs lg:text-base">Integrated Mess System</p>
+              <p className="text-[10px] lg:text-sm text-muted-foreground line-clamp-1">Menu planning, smart rebates, and nutrition</p>
             </div>
           </div>
         </div>
 
         {/* Roles section */}
-        <div className="text-center mb-8 lg:mb-12">
+        <div className="text-center mb-6 lg:mb-12">
           <span className="inline-flex items-center gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full bg-primary/10 text-primary text-xs lg:text-sm font-medium mb-3 lg:mb-4">
             <Users className="h-3 w-3 lg:h-4 lg:w-4" />
             Role-Based Access
           </span>
           <h2 className="text-xl lg:text-3xl font-bold text-foreground mb-2 lg:mb-3">
-            7 Tailored Dashboards
+            6 Tailored Dashboards
           </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto text-sm lg:text-base">
+          <p className="text-muted-foreground max-w-lg mx-auto text-xs lg:text-base">
             Each role gets a dedicated interface.
             <span className="font-medium text-foreground"> Right access, right time.</span>
           </p>
@@ -210,7 +235,7 @@ export const Features = () => {
         {/* CTA */}
         <div className="text-center">
           <Link to="/features">
-            <Button size="lg" variant="outline" className="gap-2 group">
+            <Button size="lg" variant="outline" className="gap-2 group text-sm lg:text-base">
               View All Features <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
