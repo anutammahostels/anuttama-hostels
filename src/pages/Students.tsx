@@ -643,6 +643,10 @@ const Students = () => {
                                     <BedDouble className="h-4 w-4 mr-2" /> Assign Room
                                   </DropdownMenuItem>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setDeleteConfirmStudent(student)} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" /> Delete Student
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
