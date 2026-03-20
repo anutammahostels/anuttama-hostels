@@ -581,7 +581,16 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
 
         {/* Payroll Records Tab */}
         <TabsContent value="payroll" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => {
+              if (payrollRecords.length === 0) return;
+              exportToExcel(payrollRecords.map(r => ({
+                "Employee": (r.employees as any)?.full_name || "", "Month": r.month,
+                "Basic": r.basic_salary, "HRA": r.hra, "DA": r.da, "Gross": r.gross_salary,
+                "PF (Emp)": r.pf_employee, "ESI (Emp)": r.esi_employee, "PT": r.professional_tax,
+                "TDS": r.tds, "Total Deductions": r.deductions, "Net Salary": r.net_salary, "Status": r.status,
+              })), `payroll-${format(new Date(), "yyyy-MM-dd")}`, "Payroll");
+            }}><Download className="h-4 w-4 mr-2" />Export Excel</Button>
             <Dialog open={payrollDialogOpen} onOpenChange={setPayrollDialogOpen}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" /> Generate Payroll</Button>
