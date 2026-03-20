@@ -282,7 +282,31 @@ const Billing = () => {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => {
               if (invoices.length === 0) return;
-              const headers = ["Invoice #", "Student", "Roll No", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
+              exportToExcel(invoices.map(inv => ({
+                "Invoice #": inv.invoice_number,
+                "Student": inv.student?.profile?.full_name || "",
+                "Roll No": inv.student?.roll_number || "",
+                "Billing Month": inv.billing_month,
+                "Room Rent": inv.room_rent || 0,
+                "Mess": inv.mess_charges || 0,
+                "Electricity": inv.electricity_charges || 0,
+                "Other": inv.other_charges || 0,
+                "Discount": inv.discounts || 0,
+                "Total": inv.total_amount,
+                "Paid": inv.paid_amount || 0,
+                "Balance": inv.total_amount - (inv.paid_amount || 0),
+                "Due Date": inv.due_date,
+                "Status": inv.status || "",
+                "Payment Method": inv.payment_method || "",
+              })), `invoices-${format(new Date(), "yyyy-MM-dd")}`, "Invoices");
+              toast({ title: "Exported", description: `${invoices.length} invoices exported as Excel` });
+            }}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button variant="outline" onClick={() => {
+              if (invoices.length === 0) return;
+              const headers = ["Invoice #", "Student", "Roll No", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Discount", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
               const rows = invoices.map(inv => [
                 inv.invoice_number,
                 inv.student?.profile?.full_name || "",
@@ -292,6 +316,7 @@ const Billing = () => {
                 inv.mess_charges || 0,
                 inv.electricity_charges || 0,
                 inv.other_charges || 0,
+                inv.discounts || 0,
                 inv.total_amount,
                 inv.paid_amount || 0,
                 inv.total_amount - (inv.paid_amount || 0),
