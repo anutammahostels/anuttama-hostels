@@ -89,6 +89,48 @@ const Billing = () => {
     setPaymentMethod("upi");
   };
 
+  const handleDownloadPdf = (invoice: InvoiceWithStudent) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const studentName = invoice.student?.profile?.full_name || "Unknown";
+    const rollNumber = invoice.student?.roll_number || "";
+    const html = `<!DOCTYPE html><html><head><title>Invoice ${invoice.invoice_number}</title>
+    <style>
+      body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#1a1a2e;max-width:800px;margin:0 auto}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0f3460;padding-bottom:20px;margin-bottom:30px}
+      .logo{font-size:24px;font-weight:bold;color:#0f3460}
+      .invoice-title{font-size:28px;color:#0f3460;text-align:right}
+      table{width:100%;border-collapse:collapse;margin:20px 0}
+      th{background:#0f3460;color:#fff;padding:12px 16px;text-align:left;font-size:13px}
+      td{border-bottom:1px solid #eee;padding:10px 16px;font-size:14px}
+      .total-row td{font-weight:bold;border-top:2px solid #0f3460;font-size:16px}
+      .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px}
+      @media print{body{padding:20px}@page{margin:1cm}}
+    </style></head><body>
+    <div class="header">
+      <div><div class="logo">🏨 Hostylia</div><p style="color:#666;font-size:13px">Hostel Management System</p></div>
+      <div><div class="invoice-title">INVOICE</div><div style="color:#666;font-size:14px">${invoice.invoice_number}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px">
+      <div><h3 style="font-size:12px;text-transform:uppercase;color:#999">Bill To</h3><p><strong>${studentName}</strong></p>${rollNumber ? `<p>Roll No: ${rollNumber}</p>` : ''}</div>
+      <div style="text-align:right"><h3 style="font-size:12px;text-transform:uppercase;color:#999">Details</h3><p>Billing: ${format(new Date(invoice.billing_month), "MMMM yyyy")}</p><p>Due: ${format(new Date(invoice.due_date), "dd MMM yyyy")}</p></div>
+    </div>
+    <table>
+      <tr><th>Description</th><th style="text-align:right">Amount (₹)</th></tr>
+      ${invoice.room_rent ? `<tr><td>Room Rent</td><td style="text-align:right">₹${Number(invoice.room_rent).toLocaleString('en-IN')}</td></tr>` : ''}
+      ${invoice.mess_charges ? `<tr><td>Mess Charges</td><td style="text-align:right">₹${Number(invoice.mess_charges).toLocaleString('en-IN')}</td></tr>` : ''}
+      ${invoice.electricity_charges ? `<tr><td>Electricity</td><td style="text-align:right">₹${Number(invoice.electricity_charges).toLocaleString('en-IN')}</td></tr>` : ''}
+      ${invoice.other_charges && invoice.other_charges > 0 ? `<tr><td>Other Charges</td><td style="text-align:right">₹${Number(invoice.other_charges).toLocaleString('en-IN')}</td></tr>` : ''}
+      <tr class="total-row"><td>Total</td><td style="text-align:right">₹${Number(invoice.total_amount).toLocaleString('en-IN')}</td></tr>
+    </table>
+    ${invoice.paid_amount && invoice.paid_amount > 0 ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-top:20px"><strong>Paid: ₹${Number(invoice.paid_amount).toLocaleString('en-IN')}</strong> via ${(invoice.payment_method || 'N/A').toUpperCase()}${invoice.total_amount - (invoice.paid_amount || 0) > 0 ? ` | Balance: ₹${(invoice.total_amount - (invoice.paid_amount || 0)).toLocaleString('en-IN')}` : ''}</div>` : ''}
+    <div class="footer"><p>This is a computer-generated invoice.</p></div>
+    </body></html>`;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const toggleStudentSelection = (studentId: string) => {
     setSelectedStudentIds(prev => 
       prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
@@ -212,9 +254,36 @@ const Billing = () => {
             <p className="text-muted-foreground">Manage invoices, payments, and collections</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => {
+              if (invoices.length === 0) return;
+              const headers = ["Invoice #", "Student", "Roll No", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
+              const rows = invoices.map(inv => [
+                inv.invoice_number,
+                inv.student?.profile?.full_name || "",
+                inv.student?.roll_number || "",
+                inv.billing_month,
+                inv.room_rent || 0,
+                inv.mess_charges || 0,
+                inv.electricity_charges || 0,
+                inv.other_charges || 0,
+                inv.total_amount,
+                inv.paid_amount || 0,
+                inv.total_amount - (inv.paid_amount || 0),
+                inv.due_date,
+                inv.status || "",
+                inv.payment_method || "",
+                inv.payment_date || "",
+              ]);
+              const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `invoices-${format(new Date(), "yyyy-MM-dd")}.csv`; a.click();
+              URL.revokeObjectURL(url);
+              toast({ title: "Exported", description: `${invoices.length} invoices exported as CSV` });
+            }}>
               <Download className="h-4 w-4 mr-2" />
-              Export
+              Export CSV
             </Button>
             <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
               <Plus className="h-4 w-4 mr-2" />
@@ -266,6 +335,7 @@ const Billing = () => {
             <TabsTrigger value="invoices">All Invoices</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="overdue">Overdue</TabsTrigger>
+            <TabsTrigger value="payments">Payment History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
@@ -376,12 +446,8 @@ const Billing = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="bg-popover">
-                                    <DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleDownloadPdf(invoice)}>
                                       <FileText className="h-4 w-4 mr-2" />
-                                      View Invoice
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                      <Download className="h-4 w-4 mr-2" />
                                       Download PDF
                                     </DropdownMenuItem>
                                     <DropdownMenuItem>
@@ -496,6 +562,50 @@ const Billing = () => {
                           </TableRow>
                         );
                       })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="payments" className="mt-6">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Payment History</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Amount Paid</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No payments recorded yet</TableCell>
+                        </TableRow>
+                      ) : (
+                        invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).map((invoice) => (
+                          <TableRow key={invoice.id}>
+                            <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
+                            <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
+                            <TableCell className="text-green-600 font-semibold">{formatCurrency(invoice.paid_amount || 0)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs capitalize">{invoice.payment_method || "N/A"}</Badge>
+                            </TableCell>
+                            <TableCell>{invoice.payment_date ? format(new Date(invoice.payment_date), "MMM d, yyyy") : "—"}</TableCell>
+                            <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>

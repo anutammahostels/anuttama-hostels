@@ -45,7 +45,6 @@ export function useInvoices(studentId?: string) {
       if (invoicesError) throw invoicesError;
       if (!invoicesData || invoicesData.length === 0) return [] as InvoiceWithStudent[];
 
-      // Get profiles for students
       const userIds = invoicesData
         .map(inv => inv.student?.user_id)
         .filter((id): id is string => !!id);
@@ -83,17 +82,10 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast({
-        title: 'Invoice Created',
-        description: 'New invoice has been generated.',
-      });
+      toast({ title: 'Invoice Created', description: 'New invoice has been generated.' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -111,17 +103,10 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast({
-        title: 'Invoice Updated',
-        description: 'Invoice has been updated.',
-      });
+      toast({ title: 'Invoice Updated', description: 'Invoice has been updated.' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -129,16 +114,20 @@ export function useInvoices(studentId?: string) {
     mutationFn: async ({ 
       id, 
       amount, 
-      method 
+      method,
+      studentId: payStudentId,
+      propertyId,
     }: { 
       id: string; 
       amount: number; 
       method: string;
+      studentId?: string;
+      propertyId?: string;
     }) => {
       // First get current invoice
       const { data: current, error: fetchError } = await supabase
         .from('invoices')
-        .select('paid_amount, total_amount')
+        .select('paid_amount, total_amount, student_id')
         .eq('id', id)
         .single();
       
@@ -160,21 +149,45 @@ export function useInvoices(studentId?: string) {
         .single();
       
       if (error) throw error;
+
+      // Also insert into payments table for audit trail
+      const sId = payStudentId || current.student_id;
+      if (sId) {
+        // Get a property_id from the student if not provided
+        let pId = propertyId;
+        if (!pId) {
+          // Try to get from existing data or skip
+          const { data: bedData } = await supabase
+            .from('beds')
+            .select('room_id, rooms(floor_id, floors(block_id, blocks(property_id)))')
+            .eq('student_id', sId)
+            .limit(1)
+            .maybeSingle();
+          pId = (bedData as any)?.rooms?.floors?.blocks?.property_id;
+        }
+
+        if (pId) {
+          await supabase.from('payments').insert({
+            invoice_id: id,
+            student_id: sId,
+            property_id: pId,
+            amount,
+            payment_method: method,
+            status: 'completed',
+            recorded_by: user?.id || null,
+          } as any);
+        }
+      }
+
       return data as Invoice;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast({
-        title: 'Payment Recorded',
-        description: 'Payment has been recorded successfully.',
-      });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      toast({ title: 'Payment Recorded', description: 'Payment has been recorded successfully.' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 

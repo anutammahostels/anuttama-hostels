@@ -950,6 +950,73 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          gateway_response: Json | null
+          id: string
+          invoice_id: string
+          paid_at: string
+          payment_method: string
+          property_id: string
+          recorded_by: string | null
+          status: string
+          student_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          gateway_response?: Json | null
+          id?: string
+          invoice_id: string
+          paid_at?: string
+          payment_method?: string
+          property_id: string
+          recorded_by?: string | null
+          status?: string
+          student_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          gateway_response?: Json | null
+          id?: string
+          invoice_id?: string
+          paid_at?: string
+          payment_method?: string
+          property_id?: string
+          recorded_by?: string | null
+          status?: string
+          student_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_records: {
         Row: {
           allowances: number | null

@@ -90,6 +90,20 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
+  const { data: feeCollections = [] } = useQuery({
+    queryKey: ["fee-collections", propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*, invoice:invoices(invoice_number, billing_month, student_id)")
+        .eq("property_id", propertyId)
+        .order("paid_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId,
+  });
+
 
   // Mutations
   const createAccount = useMutation({
@@ -257,7 +271,8 @@ export default function Accounting() {
             <TabsTrigger value="transactions" className="gap-1"><TrendingUp className="h-3.5 w-3.5" />Transactions</TabsTrigger>
             <TabsTrigger value="ledger" className="gap-1"><BookOpen className="h-3.5 w-3.5" />Ledger</TabsTrigger>
             <TabsTrigger value="accounts" className="gap-1"><ClipboardList className="h-3.5 w-3.5" />Accounts</TabsTrigger>
-            
+            <TabsTrigger value="collections" className="gap-1"><IndianRupee className="h-3.5 w-3.5" />Fee Collections</TabsTrigger>
+            <TabsTrigger value="pnl" className="gap-1"><TrendingDown className="h-3.5 w-3.5" />P&L</TabsTrigger>
           </TabsList>
           <div className="flex gap-2 flex-wrap">
             {activeTab === "transactions" && (
@@ -446,6 +461,114 @@ export default function Accounting() {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Fee Collections Tab */}
+        <TabsContent value="collections">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Fee Collections</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {feeCollections.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No fee collections recorded yet. Payments from Billing will appear here.</TableCell></TableRow>
+                  ) : feeCollections.map((p: any) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="text-sm">{format(new Date(p.paid_at), "dd MMM yyyy")}</TableCell>
+                      <TableCell className="font-mono text-sm">{p.invoice?.invoice_number || "—"}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs capitalize">{p.payment_method}</Badge></TableCell>
+                      <TableCell><Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-xs">{p.status}</Badge></TableCell>
+                      <TableCell className="text-right font-semibold text-green-600">₹{Number(p.amount).toLocaleString("en-IN")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Profit & Loss Tab */}
+        <TabsContent value="pnl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader><CardTitle className="text-lg text-green-600">Income</CardTitle></CardHeader>
+              <CardContent>
+                {accounts.filter(a => a.account_type === 'income').length === 0 && feeCollections.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No income data yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {feeCollections.length > 0 && (
+                      <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                        <span className="font-medium">Fee Collections</span>
+                        <span className="font-bold text-green-600">₹{feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {accounts.filter(a => a.account_type === 'income').map(a => {
+                      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+                      return total > 0 ? (
+                        <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                          <span>{a.name}</span>
+                          <span className="font-semibold text-green-600">₹{total.toLocaleString("en-IN")}</span>
+                        </div>
+                      ) : null;
+                    })}
+                    <div className="flex justify-between items-center p-3 border-t-2 font-bold">
+                      <span>Total Income</span>
+                      <span className="text-green-600">₹{(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0)).toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-lg text-red-600">Expenses</CardTitle></CardHeader>
+              <CardContent>
+                {accounts.filter(a => a.account_type === 'expense').length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No expense data yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {accounts.filter(a => a.account_type === 'expense').map(a => {
+                      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+                      return total > 0 ? (
+                        <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                          <span>{a.name}</span>
+                          <span className="font-semibold text-red-600">₹{total.toLocaleString("en-IN")}</span>
+                        </div>
+                      ) : null;
+                    })}
+                    <div className="flex justify-between items-center p-3 border-t-2 font-bold">
+                      <span>Total Expenses</span>
+                      <span className="text-red-600">₹{totalExpense.toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          <Card className="mt-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Net Profit / Loss</p>
+                  <p className={`text-3xl font-bold ${(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0) - totalExpense) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    ₹{(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0) - totalExpense).toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <Button variant="outline" onClick={generateReport}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
