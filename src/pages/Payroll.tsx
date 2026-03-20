@@ -273,7 +273,7 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const resetEmpForm = () => setEmpForm({ full_name: "", email: "", phone: "", designation: "", department: "", salary_amount: "", bank_account: "", bank_name: "", uan_number: "", esi_number: "" });
+  const resetEmpForm = () => setEmpForm({ full_name: "", email: "", phone: "", designation: "", department: "", salary_amount: "", bank_account: "", bank_name: "", uan_number: "", esi_number: "", employee_number: "", gender: "", work_location: "" });
 
   const openEditEmployee = (emp: Employee) => {
     setEditingEmployee(emp);
