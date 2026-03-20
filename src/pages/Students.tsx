@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2 } from "lucide-react";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
 import { useRooms } from "@/hooks/useRooms";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,10 +55,23 @@ const Students = () => {
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedBedId, setSelectedBedId] = useState("");
 
-  const { students, stats, isLoading, error, updateStudent } = useStudents();
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCourse, setFilterCourse] = useState("all");
+  const [filterYear, setFilterYear] = useState("all");
+  const [filterRoom, setFilterRoom] = useState("all");
+  const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
+
+  const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Derive unique courses for filter
+  const uniqueCourses = useMemo(() => {
+    const courses = students.map(s => s.course).filter((c): c is string => !!c);
+    return [...new Set(courses)].sort();
+  }, [students]);
 
   // Derive cascading data for assign room dialog - extract unique blocks from rooms data
   const assignBlocks = rooms
@@ -305,12 +320,20 @@ const Students = () => {
     }
   };
 
-  // Filter students based on search
+  // Filter students based on search and filters
+  const activeFilterCount = [filterStatus, filterCourse, filterYear, filterRoom].filter(f => f !== "all").length;
+
   const filteredStudents = students.filter(student => {
     const name = student.profile?.full_name?.toLowerCase() || "";
     const rollNumber = student.roll_number?.toLowerCase() || "";
     const query = searchQuery.toLowerCase();
-    return name.includes(query) || rollNumber.includes(query);
+    const matchesSearch = name.includes(query) || rollNumber.includes(query);
+    const matchesStatus = filterStatus === "all" || student.status === filterStatus;
+    const matchesCourse = filterCourse === "all" || student.course === filterCourse;
+    const matchesYear = filterYear === "all" || student.year?.toString() === filterYear;
+    const matchesRoom = filterRoom === "all" || 
+      (filterRoom === "allocated" ? !!student.bed : !student.bed);
+    return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
   });
 
   const getStatusColor = (status: string | null) => {
@@ -406,9 +429,78 @@ const Students = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search by name or roll number..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" /> Filters
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="relative">
+                    <Filter className="h-4 w-4 mr-2" /> Filters
+                    {activeFilterCount > 0 && (
+                      <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-primary text-primary-foreground">
+                        {activeFilterCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 space-y-4" align="end">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Status</Label>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="on_leave">On Leave</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Course</Label>
+                    <Select value={filterCourse} onValueChange={setFilterCourse}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Courses</SelectItem>
+                        {uniqueCourses.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Year</Label>
+                    <Select value={filterYear} onValueChange={setFilterYear}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Years</SelectItem>
+                        <SelectItem value="1">1st Year</SelectItem>
+                        <SelectItem value="2">2nd Year</SelectItem>
+                        <SelectItem value="3">3rd Year</SelectItem>
+                        <SelectItem value="4">4th Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Room Status</Label>
+                    <Select value={filterRoom} onValueChange={setFilterRoom}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="allocated">Allocated</SelectItem>
+                        <SelectItem value="not_allocated">Not Allocated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {activeFilterCount > 0 && (
+                    <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => {
+                      setFilterStatus("all");
+                      setFilterCourse("all");
+                      setFilterYear("all");
+                      setFilterRoom("all");
+                    }}>
+                      Clear All Filters
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
           </CardContent>
         </Card>
@@ -474,6 +566,10 @@ const Students = () => {
                                   <BedDouble className="h-4 w-4 mr-2" /> Assign Room
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setDeleteConfirmStudent(student)} className="text-destructive">
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete Student
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -547,6 +643,10 @@ const Students = () => {
                                     <BedDouble className="h-4 w-4 mr-2" /> Assign Room
                                   </DropdownMenuItem>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setDeleteConfirmStudent(student)} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" /> Delete Student
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -915,6 +1015,34 @@ const Students = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Student Confirmation */}
+      <AlertDialog open={!!deleteConfirmStudent} onOpenChange={(open) => { if (!open) setDeleteConfirmStudent(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {deleteConfirmStudent?.profile?.full_name || "this student"} from the system.
+              {deleteConfirmStudent?.bed && " Their bed assignment will also be vacated."}
+              {" "}This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirmStudent) {
+                  deleteStudent.mutate(deleteConfirmStudent.id);
+                  setDeleteConfirmStudent(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

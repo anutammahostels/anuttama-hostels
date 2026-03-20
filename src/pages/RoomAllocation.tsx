@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BedDouble, Search, Users, Loader2, Eye, Plus, UserPlus } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { BedDouble, Search, Users, Loader2, Eye, Plus, UserPlus, Trash2 } from "lucide-react";
 import { useRooms, type RoomWithDetails } from "@/hooks/useRooms";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -57,7 +58,7 @@ const RoomAllocation = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { property } = useDashboard();
-  const { rooms, blocks, floors, stats, isLoading, assignBed, vacateBed, createBlock, createFloor, createRoom, createBed } = useRooms(property?.id);
+  const { rooms, blocks, floors, stats, isLoading, assignBed, vacateBed, createBlock, createFloor, createRoom, createBed, deleteRoom } = useRooms(property?.id);
   const { students } = useStudents();
   const { toast } = useToast();
 
@@ -333,6 +334,32 @@ const RoomAllocation = () => {
                       <Badge variant="outline" className="text-xs">
                         {room.floor?.block?.name || "Block"} - F{room.floor?.floor_number}
                       </Badge>
+                      {room.beds?.every(bed => !bed.student_id) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Room {room.room_number}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the room and all its beds. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteRoom.mutate(room.id)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
