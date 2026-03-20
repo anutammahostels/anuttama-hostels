@@ -867,6 +867,60 @@ const Billing = () => {
             )}
           </DialogContent>
         </Dialog>
+        {/* Refund Dialog */}
+        <Dialog open={refundDialog.open} onOpenChange={(open) => { if (!open) setRefundDialog({ open: false, invoice: null }); }}>
+          <DialogContent className="bg-background">
+            <DialogHeader>
+              <DialogTitle>Process Refund</DialogTitle>
+              <DialogDescription>Refund for invoice {refundDialog.invoice?.invoice_number}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between"><span className="text-muted-foreground">Student:</span><span className="font-medium">{refundDialog.invoice?.student?.profile?.full_name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Paid Amount:</span><span className="font-medium">{formatCurrency(refundDialog.invoice?.paid_amount || 0)}</span></div>
+              </div>
+              <div className="space-y-2">
+                <Label>Refund Amount (₹)</Label>
+                <Input type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} max={refundDialog.invoice?.paid_amount || 0} />
+              </div>
+              <div className="space-y-2">
+                <Label>Reason</Label>
+                <Textarea value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. Student exit, overpayment..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Refund Method</Label>
+                <Select value={refundMethod} onValueChange={setRefundMethod}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="upi">UPI</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRefundDialog({ open: false, invoice: null })}>Cancel</Button>
+              <Button variant="destructive" disabled={!refundAmount || !refundReason || processRefund.isPending} onClick={async () => {
+                if (!refundDialog.invoice) return;
+                const propertyId = properties?.[0]?.id || "";
+                await processRefund.mutateAsync({
+                  invoiceId: refundDialog.invoice.id,
+                  studentId: refundDialog.invoice.student_id,
+                  propertyId,
+                  amount: parseFloat(refundAmount),
+                  reason: refundReason,
+                  refundMethod,
+                });
+                setRefundDialog({ open: false, invoice: null });
+                setRefundAmount(""); setRefundReason(""); setRefundMethod("cash");
+              }}>
+                {processRefund.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Process Refund"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
