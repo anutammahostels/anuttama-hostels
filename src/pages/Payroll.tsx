@@ -276,19 +276,29 @@ const Payroll = () => {
         month: payrollForm.month,
         basic_salary: c.basic,
         hra: c.hra,
-        da: c.da,
-        travel_allowance: c.travel,
-        medical_allowance: c.medical,
-        other_allowance: c.otherAllow,
+        special_allowance: c.specialAllowance,
+        professional_fees: c.professionalFees,
+        contract_fees: c.contractFees,
+        other_additions: c.otherAdditions,
+        ot: c.ot,
+        incentives: c.incentives,
+        bonus: c.bonus,
         gross_salary: c.gross,
         pf_employee: c.pfEmployee,
         pf_employer: c.pfEmployer,
         esi_employee: c.esiEmployee,
         esi_employer: c.esiEmployer,
+        lwf: c.lwf,
+        salary_advance: c.salaryAdvance,
         professional_tax: c.pt,
         tds: c.tds,
+        tds_194c: c.tds194c,
+        tds_194j: c.tds194j,
         other_deduction: c.otherDed,
-        allowances: c.totalAllowances,
+        total_days: c.totalDays,
+        lop: c.lop,
+        days_worked: c.daysWorked,
+        allowances: c.hra + c.specialAllowance + c.professionalFees + c.contractFees + c.otherAdditions + c.ot + c.incentives + c.bonus,
         deductions: c.totalDeductions,
         net_salary: c.net,
         notes: payrollForm.notes || null,
@@ -298,7 +308,7 @@ const Payroll = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
       setPayrollDialogOpen(false);
-      setPayrollForm({ employee_id: "", month: format(new Date(), "yyyy-MM"), hra: "0", da: "0", travel_allowance: "0", medical_allowance: "0", other_allowance: "0", pf_enabled: true, esi_enabled: true, professional_tax: "200", tds: "0", other_deduction: "0", notes: "" });
+      setPayrollForm(defaultPayrollForm);
       toast({ title: "Payroll generated successfully" });
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
