@@ -31,6 +31,8 @@ import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
 import Complaints from "./pages/Complaints";
 import Payroll from "./pages/Payroll";
+import Accounting from "./pages/Accounting";
+import Admissions from "./pages/Admissions";
 import NotFound from "./pages/NotFound";
 
 // Student pages
@@ -84,6 +86,8 @@ const App = () => (
               <Route path="/dashboard/mess" element={<MessManagement />} />
               <Route path="/dashboard/billing" element={<Billing />} />
               <Route path="/dashboard/payroll" element={<Payroll />} />
+              <Route path="/dashboard/accounting" element={<Accounting />} />
+              <Route path="/dashboard/admissions" element={<Admissions />} />
               <Route path="/dashboard/maintenance" element={<Maintenance />} />
               <Route path="/dashboard/complaints" element={<Complaints />} />
               <Route path="/dashboard/settings" element={<Settings />} />

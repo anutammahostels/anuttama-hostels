@@ -14,6 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          property_id: string
+        }
+        Insert: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          property_id: string
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          property_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admissions: {
+        Row: {
+          address: string | null
+          admission_date: string | null
+          blood_group: string | null
+          city: string | null
+          course: string | null
+          created_at: string
+          date_of_birth: string | null
+          department: string | null
+          email: string | null
+          full_name: string
+          gender: string | null
+          id: string
+          notes: string | null
+          parent_address: string | null
+          parent_email: string | null
+          parent_name: string | null
+          parent_phone: string | null
+          parent_relationship: string | null
+          phone: string | null
+          pincode: string | null
+          property_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          roll_number: string | null
+          room_type_preference: string | null
+          state: string | null
+          status: string | null
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          address?: string | null
+          admission_date?: string | null
+          blood_group?: string | null
+          city?: string | null
+          course?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          department?: string | null
+          email?: string | null
+          full_name: string
+          gender?: string | null
+          id?: string
+          notes?: string | null
+          parent_address?: string | null
+          parent_email?: string | null
+          parent_name?: string | null
+          parent_phone?: string | null
+          parent_relationship?: string | null
+          phone?: string | null
+          pincode?: string | null
+          property_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          roll_number?: string | null
+          room_type_preference?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          address?: string | null
+          admission_date?: string | null
+          blood_group?: string | null
+          city?: string | null
+          course?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          department?: string | null
+          email?: string | null
+          full_name?: string
+          gender?: string | null
+          id?: string
+          notes?: string | null
+          parent_address?: string | null
+          parent_email?: string | null
+          parent_name?: string | null
+          parent_phone?: string | null
+          parent_relationship?: string | null
+          phone?: string | null
+          pincode?: string | null
+          property_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          roll_number?: string | null
+          room_type_preference?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admissions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance: {
         Row: {
           created_at: string
@@ -58,6 +203,50 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          property_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          property_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          property_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
@@ -428,6 +617,70 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          credit_account_id: string
+          date: string
+          debit_account_id: string
+          description: string
+          entry_number: string
+          id: string
+          property_id: string
+          reference: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          credit_account_id: string
+          date?: string
+          debit_account_id: string
+          description: string
+          entry_number: string
+          id?: string
+          property_id: string
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          credit_account_id?: string
+          date?: string
+          debit_account_id?: string
+          description?: string
+          entry_number?: string
+          id?: string
+          property_id?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_credit_account_id_fkey"
+            columns: ["credit_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_debit_account_id_fkey"
+            columns: ["debit_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
@@ -1018,6 +1271,69 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          category: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          id: string
+          payment_mode: string | null
+          property_id: string
+          reference_number: string | null
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          payment_mode?: string | null
+          property_id: string
+          reference_number?: string | null
+          transaction_type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          payment_mode?: string | null
+          property_id?: string
+          reference_number?: string | null
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -1054,6 +1370,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_type: "income" | "expense" | "asset" | "liability"
       app_role:
         | "super_admin"
         | "tenant_admin"
@@ -1188,6 +1505,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["income", "expense", "asset", "liability"],
       app_role: [
         "super_admin",
         "tenant_admin",
