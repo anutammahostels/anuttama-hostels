@@ -671,6 +671,27 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
 
                   {selectedEmployee && (
                     <>
+                      {/* Attendance */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-3">Attendance</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Total Days</Label>
+                            <Input type="number" min="1" max="31" value={payrollForm.total_days} onChange={e => setPayrollForm(p => ({ ...p, total_days: e.target.value }))} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">LOP (Days)</Label>
+                            <Input type="number" min="0" value={payrollForm.lop} onChange={e => setPayrollForm(p => ({ ...p, lop: e.target.value }))} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Days Worked</Label>
+                            <Input disabled value={payrollCalc.daysWorked} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
                       {/* Earnings */}
                       <div>
                         <h4 className="text-sm font-semibold text-foreground mb-3">Earnings</h4>
@@ -684,20 +705,32 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                             <Input type="number" min="0" value={payrollForm.hra} onChange={e => setPayrollForm(p => ({ ...p, hra: e.target.value }))} />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">DA (₹)</Label>
-                            <Input type="number" min="0" value={payrollForm.da} onChange={e => setPayrollForm(p => ({ ...p, da: e.target.value }))} />
+                            <Label className="text-xs">Special Allowance (₹)</Label>
+                            <Input type="number" min="0" value={payrollForm.special_allowance} onChange={e => setPayrollForm(p => ({ ...p, special_allowance: e.target.value }))} />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Travel Allowance (₹)</Label>
-                            <Input type="number" min="0" value={payrollForm.travel_allowance} onChange={e => setPayrollForm(p => ({ ...p, travel_allowance: e.target.value }))} />
+                            <Label className="text-xs">Professional Fees (₹)</Label>
+                            <Input type="number" min="0" value={payrollForm.professional_fees} onChange={e => setPayrollForm(p => ({ ...p, professional_fees: e.target.value }))} />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Medical Allowance (₹)</Label>
-                            <Input type="number" min="0" value={payrollForm.medical_allowance} onChange={e => setPayrollForm(p => ({ ...p, medical_allowance: e.target.value }))} />
+                            <Label className="text-xs">Contract Fees (₹)</Label>
+                            <Input type="number" min="0" value={payrollForm.contract_fees} onChange={e => setPayrollForm(p => ({ ...p, contract_fees: e.target.value }))} />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Other Allowance (₹)</Label>
-                            <Input type="number" min="0" value={payrollForm.other_allowance} onChange={e => setPayrollForm(p => ({ ...p, other_allowance: e.target.value }))} />
+                            <Label className="text-xs">Other Additions (₹)</Label>
+                            <Input type="number" min="0" value={payrollForm.other_additions} onChange={e => setPayrollForm(p => ({ ...p, other_additions: e.target.value }))} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">OT (₹)</Label>
+                            <Input type="number" min="0" value={payrollForm.ot} onChange={e => setPayrollForm(p => ({ ...p, ot: e.target.value }))} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Incentives (₹)</Label>
+                            <Input type="number" min="0" value={payrollForm.incentives} onChange={e => setPayrollForm(p => ({ ...p, incentives: e.target.value }))} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Bonus (₹)</Label>
+                            <Input type="number" min="0" value={payrollForm.bonus} onChange={e => setPayrollForm(p => ({ ...p, bonus: e.target.value }))} />
                           </div>
                         </div>
                         <p className="text-sm font-semibold mt-2 text-primary">Gross Salary: ₹{payrollCalc.gross.toLocaleString("en-IN")}</p>
@@ -713,7 +746,7 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                             <div className="flex items-center gap-2">
                               <Checkbox checked={payrollForm.pf_enabled} onCheckedChange={v => setPayrollForm(p => ({ ...p, pf_enabled: !!v }))} />
                               <div>
-                                <p className="text-sm font-medium">PF (Employee — 12% of Basic)</p>
+                                <p className="text-sm font-medium">Employee PF @ 12% of Basic</p>
                                 <p className="text-xs text-muted-foreground">Employer also contributes 12%</p>
                               </div>
                             </div>
@@ -723,7 +756,7 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                             <div className="flex items-center gap-2">
                               <Checkbox checked={payrollForm.esi_enabled} onCheckedChange={v => setPayrollForm(p => ({ ...p, esi_enabled: !!v }))} />
                               <div>
-                                <p className="text-sm font-medium">ESI (Employee — 0.75% of Gross)</p>
+                                <p className="text-sm font-medium">Employee ESI @ 0.75% of Gross</p>
                                 <p className="text-xs text-muted-foreground">
                                   {payrollCalc.gross > 21000 ? "Not applicable (Gross > ₹21,000)" : "Employer contributes 3.25%"}
                                 </p>
@@ -733,12 +766,28 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                           </div>
                           <div className="grid grid-cols-3 gap-3">
                             <div className="space-y-1">
+                              <Label className="text-xs">LWF (₹)</Label>
+                              <Input type="number" min="0" value={payrollForm.lwf} onChange={e => setPayrollForm(p => ({ ...p, lwf: e.target.value }))} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Salary Advance (₹)</Label>
+                              <Input type="number" min="0" value={payrollForm.salary_advance} onChange={e => setPayrollForm(p => ({ ...p, salary_advance: e.target.value }))} />
+                            </div>
+                            <div className="space-y-1">
                               <Label className="text-xs">Professional Tax (₹)</Label>
                               <Input type="number" min="0" value={payrollForm.professional_tax} onChange={e => setPayrollForm(p => ({ ...p, professional_tax: e.target.value }))} />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">TDS (₹)</Label>
+                              <Label className="text-xs">Income Tax / TDS (₹)</Label>
                               <Input type="number" min="0" value={payrollForm.tds} onChange={e => setPayrollForm(p => ({ ...p, tds: e.target.value }))} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">TDS 194C (₹)</Label>
+                              <Input type="number" min="0" value={payrollForm.tds_194c} onChange={e => setPayrollForm(p => ({ ...p, tds_194c: e.target.value }))} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">TDS 194J (₹)</Label>
+                              <Input type="number" min="0" value={payrollForm.tds_194j} onChange={e => setPayrollForm(p => ({ ...p, tds_194j: e.target.value }))} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Other Deductions (₹)</Label>
@@ -754,8 +803,9 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                       <div className="bg-muted/30 rounded-lg p-4 space-y-2">
                         <div className="flex justify-between text-sm"><span>Gross Salary</span><span className="font-semibold">₹{payrollCalc.gross.toLocaleString("en-IN")}</span></div>
                         <div className="flex justify-between text-sm text-destructive"><span>Total Deductions</span><span className="font-semibold">- ₹{payrollCalc.totalDeductions.toLocaleString("en-IN")}</span></div>
+                        <div className="flex justify-between text-xs text-muted-foreground"><span>Days Worked / Total Days</span><span>{payrollCalc.daysWorked} / {payrollCalc.totalDays}</span></div>
                         <Separator />
-                        <div className="flex justify-between text-base font-bold text-primary"><span>Net Salary</span><span>₹{payrollCalc.net.toLocaleString("en-IN")}</span></div>
+                        <div className="flex justify-between text-base font-bold text-primary"><span>Net Salary (Prorated)</span><span>₹{payrollCalc.net.toLocaleString("en-IN")}</span></div>
                         <p className="text-xs text-muted-foreground">Employer PF: ₹{payrollCalc.pfEmployer.toLocaleString("en-IN")} | Employer ESI: ₹{payrollCalc.esiEmployer.toLocaleString("en-IN")}</p>
                       </div>
                     </>
