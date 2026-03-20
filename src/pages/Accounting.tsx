@@ -35,10 +35,6 @@ type JournalEntry = {
   description: string; debit_account_id: string; credit_account_id: string;
   amount: number; reference: string | null; created_by: string | null; created_at: string;
 };
-type AuditLog = {
-  id: string; property_id: string; user_id: string | null; action: string;
-  entity_type: string; entity_id: string | null; details: any; created_at: string;
-};
 
 const ACCOUNT_TYPES = ['income', 'expense', 'asset', 'liability'] as const;
 const PAYMENT_MODES = ['cash', 'bank_transfer', 'upi', 'cheque', 'card'] as const;
