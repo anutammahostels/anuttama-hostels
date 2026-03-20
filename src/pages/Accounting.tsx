@@ -90,6 +90,20 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
+  const { data: feeCollections = [] } = useQuery({
+    queryKey: ["fee-collections", propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*, invoice:invoices(invoice_number, billing_month, student_id)")
+        .eq("property_id", propertyId)
+        .order("paid_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId,
+  });
+
 
   // Mutations
   const createAccount = useMutation({
