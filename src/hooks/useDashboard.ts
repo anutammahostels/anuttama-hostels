@@ -12,6 +12,8 @@ export interface DashboardStats {
   duesChange: number;
   openTickets: number;
   ticketsChange: number;
+  totalRefunds: number;
+  refundsCount: number;
 }
 
 export interface PendingApproval {
@@ -147,15 +149,25 @@ export function useDashboard() {
         .select('*', { count: 'exact', head: true })
         .in('status', ['open', 'in_progress']);
 
+      // Get refunds data
+      const { data: refundsData } = await supabase
+        .from('refunds')
+        .select('amount');
+
+      const totalRefunds = refundsData?.reduce((sum, r) => sum + Number(r.amount), 0) || 0;
+      const refundsCount = refundsData?.length || 0;
+
       return {
         totalStudents: totalStudents || 0,
-        studentsChange: 0, // Could calculate from last month
+        studentsChange: 0,
         occupancyRate,
         occupancyChange: 0,
         pendingDues,
         duesChange: 0,
         openTickets: openTickets || 0,
         ticketsChange: 0,
+        totalRefunds,
+        refundsCount,
       } as DashboardStats;
     },
     enabled: !!user,
@@ -369,6 +381,8 @@ export function useDashboard() {
       duesChange: 0,
       openTickets: 0,
       ticketsChange: 0,
+      totalRefunds: 0,
+      refundsCount: 0,
     },
     pendingApprovals: approvalsQuery.data || [],
     recentActivity: activityQuery.data || [],
