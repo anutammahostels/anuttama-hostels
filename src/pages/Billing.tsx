@@ -114,7 +114,7 @@ const Billing = () => {
     setRefundsLoading(false);
   };
 
-  useState(() => { fetchRefundsList(); });
+  useEffect(() => { fetchRefundsList(); }, []);
 
   const handleSendReminder = (invoice?: InvoiceWithStudent) => {
     if (invoice) {
