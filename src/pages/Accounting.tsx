@@ -165,51 +165,155 @@ export default function Accounting() {
 
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || "—";
 
-  const generateReport = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    const propName = properties.find(p => p.id === propertyId)?.name || "Property";
-    const html = `<!DOCTYPE html><html><head><title>Financial Report</title>
-    <style>
-      body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e}
-      h1{color:#16213e;border-bottom:2px solid #0f3460;padding-bottom:8px}
-      h2{color:#0f3460;margin-top:30px}
-      table{width:100%;border-collapse:collapse;margin:15px 0}
-      th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:13px}
-      th{background:#0f3460;color:#fff}
-      .income{color:#16a34a}.expense{color:#dc2626}
-      .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin:20px 0}
-      .summary-card{border:1px solid #ddd;border-radius:8px;padding:16px;text-align:center}
-      .summary-card h3{font-size:14px;color:#666;margin:0 0 8px}
-      .summary-card .value{font-size:24px;font-weight:bold}
-      @media print{body{padding:20px}}
-    </style></head><body>
-    <h1>Financial Report — ${propName}</h1>
-    <p>Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")}</p>
-    <div class="summary-grid">
-      <div class="summary-card"><h3>Total Income</h3><div class="value income">₹${totalIncome.toLocaleString("en-IN")}</div></div>
-      <div class="summary-card"><h3>Total Expenses</h3><div class="value expense">₹${totalExpense.toLocaleString("en-IN")}</div></div>
-      <div class="summary-card"><h3>Net Balance</h3><div class="value" style="color:${netBalance >= 0 ? '#16a34a' : '#dc2626'}">₹${netBalance.toLocaleString("en-IN")}</div></div>
-    </div>
+  const feeTotal = feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0);
+
+  const pdfStyles = `<style>
+    body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e}
+    h1{color:#16213e;border-bottom:2px solid #0f3460;padding-bottom:8px}
+    h2{color:#0f3460;margin-top:30px}
+    table{width:100%;border-collapse:collapse;margin:15px 0}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:13px}
+    th{background:#0f3460;color:#fff}
+    .income{color:#16a34a}.expense{color:#dc2626}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin:20px 0}
+    .summary-card{border:1px solid #ddd;border-radius:8px;padding:16px;text-align:center}
+    .summary-card h3{font-size:14px;color:#666;margin:0 0 8px}
+    .summary-card .value{font-size:24px;font-weight:bold}
+    @media print{body{padding:20px}}
+  </style>`;
+
+  const propName = properties.find(p => p.id === propertyId)?.name || "Property";
+  const dateStr = format(new Date(), "dd MMM yyyy, hh:mm a");
+  const fileDateStr = format(new Date(), "yyyy-MM-dd");
+
+  const buildTransactionsHTML = () => `
     <h2>Income & Expense Transactions</h2>
     <table><tr><th>Date</th><th>Type</th><th>Account</th><th>Category</th><th>Description</th><th>Payment Mode</th><th>Amount</th></tr>
     ${transactions.map(t => `<tr><td>${format(new Date(t.date), "dd/MM/yyyy")}</td><td class="${t.transaction_type}">${t.transaction_type.toUpperCase()}</td><td>${getAccountName(t.account_id)}</td><td>${t.category || "—"}</td><td>${t.description || "—"}</td><td>${t.payment_mode || "—"}</td><td class="${t.transaction_type}">₹${Number(t.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
-    </table>
+    </table>`;
+
+  const buildLedgerHTML = () => `
     <h2>Journal Entries (Ledger)</h2>
     <table><tr><th>Date</th><th>Entry #</th><th>Description</th><th>Debit Account</th><th>Credit Account</th><th>Amount</th></tr>
     ${journalEntries.map(j => `<tr><td>${format(new Date(j.date), "dd/MM/yyyy")}</td><td>${j.entry_number}</td><td>${j.description}</td><td>${getAccountName(j.debit_account_id)}</td><td>${getAccountName(j.credit_account_id)}</td><td>₹${Number(j.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
+    </table>`;
+
+  const buildAccountsHTML = () => `
+    <h2>Chart of Accounts</h2>
+    <table><tr><th>Code</th><th>Name</th><th>Type</th><th>Description</th><th>Status</th></tr>
+    ${accounts.map(a => `<tr><td>${a.code || "—"}</td><td>${a.name}</td><td>${a.account_type}</td><td>${a.description || "—"}</td><td>${a.is_active ? "Active" : "Inactive"}</td></tr>`).join("")}
+    </table>`;
+
+  const buildCollectionsHTML = () => `
+    <h2>Fee Collections</h2>
+    <table><tr><th>Date</th><th>Invoice</th><th>Method</th><th>Status</th><th>Amount</th></tr>
+    ${feeCollections.map((p: any) => `<tr><td>${format(new Date(p.paid_at), "dd/MM/yyyy")}</td><td>${p.invoice?.invoice_number || "—"}</td><td>${p.payment_method}</td><td>${p.status}</td><td>₹${Number(p.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
     </table>
-    <h2>Account Summary (P&L)</h2>
-    <table><tr><th>Account</th><th>Type</th><th>Total Amount</th></tr>
-    ${accounts.map(a => {
+    <p><strong>Total Fee Collections: </strong>₹${feeTotal.toLocaleString("en-IN")}</p>`;
+
+  const buildPnlHTML = () => {
+    const incomeRows = accounts.filter(a => a.account_type === 'income').map(a => {
       const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-      return `<tr><td>${a.name}</td><td>${a.account_type}</td><td>₹${total.toLocaleString("en-IN")}</td></tr>`;
-    }).join("")}
+      return total > 0 ? `<tr><td>${a.name}</td><td>₹${total.toLocaleString("en-IN")}</td></tr>` : "";
+    }).join("");
+    const expenseRows = accounts.filter(a => a.account_type === 'expense').map(a => {
+      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+      return total > 0 ? `<tr><td>${a.name}</td><td>₹${total.toLocaleString("en-IN")}</td></tr>` : "";
+    }).join("");
+    const netPL = totalIncome + feeTotal - totalExpense;
+    return `
+    <h2>Profit & Loss Statement</h2>
+    <h3 style="color:#16a34a">Income</h3>
+    <table><tr><th>Account</th><th>Amount</th></tr>
+    ${feeTotal > 0 ? `<tr><td>Fee Collections</td><td>₹${feeTotal.toLocaleString("en-IN")}</td></tr>` : ""}
+    ${incomeRows}
+    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Income</td><td>₹${(totalIncome + feeTotal).toLocaleString("en-IN")}</td></tr>
     </table>
-    </body></html>`;
-    printWindow.document.write(html);
+    <h3 style="color:#dc2626">Expenses</h3>
+    <table><tr><th>Account</th><th>Amount</th></tr>
+    ${expenseRows}
+    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Expenses</td><td>₹${totalExpense.toLocaleString("en-IN")}</td></tr>
+    </table>
+    <h3>Net Profit / Loss: <span style="color:${netPL >= 0 ? '#16a34a' : '#dc2626'}">₹${netPL.toLocaleString("en-IN")}</span></h3>`;
+  };
+
+  const printPDF = (title: string, bodyHTML: string) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>${pdfStyles}</head><body>
+      <h1>${title} — ${propName}</h1><p>Generated on ${dateStr}</p>${bodyHTML}</body></html>`);
     printWindow.document.close();
     printWindow.print();
+  };
+
+  const exportSectionPDF = (section: string) => {
+    switch (section) {
+      case "transactions": printPDF("Transactions Report", buildTransactionsHTML()); break;
+      case "ledger": printPDF("Ledger Report", buildLedgerHTML()); break;
+      case "accounts": printPDF("Accounts Report", buildAccountsHTML()); break;
+      case "collections": printPDF("Fee Collections Report", buildCollectionsHTML()); break;
+      case "pnl": printPDF("Profit & Loss Report", buildPnlHTML()); break;
+      case "all":
+        const summaryHTML = `<div class="summary-grid">
+          <div class="summary-card"><h3>Total Income</h3><div class="value income">₹${totalIncome.toLocaleString("en-IN")}</div></div>
+          <div class="summary-card"><h3>Total Expenses</h3><div class="value expense">₹${totalExpense.toLocaleString("en-IN")}</div></div>
+          <div class="summary-card"><h3>Net Balance</h3><div class="value" style="color:${netBalance >= 0 ? '#16a34a' : '#dc2626'}">₹${netBalance.toLocaleString("en-IN")}</div></div>
+        </div>`;
+        printPDF("Complete Financial Report", summaryHTML + buildTransactionsHTML() + buildLedgerHTML() + buildAccountsHTML() + buildCollectionsHTML() + buildPnlHTML());
+        break;
+    }
+  };
+
+  const exportSectionExcel = (section: string) => {
+    const txnData = transactions.map(t => ({
+      Date: format(new Date(t.date), "dd/MM/yyyy"), Type: t.transaction_type, Account: getAccountName(t.account_id),
+      Category: t.category || "", Description: t.description || "", Mode: t.payment_mode || "", Amount: Number(t.amount),
+    }));
+    const ledgerData = journalEntries.map(j => ({
+      Date: format(new Date(j.date), "dd/MM/yyyy"), "Entry #": j.entry_number, Description: j.description,
+      "Debit Account": getAccountName(j.debit_account_id), "Credit Account": getAccountName(j.credit_account_id), Amount: Number(j.amount),
+    }));
+    const accountsData = accounts.map(a => ({
+      Code: a.code || "", Name: a.name, Type: a.account_type, Description: a.description || "", Status: a.is_active ? "Active" : "Inactive",
+    }));
+    const collectionsData = feeCollections.map((p: any) => ({
+      Date: format(new Date(p.paid_at), "dd/MM/yyyy"), Invoice: p.invoice?.invoice_number || "", Method: p.payment_method, Status: p.status, Amount: Number(p.amount),
+    }));
+    const pnlIncomeData = [
+      ...(feeTotal > 0 ? [{ Category: "Fee Collections", Type: "Income", Amount: feeTotal }] : []),
+      ...accounts.filter(a => a.account_type === 'income').map(a => {
+        const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+        return { Category: a.name, Type: "Income", Amount: total };
+      }).filter(r => r.Amount > 0),
+      ...accounts.filter(a => a.account_type === 'expense').map(a => {
+        const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+        return { Category: a.name, Type: "Expense", Amount: total };
+      }).filter(r => r.Amount > 0),
+      { Category: "Net Profit/Loss", Type: "", Amount: totalIncome + feeTotal - totalExpense },
+    ];
+
+    if (section === "all") {
+      // Multi-sheet workbook
+      const XLSX = require("xlsx");
+      const wb = XLSX.utils.book_new();
+      if (txnData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txnData), "Transactions");
+      if (ledgerData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ledgerData), "Ledger");
+      if (accountsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(accountsData), "Accounts");
+      if (collectionsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(collectionsData), "Fee Collections");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pnlIncomeData), "P&L");
+      XLSX.writeFile(wb, `accounting-full-report-${fileDateStr}.xlsx`);
+      return;
+    }
+
+    const map: Record<string, { data: any[]; sheet: string }> = {
+      transactions: { data: txnData, sheet: "Transactions" },
+      ledger: { data: ledgerData, sheet: "Ledger" },
+      accounts: { data: accountsData, sheet: "Accounts" },
+      collections: { data: collectionsData, sheet: "Fee Collections" },
+      pnl: { data: pnlIncomeData, sheet: "P&L" },
+    };
+    const { data, sheet } = map[section] || {};
+    if (data && data.length > 0) exportToExcel(data, `accounting-${section}-${fileDateStr}`, sheet);
   };
 
   return (
