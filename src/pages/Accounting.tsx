@@ -106,6 +106,33 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
+  const { data: refundsData = [] } = useQuery({
+    queryKey: ["refunds-accounting", propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("refunds")
+        .select("*")
+        .eq("property_id", propertyId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId,
+  });
+
+  const { data: payrollRecords = [] } = useQuery({
+    queryKey: ["payroll-accounting", propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_records")
+        .select("net_salary, month, status")
+        .eq("property_id", propertyId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId,
+  });
+
 
   // Mutations
   const createAccount = useMutation({
