@@ -312,11 +312,18 @@ export default function Accounting() {
     const accountsData = accounts.map(a => ({
       Code: a.code || "", Name: a.name, Type: a.account_type, Description: a.description || "", Status: a.is_active ? "Active" : "Inactive",
     }));
-    const collectionsData = feeCollections.map((p: any) => ({
-      Date: format(new Date(p.paid_at), "dd/MM/yyyy"), Invoice: p.invoice?.invoice_number || "", Method: p.payment_method, Status: p.status, Amount: Number(p.amount),
-    }));
+    const collectionsData = [
+      ...feeCollections.map((p: any) => ({
+        Date: format(new Date(p.paid_at), "dd/MM/yyyy"), Invoice: p.invoice?.invoice_number || "", Type: "Collection", Method: p.payment_method, Status: p.status, Amount: Number(p.amount),
+      })),
+      ...refundsData.map((r: any) => ({
+        Date: format(new Date(r.created_at), "dd/MM/yyyy"), Invoice: "REFUND", Type: "Refund", Method: r.refund_method || "cash", Status: r.status || "processed", Amount: -Number(r.amount),
+      })),
+    ];
     const pnlIncomeData = [
       ...(feeTotal > 0 ? [{ Category: "Fee Collections", Type: "Income", Amount: feeTotal }] : []),
+      ...(refundsTotal > 0 ? [{ Category: "Less: Refunds", Type: "Income Deduction", Amount: -refundsTotal }] : []),
+      ...(feeTotal > 0 && refundsTotal > 0 ? [{ Category: "Net Fee Income", Type: "Income", Amount: feeTotal - refundsTotal }] : []),
       ...accounts.filter(a => a.account_type === 'income').map(a => {
         const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
         return { Category: a.name, Type: "Income", Amount: total };
@@ -325,7 +332,8 @@ export default function Accounting() {
         const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
         return { Category: a.name, Type: "Expense", Amount: total };
       }).filter(r => r.Amount > 0),
-      { Category: "Net Profit/Loss", Type: "", Amount: totalIncome + feeTotal - totalExpense },
+      ...(payrollTotal > 0 ? [{ Category: "Staff Salaries (Payroll)", Type: "Expense", Amount: payrollTotal }] : []),
+      { Category: "Net Profit/Loss", Type: "", Amount: totalIncome + (feeTotal - refundsTotal) - (totalExpense + payrollTotal) },
     ];
 
     if (section === "all") {
