@@ -760,7 +760,6 @@ const Students = () => {
                                 <DropdownMenuItem onClick={() => setDeleteConfirmStudent(student)} className="text-destructive">
                                   <Trash2 className="h-4 w-4 mr-2" /> Delete Student
                                 </DropdownMenuItem>
-                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
