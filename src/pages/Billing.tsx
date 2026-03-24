@@ -77,6 +77,45 @@ const Billing = () => {
   const { properties } = useProperties();
   const { toast } = useToast();
 
+  // Fetch refunds for the Refunds tab
+  const [refundsList, setRefundsList] = useState<any[]>([]);
+  const [refundsLoading, setRefundsLoading] = useState(false);
+
+  const fetchRefundsList = async () => {
+    setRefundsLoading(true);
+    const { data } = await supabase
+      .from('refunds')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (data) {
+      // Enrich with student names and invoice numbers
+      const studentIds = [...new Set(data.map(r => r.student_id))];
+      const invoiceIds = [...new Set(data.map(r => r.invoice_id))];
+      
+      const [{ data: studentsData }, { data: invoicesData }] = await Promise.all([
+        supabase.from('students').select('id, user_id, roll_number').in('id', studentIds.length ? studentIds : ['']),
+        supabase.from('invoices').select('id, invoice_number').in('id', invoiceIds.length ? invoiceIds : ['']),
+      ]);
+
+      const userIds = studentsData?.map(s => s.user_id).filter(Boolean) || [];
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds.length ? userIds : ['']);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      const studentInfoMap = new Map(studentsData?.map(s => [s.id, { name: profileMap.get(s.user_id) || 'Unknown', rollNo: s.roll_number }]) || []);
+      const invoiceMap = new Map(invoicesData?.map(i => [i.id, i.invoice_number]) || []);
+
+      setRefundsList(data.map(r => ({
+        ...r,
+        studentName: studentInfoMap.get(r.student_id)?.name || 'Unknown',
+        studentRollNo: studentInfoMap.get(r.student_id)?.rollNo || '-',
+        invoiceNumber: invoiceMap.get(r.invoice_id) || '-',
+      })));
+    }
+    setRefundsLoading(false);
+  };
+
+  useState(() => { fetchRefundsList(); });
+
   const handleSendReminder = (invoice?: InvoiceWithStudent) => {
     if (invoice) {
       toast({ title: "Reminder Sent", description: `Payment reminder sent for ${invoice.invoice_number} to ${invoice.student?.profile?.full_name || "student"}.` });
