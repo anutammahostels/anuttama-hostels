@@ -388,6 +388,7 @@ export type Database = {
       employees: {
         Row: {
           bank_account: string | null
+          bank_ifsc: string | null
           bank_name: string | null
           created_at: string
           date_of_joining: string | null
@@ -395,13 +396,19 @@ export type Database = {
           designation: string
           email: string | null
           employee_number: string | null
+          employer_pf_contribution: number | null
           esi_number: string | null
           full_name: string
           gender: string | null
+          hra: number | null
           id: string
+          last_working_day: string | null
+          other_additions: number | null
+          pan_number: string | null
           phone: string | null
           property_id: string
           salary_amount: number
+          special_allowance: number | null
           status: string | null
           uan_number: string | null
           updated_at: string
@@ -409,6 +416,7 @@ export type Database = {
         }
         Insert: {
           bank_account?: string | null
+          bank_ifsc?: string | null
           bank_name?: string | null
           created_at?: string
           date_of_joining?: string | null
@@ -416,13 +424,19 @@ export type Database = {
           designation: string
           email?: string | null
           employee_number?: string | null
+          employer_pf_contribution?: number | null
           esi_number?: string | null
           full_name: string
           gender?: string | null
+          hra?: number | null
           id?: string
+          last_working_day?: string | null
+          other_additions?: number | null
+          pan_number?: string | null
           phone?: string | null
           property_id: string
           salary_amount?: number
+          special_allowance?: number | null
           status?: string | null
           uan_number?: string | null
           updated_at?: string
@@ -430,6 +444,7 @@ export type Database = {
         }
         Update: {
           bank_account?: string | null
+          bank_ifsc?: string | null
           bank_name?: string | null
           created_at?: string
           date_of_joining?: string | null
@@ -437,13 +452,19 @@ export type Database = {
           designation?: string
           email?: string | null
           employee_number?: string | null
+          employer_pf_contribution?: number | null
           esi_number?: string | null
           full_name?: string
           gender?: string | null
+          hra?: number | null
           id?: string
+          last_working_day?: string | null
+          other_additions?: number | null
+          pan_number?: string | null
           phone?: string | null
           property_id?: string
           salary_amount?: number
+          special_allowance?: number | null
           status?: string | null
           uan_number?: string | null
           updated_at?: string
@@ -1044,6 +1065,7 @@ export type Database = {
           hra: number | null
           id: string
           incentives: number | null
+          is_locked: boolean | null
           lop: number | null
           lwf: number | null
           medical_allowance: number | null
@@ -1085,6 +1107,7 @@ export type Database = {
           hra?: number | null
           id?: string
           incentives?: number | null
+          is_locked?: boolean | null
           lop?: number | null
           lwf?: number | null
           medical_allowance?: number | null
@@ -1126,6 +1149,7 @@ export type Database = {
           hra?: number | null
           id?: string
           incentives?: number | null
+          is_locked?: boolean | null
           lop?: number | null
           lwf?: number | null
           medical_allowance?: number | null
