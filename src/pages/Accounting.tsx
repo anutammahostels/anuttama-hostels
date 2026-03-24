@@ -701,7 +701,7 @@ export default function Accounting() {
                     ₹{(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0) - totalExpense).toLocaleString("en-IN")}
                   </p>
                 </div>
-                <Button variant="outline" onClick={generateReport}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
+                <Button variant="outline" onClick={() => exportSectionPDF("all")}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
               </div>
             </CardContent>
           </Card>
