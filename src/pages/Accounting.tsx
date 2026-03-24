@@ -639,7 +639,16 @@ export default function Accounting() {
         <TabsContent value="collections">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Fee Collections</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Fee Collections</CardTitle>
+                {refundsTotal > 0 && (
+                  <div className="flex gap-4 text-sm">
+                    <span>Collections: <strong className="text-green-600">₹{feeTotal.toLocaleString("en-IN")}</strong></span>
+                    <span>Refunds: <strong className="text-orange-600">-₹{refundsTotal.toLocaleString("en-IN")}</strong></span>
+                    <span>Net: <strong>₹{(feeTotal - refundsTotal).toLocaleString("en-IN")}</strong></span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -647,23 +656,39 @@ export default function Accounting() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Invoice</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Method</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {feeCollections.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No fee collections recorded yet. Payments from Billing will appear here.</TableCell></TableRow>
-                  ) : feeCollections.map((p: any) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="text-sm">{format(new Date(p.paid_at), "dd MMM yyyy")}</TableCell>
-                      <TableCell className="font-mono text-sm">{p.invoice?.invoice_number || "—"}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs capitalize">{p.payment_method}</Badge></TableCell>
-                      <TableCell><Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-xs">{p.status}</Badge></TableCell>
-                      <TableCell className="text-right font-semibold text-green-600">₹{Number(p.amount).toLocaleString("en-IN")}</TableCell>
-                    </TableRow>
-                  ))}
+                  {feeCollections.length === 0 && refundsData.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No fee collections recorded yet. Payments from Billing will appear here.</TableCell></TableRow>
+                  ) : (
+                    <>
+                      {feeCollections.map((p: any) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-sm">{format(new Date(p.paid_at), "dd MMM yyyy")}</TableCell>
+                          <TableCell className="font-mono text-sm">{p.invoice?.invoice_number || "—"}</TableCell>
+                          <TableCell><Badge className="bg-green-500/10 text-green-600 text-xs">Collection</Badge></TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs capitalize">{p.payment_method}</Badge></TableCell>
+                          <TableCell><Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-xs">{p.status}</Badge></TableCell>
+                          <TableCell className="text-right font-semibold text-green-600">₹{Number(p.amount).toLocaleString("en-IN")}</TableCell>
+                        </TableRow>
+                      ))}
+                      {refundsData.map((r: any) => (
+                        <TableRow key={`refund-${r.id}`} className="bg-orange-50/50 dark:bg-orange-950/10">
+                          <TableCell className="text-sm">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
+                          <TableCell className="font-mono text-sm">—</TableCell>
+                          <TableCell><Badge className="bg-orange-500/10 text-orange-600 text-xs">Refund</Badge></TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs capitalize">{r.refund_method || 'cash'}</Badge></TableCell>
+                          <TableCell><Badge variant="secondary" className="text-xs">{r.status || 'processed'}</Badge></TableCell>
+                          <TableCell className="text-right font-semibold text-orange-600">-₹{Number(r.amount).toLocaleString("en-IN")}</TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
