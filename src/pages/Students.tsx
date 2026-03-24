@@ -663,6 +663,14 @@ const Students = () => {
                                   <BedDouble className="h-4 w-4 mr-2" /> Assign Room
                                 </DropdownMenuItem>
                               )}
+                              {student.status === "active" && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => openExitDialog(student)} className="text-orange-600">
+                                    <LogOut className="h-4 w-4 mr-2" /> Exit Student
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => setDeleteConfirmStudent(student)} className="text-destructive">
                                 <Trash2 className="h-4 w-4 mr-2" /> Delete Student
