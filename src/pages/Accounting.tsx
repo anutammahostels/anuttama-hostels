@@ -294,11 +294,15 @@ export default function Accounting() {
 
     if (section === "all") {
       // Multi-sheet workbook
-      const XLSX = require("xlsx");
-      const wb = XLSX.utils.book_new();
-      if (txnData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txnData), "Transactions");
-      if (ledgerData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ledgerData), "Ledger");
-      if (accountsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(accountsData), "Accounts");
+      import("xlsx").then(XLSX => {
+        const wb = XLSX.utils.book_new();
+        if (txnData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txnData), "Transactions");
+        if (ledgerData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ledgerData), "Ledger");
+        if (accountsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(accountsData), "Accounts");
+        if (collectionsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(collectionsData), "Fee Collections");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pnlIncomeData), "P&L");
+        XLSX.writeFile(wb, `accounting-full-report-${fileDateStr}.xlsx`);
+      });
       if (collectionsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(collectionsData), "Fee Collections");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pnlIncomeData), "P&L");
       XLSX.writeFile(wb, `accounting-full-report-${fileDateStr}.xlsx`);
