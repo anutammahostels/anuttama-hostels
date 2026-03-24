@@ -481,17 +481,34 @@ export default function Accounting() {
                 </DialogContent>
               </Dialog>
             )}
-            <Button size="sm" variant="outline" onClick={() => {
-              const data = activeTab === "transactions" ? transactions.map(t => ({
-                Date: format(new Date(t.date), "dd/MM/yyyy"), Type: t.transaction_type, Account: getAccountName(t.account_id),
-                Category: t.category || "", Description: t.description || "", Mode: t.payment_mode || "", Amount: Number(t.amount),
-              })) : activeTab === "ledger" ? journalEntries.map(j => ({
-                Date: format(new Date(j.date), "dd/MM/yyyy"), "Entry #": j.entry_number, Description: j.description,
-                "Debit Account": getAccountName(j.debit_account_id), "Credit Account": getAccountName(j.credit_account_id), Amount: Number(j.amount),
-              })) : [];
-              if (data.length > 0) exportToExcel(data, `accounting-${activeTab}-${format(new Date(), "yyyy-MM-dd")}`, activeTab);
-            }}><Download className="h-4 w-4 mr-1" />Export Excel</Button>
-            <Button size="sm" variant="outline" onClick={generateReport}><Download className="h-4 w-4 mr-1" />Export PDF</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4 mr-1" />Export Excel</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportSectionExcel("transactions")}>Transactions</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionExcel("ledger")}>Ledger</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionExcel("accounts")}>Accounts</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionExcel("collections")}>Fee Collections</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionExcel("pnl")}>P&L</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => exportSectionExcel("all")} className="font-semibold">📊 Full Report (All Sheets)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline"><FileText className="h-4 w-4 mr-1" />Export PDF</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportSectionPDF("transactions")}>Transactions</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionPDF("ledger")}>Ledger</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionPDF("accounts")}>Accounts</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionPDF("collections")}>Fee Collections</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSectionPDF("pnl")}>P&L</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => exportSectionPDF("all")} className="font-semibold">📄 Complete Report</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
