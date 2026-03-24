@@ -710,6 +710,76 @@ const Billing = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Refunds Tab */}
+          <TabsContent value="refunds" className="mt-6">
+            {(() => {
+              const totalRefunded = refundsList.reduce((s, r) => s + Number(r.amount), 0);
+              return (
+                <>
+                  <Card className="border-border/50 mb-4">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-muted text-orange-500">
+                          <Undo2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{formatCurrency(totalRefunded)}</p>
+                          <p className="text-sm text-muted-foreground">Total Refunded ({refundsList.length} refunds)</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border/50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Refund History</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        {refundsLoading ? (
+                          <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Student</TableHead>
+                                <TableHead>Invoice</TableHead>
+                                <TableHead>Amount</TableHead>
+                                <TableHead>Method</TableHead>
+                                <TableHead>Reason</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {refundsList.length === 0 ? (
+                                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No refunds processed yet</TableCell></TableRow>
+                              ) : refundsList.map(r => (
+                                <TableRow key={r.id}>
+                                  <TableCell className="text-sm">{format(new Date(r.created_at), "MMM d, yyyy")}</TableCell>
+                                  <TableCell>
+                                    <div>
+                                      <p className="font-medium">{r.studentName}</p>
+                                      <p className="text-xs text-muted-foreground">{r.studentRollNo}</p>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">{r.invoiceNumber}</TableCell>
+                                  <TableCell className="font-semibold text-orange-600">{formatCurrency(Number(r.amount))}</TableCell>
+                                  <TableCell><Badge variant="outline" className="text-xs capitalize">{r.refund_method || 'cash'}</Badge></TableCell>
+                                  <TableCell className="text-sm max-w-[200px] truncate">{r.reason || '—'}</TableCell>
+                                  <TableCell><Badge className="bg-green-500/10 text-green-600">{r.status || 'processed'}</Badge></TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              );
+            })()}
+          </TabsContent>
         </Tabs>
 
         {/* Payment Dialog */}
