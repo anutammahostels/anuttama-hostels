@@ -237,8 +237,10 @@ export default function Accounting() {
     <h2>Fee Collections</h2>
     <table><tr><th>Date</th><th>Invoice</th><th>Method</th><th>Status</th><th>Amount</th></tr>
     ${feeCollections.map((p: any) => `<tr><td>${format(new Date(p.paid_at), "dd/MM/yyyy")}</td><td>${p.invoice?.invoice_number || "—"}</td><td>${p.payment_method}</td><td>${p.status}</td><td>₹${Number(p.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
+    ${refundsData.length > 0 ? refundsData.map((r: any) => `<tr><td>${format(new Date(r.created_at), "dd/MM/yyyy")}</td><td>REFUND</td><td>${r.refund_method || 'cash'}</td><td>${r.status || 'processed'}</td><td class="expense">-₹${Number(r.amount).toLocaleString("en-IN")}</td></tr>`).join("") : ""}
     </table>
-    <p><strong>Total Fee Collections: </strong>₹${feeTotal.toLocaleString("en-IN")}</p>`;
+    <p><strong>Total Fee Collections: </strong>₹${feeTotal.toLocaleString("en-IN")}</p>
+    ${refundsTotal > 0 ? `<p><strong>Total Refunds: </strong><span class="expense">-₹${refundsTotal.toLocaleString("en-IN")}</span></p><p><strong>Net Collections: </strong>₹${(feeTotal - refundsTotal).toLocaleString("en-IN")}</p>` : ""}`;
 
   const buildPnlHTML = () => {
     const incomeRows = accounts.filter(a => a.account_type === 'income').map(a => {
@@ -249,19 +251,24 @@ export default function Accounting() {
       const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
       return total > 0 ? `<tr><td>${a.name}</td><td>₹${total.toLocaleString("en-IN")}</td></tr>` : "";
     }).join("");
-    const netPL = totalIncome + feeTotal - totalExpense;
+    const netFeeIncome = feeTotal - refundsTotal;
+    const totalExpenseWithPayroll = totalExpense + payrollTotal;
+    const netPL = totalIncome + netFeeIncome - totalExpenseWithPayroll;
     return `
     <h2>Profit & Loss Statement</h2>
     <h3 style="color:#16a34a">Income</h3>
     <table><tr><th>Account</th><th>Amount</th></tr>
     ${feeTotal > 0 ? `<tr><td>Fee Collections</td><td>₹${feeTotal.toLocaleString("en-IN")}</td></tr>` : ""}
+    ${refundsTotal > 0 ? `<tr><td>Less: Refunds</td><td style="color:#dc2626">-₹${refundsTotal.toLocaleString("en-IN")}</td></tr>` : ""}
+    ${netFeeIncome > 0 ? `<tr><td><strong>Net Fee Income</strong></td><td><strong>₹${netFeeIncome.toLocaleString("en-IN")}</strong></td></tr>` : ""}
     ${incomeRows}
-    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Income</td><td>₹${(totalIncome + feeTotal).toLocaleString("en-IN")}</td></tr>
+    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Income</td><td>₹${(totalIncome + netFeeIncome).toLocaleString("en-IN")}</td></tr>
     </table>
     <h3 style="color:#dc2626">Expenses</h3>
     <table><tr><th>Account</th><th>Amount</th></tr>
     ${expenseRows}
-    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Expenses</td><td>₹${totalExpense.toLocaleString("en-IN")}</td></tr>
+    ${payrollTotal > 0 ? `<tr><td>Staff Salaries (Payroll)</td><td>₹${payrollTotal.toLocaleString("en-IN")}</td></tr>` : ""}
+    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Expenses</td><td>₹${totalExpenseWithPayroll.toLocaleString("en-IN")}</td></tr>
     </table>
     <h3>Net Profit / Loss: <span style="color:${netPL >= 0 ? '#16a34a' : '#dc2626'}">₹${netPL.toLocaleString("en-IN")}</span></h3>`;
   };
