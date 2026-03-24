@@ -697,75 +697,103 @@ export default function Accounting() {
 
         {/* Profit & Loss Tab */}
         <TabsContent value="pnl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader><CardTitle className="text-lg text-green-600">Income</CardTitle></CardHeader>
-              <CardContent>
-                {accounts.filter(a => a.account_type === 'income').length === 0 && feeCollections.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No income data yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {feeCollections.length > 0 && (
-                      <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                        <span className="font-medium">Fee Collections</span>
-                        <span className="font-bold text-green-600">₹{feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0).toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                    {accounts.filter(a => a.account_type === 'income').map(a => {
-                      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-                      return total > 0 ? (
-                        <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                          <span>{a.name}</span>
-                          <span className="font-semibold text-green-600">₹{total.toLocaleString("en-IN")}</span>
+          {(() => {
+            const netFeeIncome = feeTotal - refundsTotal;
+            const totalGrossIncome = totalIncome + netFeeIncome;
+            const totalExpenseWithPayroll = totalExpense + payrollTotal;
+            const netPL = totalGrossIncome - totalExpenseWithPayroll;
+            return (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg text-green-600">Income</CardTitle></CardHeader>
+                    <CardContent>
+                      {accounts.filter(a => a.account_type === 'income').length === 0 && feeCollections.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No income data yet</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {feeTotal > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                              <span className="font-medium">Fee Collections</span>
+                              <span className="font-bold text-green-600">₹{feeTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          {refundsTotal > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                              <span className="font-medium">Less: Refunds</span>
+                              <span className="font-bold text-orange-600">-₹{refundsTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          {(feeTotal > 0 && refundsTotal > 0) && (
+                            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                              <span className="font-medium">Net Fee Income</span>
+                              <span className="font-bold text-green-600">₹{netFeeIncome.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          {accounts.filter(a => a.account_type === 'income').map(a => {
+                            const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+                            return total > 0 ? (
+                              <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                                <span>{a.name}</span>
+                                <span className="font-semibold text-green-600">₹{total.toLocaleString("en-IN")}</span>
+                              </div>
+                            ) : null;
+                          })}
+                          <div className="flex justify-between items-center p-3 border-t-2 font-bold">
+                            <span>Total Income</span>
+                            <span className="text-green-600">₹{totalGrossIncome.toLocaleString("en-IN")}</span>
+                          </div>
                         </div>
-                      ) : null;
-                    })}
-                    <div className="flex justify-between items-center p-3 border-t-2 font-bold">
-                      <span>Total Income</span>
-                      <span className="text-green-600">₹{(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0)).toLocaleString("en-IN")}</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-lg text-red-600">Expenses</CardTitle></CardHeader>
-              <CardContent>
-                {accounts.filter(a => a.account_type === 'expense').length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No expense data yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {accounts.filter(a => a.account_type === 'expense').map(a => {
-                      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-                      return total > 0 ? (
-                        <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                          <span>{a.name}</span>
-                          <span className="font-semibold text-red-600">₹{total.toLocaleString("en-IN")}</span>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg text-red-600">Expenses</CardTitle></CardHeader>
+                    <CardContent>
+                      {accounts.filter(a => a.account_type === 'expense').length === 0 && payrollTotal === 0 ? (
+                        <p className="text-muted-foreground text-sm">No expense data yet</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {accounts.filter(a => a.account_type === 'expense').map(a => {
+                            const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+                            return total > 0 ? (
+                              <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                                <span>{a.name}</span>
+                                <span className="font-semibold text-red-600">₹{total.toLocaleString("en-IN")}</span>
+                              </div>
+                            ) : null;
+                          })}
+                          {payrollTotal > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                              <span className="font-medium">Staff Salaries (Payroll)</span>
+                              <span className="font-bold text-red-600">₹{payrollTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center p-3 border-t-2 font-bold">
+                            <span>Total Expenses</span>
+                            <span className="text-red-600">₹{totalExpenseWithPayroll.toLocaleString("en-IN")}</span>
+                          </div>
                         </div>
-                      ) : null;
-                    })}
-                    <div className="flex justify-between items-center p-3 border-t-2 font-bold">
-                      <span>Total Expenses</span>
-                      <span className="text-red-600">₹{totalExpense.toLocaleString("en-IN")}</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          <Card className="mt-6">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Net Profit / Loss</p>
-                  <p className={`text-3xl font-bold ${(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0) - totalExpense) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    ₹{(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0) - totalExpense).toLocaleString("en-IN")}
-                  </p>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
-                <Button variant="outline" onClick={() => exportSectionPDF("all")}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
-              </div>
-            </CardContent>
-          </Card>
+                <Card className="mt-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Net Profit / Loss</p>
+                        <p className={`text-3xl font-bold ${netPL >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          ₹{netPL.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                      <Button variant="outline" onClick={() => exportSectionPDF("all")}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
         </TabsContent>
 
       </Tabs>
