@@ -14,9 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Plus, TrendingUp, TrendingDown, BookOpen, ClipboardList,
-  IndianRupee, ArrowUpRight, ArrowDownRight, Calendar, Download
+  IndianRupee, ArrowUpRight, ArrowDownRight, Calendar, Download, FileText, FileSpreadsheet
 } from "lucide-react";
 import { format } from "date-fns";
 import { exportToExcel } from "@/lib/exportExcel";
