@@ -329,6 +329,94 @@ const Students = () => {
     }
   };
 
+  // Exit student handlers
+  const openExitDialog = async (student: StudentWithProfile) => {
+    setExitingStudent(student);
+    setExitDialogOpen(true);
+    setExitLoading(true);
+    setExitRefunds({});
+    try {
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("student_id", student.id)
+        .order("billing_month", { ascending: false });
+      const inv = invoices || [];
+      setExitInvoices(inv);
+      const refundDefaults: Record<string, { amount: string; reason: string; method: string; enabled: boolean }> = {};
+      inv.forEach((invoice: any) => {
+        const paidAmt = Number(invoice.paid_amount || 0);
+        if (paidAmt > 0 && invoice.status !== "refunded") {
+          refundDefaults[invoice.id] = {
+            amount: paidAmt.toString(),
+            reason: "Student exit - pro-rata refund",
+            method: "bank_transfer",
+            enabled: true,
+          };
+        }
+      });
+      setExitRefunds(refundDefaults);
+    } catch {
+      setExitInvoices([]);
+    } finally {
+      setExitLoading(false);
+    }
+  };
+
+  const handleExitStudent = async () => {
+    if (!exitingStudent) return;
+    setExitProcessing(true);
+    try {
+      // 1. Process refunds
+      const selectedRefunds = Object.entries(exitRefunds).filter(([, v]) => v.enabled && Number(v.amount) > 0);
+      const { data: properties } = await supabase.from("properties").select("id").limit(1);
+      const propertyId = properties?.[0]?.id;
+      
+      for (const [invoiceId, refund] of selectedRefunds) {
+        if (!propertyId) continue;
+        const { error: refundErr } = await supabase.from("refunds").insert({
+          invoice_id: invoiceId,
+          student_id: exitingStudent.id,
+          property_id: propertyId,
+          amount: Number(refund.amount),
+          reason: refund.reason,
+          refund_method: refund.method,
+          status: "processed",
+        });
+        if (refundErr) throw refundErr;
+      }
+
+      // 2. Vacate bed
+      if (exitingStudent.bed) {
+        const { error: bedErr } = await supabase
+          .from("beds")
+          .update({ student_id: null, status: "vacant" })
+          .eq("id", exitingStudent.bed.id);
+        if (bedErr) throw bedErr;
+      }
+
+      // 3. Mark student inactive
+      const { error: statusErr } = await supabase
+        .from("students")
+        .update({ status: "inactive" })
+        .eq("id", exitingStudent.id);
+      if (statusErr) throw statusErr;
+
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({
+        title: "Student Exited",
+        description: `${exitingStudent.profile?.full_name} has been marked inactive.${selectedRefunds.length > 0 ? ` ${selectedRefunds.length} refund(s) processed.` : ""}`,
+      });
+      setExitDialogOpen(false);
+      setExitingStudent(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to process exit", variant: "destructive" });
+    } finally {
+      setExitProcessing(false);
+    }
+  };
+
   // Filter students based on search and filters
   const activeFilterCount = [filterStatus, filterCourse, filterYear, filterRoom].filter(f => f !== "all").length;
 
