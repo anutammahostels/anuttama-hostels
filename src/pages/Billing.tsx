@@ -427,6 +427,7 @@ const Billing = () => {
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="overdue">Overdue</TabsTrigger>
             <TabsTrigger value="payments">Payment History</TabsTrigger>
+            <TabsTrigger value="refunds" onClick={() => fetchRefundsList()}>Refunds</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
