@@ -1,35 +1,81 @@
 
 
-## Student Exit with Refund Processing
+## Refund Reflection Across Dashboard + Cross-Wiring Payroll/Accounting
 
-### Current State
-- **Refund mechanism** already exists in the Billing page — admins can process refunds against individual invoices with amount, reason, and method.
-- **Student exit** is handled via "Vacate Room" (clears bed) and "Delete Student" (removes record) on the Students page, but there is **no exit workflow** that ties together: vacating bed + processing pending invoice refunds + marking student inactive.
+### What Needs to Change
 
-### What to Build
+Currently, refunds are stored in the `refunds` table but are **not reflected** anywhere outside the Students exit dialog. They need to appear in 5 places, and existing payroll/accounting data needs cross-wiring where relevant.
 
-Add an **"Exit Student"** workflow to the Students page that consolidates the exit procedure into a single guided dialog:
+---
 
-**1. "Exit Student" menu item** — Add to the student dropdown menu (visible only for active students with a bed assigned).
+### 1. Dashboard Stats — Add "Refunds Processed" metric & adjust Dues
 
-**2. Exit Dialog** — A multi-section dialog that shows:
-- **Student summary**: Name, Roll No, Room, Admission Date
-- **Outstanding invoices**: Fetches all invoices for the student, shows paid amounts eligible for pro-rata refund
-- **Refund form per invoice**: For each paid/partial invoice, allow admin to enter refund amount (pre-filled with remaining days pro-rata or full paid amount), reason, and method
-- **Confirmation**: Summary of actions — vacate bed, set status to "inactive", process refunds
+**File: `src/hooks/useDashboard.ts`**
+- Query `refunds` table: `SUM(amount)` for current month
+- Subtract refunded amounts from `pendingDues` calculation (so dues reflect net after refunds)
+- Return new `totalRefunds` and `refundsCount` fields in stats
 
-**3. Exit procedure** (on confirm):
-1. Process refunds for selected invoices (insert into `refunds` table, update invoice)
-2. Vacate bed (`beds` update → student_id null, status vacant)
-3. Update student status to `inactive`
-4. Show success toast with summary
+**File: `src/components/dashboard/DashboardStats.tsx`**
+- Add a 5th stat card: "Refunds" showing total refunded amount with count as subtitle
+- Use `Undo2` icon with a red/orange gradient
+
+---
+
+### 2. Billing Page — Add Refunds Tab
+
+**File: `src/pages/Billing.tsx`**
+- Add a new "Refunds" tab alongside Invoices and Payment History
+- Query `refunds` table joined with student profiles and invoice numbers
+- Display table: Date, Student, Invoice #, Amount, Method, Reason, Status
+- Show total refunded at top as a summary card
+
+---
+
+### 3. Receivables — Add Refunds Column
+
+**File: `src/pages/Receivables.tsx`**
+- Query `refunds` table grouped by `student_id`
+- Add "Refunds" column to the table between "Received" and "Net Receivable"
+- Adjust Net Receivable formula: `Gross - Discounts - Received + Refunds` (refunds increase net receivable since money went back)
+- Update Excel and PDF exports to include Refunds column
+
+---
+
+### 4. Accounting — Wire Refunds into Fee Collections & P&L
+
+**File: `src/pages/Accounting.tsx`**
+- **Fee Collections tab**: Query `refunds` table alongside payments. Show refunds as negative/outflow entries (red) in the same table, or add a "Refunds" subsection below collections with a net summary
+- **P&L tab**: Subtract total refunds from income to show "Net Fee Income = Fee Collections - Refunds"
+- **Transactions tab**: No auto-insert (manual accounting entries), but add a summary badge showing "Unrecorded Refunds: ₹X" if refunds exist without matching transaction entries
+
+---
+
+### 5. Cross-Wiring: Payroll to Accounting & Dashboard
+
+Currently payroll data lives independently. Wire it as follows:
+
+**Accounting P&L tab** (`src/pages/Accounting.tsx`):
+- Query `payroll_records` table: sum `net_salary` grouped by month
+- Add "Staff Salaries" as an expense line in P&L, so P&L shows: `Net Income = (Fee Collections - Refunds) - (Expenses + Salaries)`
+
+**Dashboard Stats** (`src/hooks/useDashboard.ts` + `DashboardStats.tsx`):
+- No change needed — payroll is operational, not a dashboard KPI for hostel management
+
+**Accounting Transactions tab**:
+- No auto-wiring — payroll payments are recorded manually as transactions. But show an info banner if payroll total for a month doesn't match any recorded salary expense transactions.
+
+---
 
 ### Files to Edit
 
 | File | Changes |
 |------|---------|
-| `src/pages/Students.tsx` | Add "Exit Student" dropdown item, exit dialog with invoice fetching, refund form, and multi-step exit handler |
+| `src/hooks/useDashboard.ts` | Add refunds query, return `totalRefunds` in stats, adjust `pendingDues` |
+| `src/components/dashboard/DashboardStats.tsx` | Add 5th "Refunds" stat card |
+| `src/pages/Billing.tsx` | Add "Refunds" tab with refunds table |
+| `src/pages/Receivables.tsx` | Add refunds column, adjust net formula, update exports |
+| `src/pages/Accounting.tsx` | Wire refunds into Fee Collections & P&L; wire payroll salaries into P&L as expense |
 
 ### No DB Changes Required
-The `refunds` table, `invoices` table, `beds` table, and `students.status` field all already exist with appropriate columns and RLS policies.
+All data already exists in `refunds` and `payroll_records` tables with appropriate RLS policies.
 
