@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle, Undo2 } from "lucide-react";
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
+import { supabase } from "@/integrations/supabase/client";
 import { useStudents } from "@/hooks/useStudents";
 import { useProperties } from "@/hooks/useProperties";
 import { format } from "date-fns";
