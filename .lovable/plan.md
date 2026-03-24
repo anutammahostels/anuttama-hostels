@@ -1,72 +1,76 @@
 
 
-## Landing Page Overhaul + New Pricing Model
+## Payroll Overhaul: Match Payslip Format + Additional Requirements
 
-### What Changes
+### Summary of Changes
 
-**1. Pricing — 2 Plans Only**
-- **Plan 1: "Growth"** — ₹2/student/day with core features (Property Management, Room Allocation, Billing with Discounts & Refunds, Gate Pass, Mess, Maintenance, Attendance, Student Portal, Excel & PDF Exports, Payroll with Payslips, Receivables Report)
-- **Plan 2: "Enterprise"** — Custom pricing with everything in Growth + Unlimited properties, Custom integrations, Dedicated account manager, SLA guarantee, On-premise option, Priority support, Training & onboarding
-- Remove old 3-tier Starter/Professional/Enterprise plans
+Based on the uploaded payslip template (XLSX) and the additional requirements PDF, the following gaps need to be addressed:
 
-**2. Hero Section Update**
-- Replace "7-Day Free Trial — No Credit Card" badge with "Starting at just ₹2/student/day"
-- Change CTA from "Start Free Trial" to "Get Started" / "Contact Sales"
-- Update trust indicators to reflect new features (Excel Reports, Payroll, Refunds)
+### Database Migration Required
 
-**3. Features Section — Updated Feature List**
-Reflect all newly built features:
-- Smart Policy Engine (existing)
-- Property & Room Management (existing)
-- Digital Gate Pass (existing)
-- Mess Management (existing)
-- **Billing, Discounts & Refunds** (updated — highlight discount during invoice, refund on student exit)
-- Maintenance Tickets (existing)
-- **Payroll & Payslips** (new — full salary components, PDF payslips)
-- **Student Receivables Report** (new — gross/discount/received/net)
-- **Excel & PDF Exports** (new — all data pages)
-- **Attendance & Admissions** (existing but highlight)
+Add missing columns to the `employees` table:
+- `bank_ifsc` (text) — Bank IFSC code
+- `pan_number` (text) — Employee PAN
+- `last_working_day` (date) — LWD
+- `hra` (numeric, default 0) — Employee-level HRA component
+- `special_allowance` (numeric, default 0) — Employee-level Special Allowance
+- `other_additions` (numeric, default 0) — Employee-level Other Additions
+- `employer_pf_contribution` (numeric, default 0) — Employer PF contribution setting
 
-**4. Benefits Section**
-- Keep structure, update copy to mention new capabilities (Excel exports, payroll automation, refund processing)
+Add `is_locked` (boolean, default false) column to `payroll_records` table for month locking.
 
-**5. Pricing Section (`src/pages/Pricing.tsx`)**
-- Complete rewrite: 2 cards side by side
-- Growth card: ₹2/student/day, full feature list
-- Enterprise card: "Contact Sales", custom features
-- Update FAQ to match new pricing model
-- Remove old testimonials from pricing page (already on homepage)
+### Changes to `src/pages/Payroll.tsx`
 
-**6. Navbar**
-- Add "Pricing" link back to nav (currently missing from navLinks)
+**1. Employee Form — Add salary structure fields + bank IFSC + PAN + LWD**
+- Add inputs for Bank IFSC, PAN Number, Last Working Day
+- Add salary component inputs at employee level: Basic (existing `salary_amount`), HRA, Special Allowance, Other Additions, Employer PF Contribution
+- These become the defaults when generating payroll
 
-**7. Footer**
-- Add Pricing link under Product
-- Update year to 2026
+**2. PF Calculation — Cap at ₹1,800**
+- Change: `pfEmployee = Math.min(Math.round(basic * 0.12), 1800)`
+- Same cap for employer PF
 
-**8. CTA Section**
-- Replace "free trial" messaging with "Starting at ₹2/student/day"
-- Update CTAs to "Get Started" and "Contact Sales"
+**3. Payslip PDF — Match uploaded template exactly**
+- Add Company name, address, logo header
+- Add Personal Details section: Employee Number, Name, Designation, DOJ, Pay Period, Paid Days, LOP Days, UAN No., ESIC No., Employee PAN, Bank Acct No.
+- Two-column Earnings/Deductions tables (already present, minor layout tweaks)
 
-**9. Mobile Responsiveness**
-- Already largely responsive, but audit all new sections for compact mobile layout
-- Ensure pricing cards stack vertically on mobile with proper spacing
+**4. Bulk Payroll Run**
+- Add "Run Payroll for All" button that generates payroll for all active employees for the selected month using their saved salary structure defaults
+- Show confirmation dialog with employee count before running
+
+**5. Month Locking**
+- Add a "Lock Month" button on Payroll Records tab
+- Once locked, prevent re-generation for that month
+- Show lock badge on locked records
+
+**6. Email Payslip**
+- Add "Send Payslip" button next to Download on each payroll record
+- Requires an edge function to send email via Supabase (will use a backend function)
+- Only visible if employee has email
+
+**7. Excel Export — Include bank details**
+- Add Bank Account, Bank Name, Bank IFSC, PAN to salary register export
+- Add month-wise filter/export option
+
+**8. Employee Master Table — Show more columns**
+- Show Employee Number, Bank Account, Bank Name, Bank IFSC in the employees table
+
+**9. Auto-populate earnings from employee master**
+- When selecting employee for payroll, auto-fill HRA, Special Allowance, Other Additions from their saved salary structure
 
 ### Files to Edit
 
 | File | Changes |
 |------|---------|
-| `src/components/landing/Hero.tsx` | Update badge, CTA text, trust indicators |
-| `src/components/landing/Features.tsx` | Add Payroll, Receivables, Excel Export, update Billing feature |
-| `src/components/landing/Benefits.tsx` | Update copy referencing new features, remove "free trial" CTA |
-| `src/components/landing/CTA.tsx` | Replace trial messaging with pricing-focused CTA |
-| `src/components/landing/Navbar.tsx` | Add Pricing to navLinks |
-| `src/components/landing/Footer.tsx` | Add Pricing link, update year |
-| `src/pages/Pricing.tsx` | Full rewrite — 2 plans (₹2/student/day + Enterprise) |
-| `src/pages/Index.tsx` | No structural change (sections stay the same) |
+| Migration SQL | Add `bank_ifsc`, `pan_number`, `last_working_day`, `hra`, `special_allowance`, `other_additions`, `employer_pf_contribution` to employees; add `is_locked` to payroll_records |
+| `src/pages/Payroll.tsx` | Full update: employee form, PF cap, bulk run, lock month, payslip template, export with bank details, auto-populate from employee master |
+| Edge function (new) | `send-payslip` — sends payslip HTML email to employee |
 
-### Pricing Card Design
-- Growth plan: White card with green accent, prominent "₹2" price, "/student/day" suffix, full checklist of 15+ features
-- Enterprise plan: Dark gradient card, "Custom" price, "Contact Sales" CTA, premium features list
-- Growth card highlighted as "Most Popular"
+### Technical Details
+
+- PF cap: `Math.min(Math.round(basic * 0.12), 1800)` for both employee and employer
+- Bulk payroll: loop through active employees, insert payroll records for each using their saved salary structure
+- Lock: update `is_locked = true` for all records of a given month; check before allowing new generation
+- Email: edge function receives payroll record ID, generates HTML payslip, sends via Supabase's built-in email or Resend
 
