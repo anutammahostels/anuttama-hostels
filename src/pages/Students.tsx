@@ -64,6 +64,13 @@ const Students = () => {
   const [filterRoom, setFilterRoom] = useState("all");
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
 
+  // Exit student state
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [exitingStudent, setExitingStudent] = useState<StudentWithProfile | null>(null);
+  const [exitInvoices, setExitInvoices] = useState<any[]>([]);
+  const [exitRefunds, setExitRefunds] = useState<Record<string, { amount: string; reason: string; method: string; enabled: boolean }>>({});
+  const [exitLoading, setExitLoading] = useState(false);
+  const [exitProcessing, setExitProcessing] = useState(false);
   const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
   const { toast } = useToast();
