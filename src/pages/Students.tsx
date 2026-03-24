@@ -1156,6 +1156,191 @@ const Students = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Exit Student Dialog */}
+      <Dialog open={exitDialogOpen} onOpenChange={(open) => { if (!exitProcessing) { setExitDialogOpen(open); if (!open) setExitingStudent(null); } }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogOut className="h-5 w-5" /> Exit Student
+            </DialogTitle>
+            <DialogDescription>
+              Process the exit for {exitingStudent?.profile?.full_name || "this student"}. This will vacate their bed, mark them inactive, and process any refunds.
+            </DialogDescription>
+          </DialogHeader>
+
+          {exitLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-6 py-2">
+              {/* Student Summary */}
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <h4 className="text-sm font-semibold">Student Summary</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Name:</span>{" "}
+                    <span className="font-medium">{exitingStudent?.profile?.full_name || "Unknown"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Roll No:</span>{" "}
+                    <span className="font-medium">{exitingStudent?.roll_number || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Room:</span>{" "}
+                    <span className="font-medium">{exitingStudent ? getRoomDisplay(exitingStudent) : "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Admission:</span>{" "}
+                    <span className="font-medium">{exitingStudent?.admission_date || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Invoices & Refunds */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <IndianRupee className="h-4 w-4" /> Refund Processing
+                </h4>
+                {exitInvoices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No invoices found for this student.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {exitInvoices.map((invoice: any) => {
+                      const paidAmt = Number(invoice.paid_amount || 0);
+                      const refund = exitRefunds[invoice.id];
+                      const isRefundable = paidAmt > 0 && invoice.status !== "refunded";
+
+                      return (
+                        <div key={invoice.id} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm">
+                              <span className="font-medium">{invoice.invoice_number}</span>
+                              <span className="text-muted-foreground ml-2">
+                                ({invoice.billing_month}) — ₹{Number(invoice.total_amount).toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                            <Badge variant="secondary" className={
+                              invoice.status === "paid" ? "bg-green-500/10 text-green-600" :
+                              invoice.status === "pending" ? "bg-yellow-500/10 text-yellow-600" :
+                              "bg-muted text-muted-foreground"
+                            }>
+                              {invoice.status}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Paid: ₹{paidAmt.toLocaleString("en-IN")} / Total: ₹{Number(invoice.total_amount).toLocaleString("en-IN")}
+                          </div>
+
+                          {isRefundable && refund && (
+                            <div className="bg-muted/50 rounded p-3 space-y-2 mt-1">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={refund.enabled}
+                                  onChange={(e) => setExitRefunds(prev => ({
+                                    ...prev,
+                                    [invoice.id]: { ...prev[invoice.id], enabled: e.target.checked }
+                                  }))}
+                                  className="rounded"
+                                />
+                                <Label className="text-xs font-semibold">Process Refund</Label>
+                              </div>
+                              {refund.enabled && (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <div>
+                                    <Label className="text-xs">Amount (₹)</Label>
+                                    <Input
+                                      type="number"
+                                      value={refund.amount}
+                                      max={paidAmt}
+                                      onChange={(e) => setExitRefunds(prev => ({
+                                        ...prev,
+                                        [invoice.id]: { ...prev[invoice.id], amount: e.target.value }
+                                      }))}
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Method</Label>
+                                    <Select
+                                      value={refund.method}
+                                      onValueChange={(v) => setExitRefunds(prev => ({
+                                        ...prev,
+                                        [invoice.id]: { ...prev[invoice.id], method: v }
+                                      }))}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="upi">UPI</SelectItem>
+                                        <SelectItem value="cheque">Cheque</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="sm:col-span-1">
+                                    <Label className="text-xs">Reason</Label>
+                                    <Input
+                                      value={refund.reason}
+                                      onChange={(e) => setExitRefunds(prev => ({
+                                        ...prev,
+                                        [invoice.id]: { ...prev[invoice.id], reason: e.target.value }
+                                      }))}
+                                      className="h-8 text-sm"
+                                      placeholder="Reason for refund"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Confirmation Summary */}
+              <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 space-y-2">
+                <h4 className="text-sm font-semibold text-orange-700 dark:text-orange-400">Actions on Confirm</h4>
+                <ul className="text-sm text-orange-600 dark:text-orange-400 space-y-1">
+                  {exitingStudent?.bed && <li>• Vacate bed: {getRoomDisplay(exitingStudent)}</li>}
+                  <li>• Mark student as <strong>inactive</strong></li>
+                  {Object.values(exitRefunds).filter(r => r.enabled && Number(r.amount) > 0).length > 0 && (
+                    <li>
+                      • Process {Object.values(exitRefunds).filter(r => r.enabled && Number(r.amount) > 0).length} refund(s) totalling ₹
+                      {Object.values(exitRefunds)
+                        .filter(r => r.enabled && Number(r.amount) > 0)
+                        .reduce((sum, r) => sum + Number(r.amount), 0)
+                        .toLocaleString("en-IN")}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setExitDialogOpen(false); setExitingStudent(null); }} disabled={exitProcessing}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={handleExitStudent}
+              disabled={exitProcessing || exitLoading}
+            >
+              {exitProcessing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : <><LogOut className="h-4 w-4 mr-2" /> Confirm Exit</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
