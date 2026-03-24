@@ -193,6 +193,8 @@ export default function Accounting() {
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || "—";
 
   const feeTotal = feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0);
+  const refundsTotal = refundsData.reduce((s: number, r: any) => s + Number(r.amount), 0);
+  const payrollTotal = payrollRecords.reduce((s: number, r: any) => s + Number(r.net_salary), 0);
 
   const pdfStyles = `<style>
     body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e}
