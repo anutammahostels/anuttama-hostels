@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle, Undo2 } from "lucide-react";
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
+import { supabase } from "@/integrations/supabase/client";
 import { useStudents } from "@/hooks/useStudents";
 import { useProperties } from "@/hooks/useProperties";
 import { format } from "date-fns";
@@ -75,6 +76,45 @@ const Billing = () => {
   const { students } = useStudents();
   const { properties } = useProperties();
   const { toast } = useToast();
+
+  // Fetch refunds for the Refunds tab
+  const [refundsList, setRefundsList] = useState<any[]>([]);
+  const [refundsLoading, setRefundsLoading] = useState(false);
+
+  const fetchRefundsList = async () => {
+    setRefundsLoading(true);
+    const { data } = await supabase
+      .from('refunds')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (data) {
+      // Enrich with student names and invoice numbers
+      const studentIds = [...new Set(data.map(r => r.student_id))];
+      const invoiceIds = [...new Set(data.map(r => r.invoice_id))];
+      
+      const [{ data: studentsData }, { data: invoicesData }] = await Promise.all([
+        supabase.from('students').select('id, user_id, roll_number').in('id', studentIds.length ? studentIds : ['']),
+        supabase.from('invoices').select('id, invoice_number').in('id', invoiceIds.length ? invoiceIds : ['']),
+      ]);
+
+      const userIds = studentsData?.map(s => s.user_id).filter(Boolean) || [];
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds.length ? userIds : ['']);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      const studentInfoMap = new Map(studentsData?.map(s => [s.id, { name: profileMap.get(s.user_id) || 'Unknown', rollNo: s.roll_number }]) || []);
+      const invoiceMap = new Map(invoicesData?.map(i => [i.id, i.invoice_number]) || []);
+
+      setRefundsList(data.map(r => ({
+        ...r,
+        studentName: studentInfoMap.get(r.student_id)?.name || 'Unknown',
+        studentRollNo: studentInfoMap.get(r.student_id)?.rollNo || '-',
+        invoiceNumber: invoiceMap.get(r.invoice_id) || '-',
+      })));
+    }
+    setRefundsLoading(false);
+  };
+
+  useEffect(() => { fetchRefundsList(); }, []);
 
   const handleSendReminder = (invoice?: InvoiceWithStudent) => {
     if (invoice) {
@@ -387,6 +427,7 @@ const Billing = () => {
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="overdue">Overdue</TabsTrigger>
             <TabsTrigger value="payments">Payment History</TabsTrigger>
+            <TabsTrigger value="refunds" onClick={() => fetchRefundsList()}>Refunds</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
@@ -668,6 +709,76 @@ const Billing = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Refunds Tab */}
+          <TabsContent value="refunds" className="mt-6">
+            {(() => {
+              const totalRefunded = refundsList.reduce((s, r) => s + Number(r.amount), 0);
+              return (
+                <>
+                  <Card className="border-border/50 mb-4">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-muted text-orange-500">
+                          <Undo2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{formatCurrency(totalRefunded)}</p>
+                          <p className="text-sm text-muted-foreground">Total Refunded ({refundsList.length} refunds)</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border/50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Refund History</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        {refundsLoading ? (
+                          <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Student</TableHead>
+                                <TableHead>Invoice</TableHead>
+                                <TableHead>Amount</TableHead>
+                                <TableHead>Method</TableHead>
+                                <TableHead>Reason</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {refundsList.length === 0 ? (
+                                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No refunds processed yet</TableCell></TableRow>
+                              ) : refundsList.map(r => (
+                                <TableRow key={r.id}>
+                                  <TableCell className="text-sm">{format(new Date(r.created_at), "MMM d, yyyy")}</TableCell>
+                                  <TableCell>
+                                    <div>
+                                      <p className="font-medium">{r.studentName}</p>
+                                      <p className="text-xs text-muted-foreground">{r.studentRollNo}</p>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">{r.invoiceNumber}</TableCell>
+                                  <TableCell className="font-semibold text-orange-600">{formatCurrency(Number(r.amount))}</TableCell>
+                                  <TableCell><Badge variant="outline" className="text-xs capitalize">{r.refund_method || 'cash'}</Badge></TableCell>
+                                  <TableCell className="text-sm max-w-[200px] truncate">{r.reason || '—'}</TableCell>
+                                  <TableCell><Badge className="bg-green-500/10 text-green-600">{r.status || 'processed'}</Badge></TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              );
+            })()}
           </TabsContent>
         </Tabs>
 

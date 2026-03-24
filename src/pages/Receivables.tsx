@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Download, FileText, Loader2 } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
+import { supabase } from "@/integrations/supabase/client";
 import { exportToExcel } from "@/lib/exportExcel";
 import { format } from "date-fns";
 
@@ -11,11 +13,26 @@ const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 const Receivables = () => {
   const { invoices, isLoading } = useInvoices();
+  const [refundsMap, setRefundsMap] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const fetchRefunds = async () => {
+      const { data } = await supabase.from('refunds').select('student_id, amount');
+      if (data) {
+        const map = new Map<string, number>();
+        data.forEach(r => {
+          map.set(r.student_id, (map.get(r.student_id) || 0) + Number(r.amount));
+        });
+        setRefundsMap(map);
+      }
+    };
+    fetchRefunds();
+  }, []);
 
   // Group by student
   const studentMap = new Map<string, {
     name: string; rollNo: string; gross: number; discounts: number;
-    received: number; paymentModes: Set<string>; net: number;
+    received: number; refunds: number; paymentModes: Set<string>; net: number;
   }>();
 
   invoices.forEach(inv => {
@@ -23,13 +40,14 @@ const Receivables = () => {
     const existing = studentMap.get(sid) || {
       name: inv.student?.profile?.full_name || "Unknown",
       rollNo: inv.student?.roll_number || "-",
-      gross: 0, discounts: 0, received: 0, paymentModes: new Set<string>(), net: 0,
+      gross: 0, discounts: 0, received: 0, refunds: 0, paymentModes: new Set<string>(), net: 0,
     };
     existing.gross += inv.total_amount + (inv.discounts || 0);
     existing.discounts += inv.discounts || 0;
     existing.received += inv.paid_amount || 0;
+    existing.refunds = refundsMap.get(sid) || 0;
     if (inv.payment_method) existing.paymentModes.add(inv.payment_method);
-    existing.net = existing.gross - existing.discounts - existing.received;
+    existing.net = existing.gross - existing.discounts - existing.received + existing.refunds;
     studentMap.set(sid, existing);
   });
 
@@ -41,8 +59,8 @@ const Receivables = () => {
 
   const totals = rows.reduce((acc, r) => ({
     gross: acc.gross + r.gross, discounts: acc.discounts + r.discounts,
-    received: acc.received + r.received, net: acc.net + r.net,
-  }), { gross: 0, discounts: 0, received: 0, net: 0 });
+    received: acc.received + r.received, refunds: acc.refunds + r.refunds, net: acc.net + r.net,
+  }), { gross: 0, discounts: 0, received: 0, refunds: 0, net: 0 });
 
   const handleExportExcel = () => {
     exportToExcel(rows.map(r => ({
@@ -51,6 +69,7 @@ const Receivables = () => {
       "Gross Receivable": r.gross,
       "Discounts": r.discounts,
       "Amount Received": r.received,
+      "Refunds": r.refunds,
       "Payment Mode": r.paymentModes,
       "Net Receivable": r.net,
     })), `receivables-${format(new Date(), "yyyy-MM-dd")}`, "Receivables");
@@ -64,9 +83,9 @@ const Receivables = () => {
     table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:13px}
     th{background:#0f3460;color:#fff}.total td{font-weight:bold;background:#f0f4ff}@media print{body{padding:15px}}</style></head><body>
     <h1>Student Receivables Report</h1><p>Generated: ${format(new Date(), "dd MMM yyyy")}</p>
-    <table><tr><th>Student</th><th>Roll No</th><th>Gross Receivable</th><th>Discounts</th><th>Received</th><th>Payment Mode</th><th>Net Receivable</th></tr>
-    ${rows.map(r => `<tr><td>${r.name}</td><td>${r.rollNo}</td><td>${formatCurrency(r.gross)}</td><td>${formatCurrency(r.discounts)}</td><td>${formatCurrency(r.received)}</td><td>${r.paymentModes}</td><td>${formatCurrency(r.net)}</td></tr>`).join("")}
-    <tr class="total"><td colspan="2">TOTAL</td><td>${formatCurrency(totals.gross)}</td><td>${formatCurrency(totals.discounts)}</td><td>${formatCurrency(totals.received)}</td><td></td><td>${formatCurrency(totals.net)}</td></tr>
+    <table><tr><th>Student</th><th>Roll No</th><th>Gross Receivable</th><th>Discounts</th><th>Received</th><th>Refunds</th><th>Payment Mode</th><th>Net Receivable</th></tr>
+    ${rows.map(r => `<tr><td>${r.name}</td><td>${r.rollNo}</td><td>${formatCurrency(r.gross)}</td><td>${formatCurrency(r.discounts)}</td><td>${formatCurrency(r.received)}</td><td>${formatCurrency(r.refunds)}</td><td>${r.paymentModes}</td><td>${formatCurrency(r.net)}</td></tr>`).join("")}
+    <tr class="total"><td colspan="2">TOTAL</td><td>${formatCurrency(totals.gross)}</td><td>${formatCurrency(totals.discounts)}</td><td>${formatCurrency(totals.received)}</td><td>${formatCurrency(totals.refunds)}</td><td></td><td>${formatCurrency(totals.net)}</td></tr>
     </table></body></html>`);
     w.document.close();
     w.print();
@@ -79,7 +98,7 @@ const Receivables = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Student Receivables</h1>
-          <p className="text-muted-foreground">Gross receivables, discounts, collections & net outstanding</p>
+          <p className="text-muted-foreground">Gross receivables, discounts, collections, refunds & net outstanding</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExportExcel}><Download className="h-4 w-4 mr-2" />Export Excel</Button>
@@ -88,10 +107,11 @@ const Receivables = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid sm:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-5 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Gross Receivable</p><p className="text-2xl font-bold">{formatCurrency(totals.gross)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Discounts Given</p><p className="text-2xl font-bold text-yellow-600">{formatCurrency(totals.discounts)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Amount Received</p><p className="text-2xl font-bold text-green-600">{formatCurrency(totals.received)}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Refunds</p><p className="text-2xl font-bold text-orange-600">{formatCurrency(totals.refunds)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Net Receivable</p><p className="text-2xl font-bold text-red-600">{formatCurrency(totals.net)}</p></CardContent></Card>
       </div>
 
@@ -106,13 +126,14 @@ const Receivables = () => {
                   <TableHead className="text-right">Gross Receivable</TableHead>
                   <TableHead className="text-right">Discounts</TableHead>
                   <TableHead className="text-right">Received</TableHead>
+                  <TableHead className="text-right">Refunds</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead className="text-right">Net Receivable</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
                 ) : rows.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
@@ -120,6 +141,7 @@ const Receivables = () => {
                     <TableCell className="text-right">{formatCurrency(r.gross)}</TableCell>
                     <TableCell className="text-right text-yellow-600">{formatCurrency(r.discounts)}</TableCell>
                     <TableCell className="text-right text-green-600">{formatCurrency(r.received)}</TableCell>
+                    <TableCell className="text-right text-orange-600">{formatCurrency(r.refunds)}</TableCell>
                     <TableCell><Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge></TableCell>
                     <TableCell className="text-right font-bold text-red-600">{formatCurrency(r.net)}</TableCell>
                   </TableRow>
@@ -130,6 +152,7 @@ const Receivables = () => {
                     <TableCell className="text-right">{formatCurrency(totals.gross)}</TableCell>
                     <TableCell className="text-right text-yellow-600">{formatCurrency(totals.discounts)}</TableCell>
                     <TableCell className="text-right text-green-600">{formatCurrency(totals.received)}</TableCell>
+                    <TableCell className="text-right text-orange-600">{formatCurrency(totals.refunds)}</TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-right text-red-600">{formatCurrency(totals.net)}</TableCell>
                   </TableRow>

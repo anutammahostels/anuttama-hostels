@@ -106,6 +106,33 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
+  const { data: refundsData = [] } = useQuery({
+    queryKey: ["refunds-accounting", propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("refunds")
+        .select("*")
+        .eq("property_id", propertyId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId,
+  });
+
+  const { data: payrollRecords = [] } = useQuery({
+    queryKey: ["payroll-accounting", propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_records")
+        .select("net_salary, month, status")
+        .eq("property_id", propertyId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!propertyId,
+  });
+
 
   // Mutations
   const createAccount = useMutation({
@@ -166,6 +193,8 @@ export default function Accounting() {
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || "—";
 
   const feeTotal = feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0);
+  const refundsTotal = refundsData.reduce((s: number, r: any) => s + Number(r.amount), 0);
+  const payrollTotal = payrollRecords.reduce((s: number, r: any) => s + Number(r.net_salary), 0);
 
   const pdfStyles = `<style>
     body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e}
@@ -208,8 +237,10 @@ export default function Accounting() {
     <h2>Fee Collections</h2>
     <table><tr><th>Date</th><th>Invoice</th><th>Method</th><th>Status</th><th>Amount</th></tr>
     ${feeCollections.map((p: any) => `<tr><td>${format(new Date(p.paid_at), "dd/MM/yyyy")}</td><td>${p.invoice?.invoice_number || "—"}</td><td>${p.payment_method}</td><td>${p.status}</td><td>₹${Number(p.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
+    ${refundsData.length > 0 ? refundsData.map((r: any) => `<tr><td>${format(new Date(r.created_at), "dd/MM/yyyy")}</td><td>REFUND</td><td>${r.refund_method || 'cash'}</td><td>${r.status || 'processed'}</td><td class="expense">-₹${Number(r.amount).toLocaleString("en-IN")}</td></tr>`).join("") : ""}
     </table>
-    <p><strong>Total Fee Collections: </strong>₹${feeTotal.toLocaleString("en-IN")}</p>`;
+    <p><strong>Total Fee Collections: </strong>₹${feeTotal.toLocaleString("en-IN")}</p>
+    ${refundsTotal > 0 ? `<p><strong>Total Refunds: </strong><span class="expense">-₹${refundsTotal.toLocaleString("en-IN")}</span></p><p><strong>Net Collections: </strong>₹${(feeTotal - refundsTotal).toLocaleString("en-IN")}</p>` : ""}`;
 
   const buildPnlHTML = () => {
     const incomeRows = accounts.filter(a => a.account_type === 'income').map(a => {
@@ -220,19 +251,24 @@ export default function Accounting() {
       const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
       return total > 0 ? `<tr><td>${a.name}</td><td>₹${total.toLocaleString("en-IN")}</td></tr>` : "";
     }).join("");
-    const netPL = totalIncome + feeTotal - totalExpense;
+    const netFeeIncome = feeTotal - refundsTotal;
+    const totalExpenseWithPayroll = totalExpense + payrollTotal;
+    const netPL = totalIncome + netFeeIncome - totalExpenseWithPayroll;
     return `
     <h2>Profit & Loss Statement</h2>
     <h3 style="color:#16a34a">Income</h3>
     <table><tr><th>Account</th><th>Amount</th></tr>
     ${feeTotal > 0 ? `<tr><td>Fee Collections</td><td>₹${feeTotal.toLocaleString("en-IN")}</td></tr>` : ""}
+    ${refundsTotal > 0 ? `<tr><td>Less: Refunds</td><td style="color:#dc2626">-₹${refundsTotal.toLocaleString("en-IN")}</td></tr>` : ""}
+    ${netFeeIncome > 0 ? `<tr><td><strong>Net Fee Income</strong></td><td><strong>₹${netFeeIncome.toLocaleString("en-IN")}</strong></td></tr>` : ""}
     ${incomeRows}
-    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Income</td><td>₹${(totalIncome + feeTotal).toLocaleString("en-IN")}</td></tr>
+    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Income</td><td>₹${(totalIncome + netFeeIncome).toLocaleString("en-IN")}</td></tr>
     </table>
     <h3 style="color:#dc2626">Expenses</h3>
     <table><tr><th>Account</th><th>Amount</th></tr>
     ${expenseRows}
-    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Expenses</td><td>₹${totalExpense.toLocaleString("en-IN")}</td></tr>
+    ${payrollTotal > 0 ? `<tr><td>Staff Salaries (Payroll)</td><td>₹${payrollTotal.toLocaleString("en-IN")}</td></tr>` : ""}
+    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Expenses</td><td>₹${totalExpenseWithPayroll.toLocaleString("en-IN")}</td></tr>
     </table>
     <h3>Net Profit / Loss: <span style="color:${netPL >= 0 ? '#16a34a' : '#dc2626'}">₹${netPL.toLocaleString("en-IN")}</span></h3>`;
   };
@@ -276,11 +312,18 @@ export default function Accounting() {
     const accountsData = accounts.map(a => ({
       Code: a.code || "", Name: a.name, Type: a.account_type, Description: a.description || "", Status: a.is_active ? "Active" : "Inactive",
     }));
-    const collectionsData = feeCollections.map((p: any) => ({
-      Date: format(new Date(p.paid_at), "dd/MM/yyyy"), Invoice: p.invoice?.invoice_number || "", Method: p.payment_method, Status: p.status, Amount: Number(p.amount),
-    }));
+    const collectionsData = [
+      ...feeCollections.map((p: any) => ({
+        Date: format(new Date(p.paid_at), "dd/MM/yyyy"), Invoice: p.invoice?.invoice_number || "", Type: "Collection", Method: p.payment_method, Status: p.status, Amount: Number(p.amount),
+      })),
+      ...refundsData.map((r: any) => ({
+        Date: format(new Date(r.created_at), "dd/MM/yyyy"), Invoice: "REFUND", Type: "Refund", Method: r.refund_method || "cash", Status: r.status || "processed", Amount: -Number(r.amount),
+      })),
+    ];
     const pnlIncomeData = [
       ...(feeTotal > 0 ? [{ Category: "Fee Collections", Type: "Income", Amount: feeTotal }] : []),
+      ...(refundsTotal > 0 ? [{ Category: "Less: Refunds", Type: "Income Deduction", Amount: -refundsTotal }] : []),
+      ...(feeTotal > 0 && refundsTotal > 0 ? [{ Category: "Net Fee Income", Type: "Income", Amount: feeTotal - refundsTotal }] : []),
       ...accounts.filter(a => a.account_type === 'income').map(a => {
         const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
         return { Category: a.name, Type: "Income", Amount: total };
@@ -289,7 +332,8 @@ export default function Accounting() {
         const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
         return { Category: a.name, Type: "Expense", Amount: total };
       }).filter(r => r.Amount > 0),
-      { Category: "Net Profit/Loss", Type: "", Amount: totalIncome + feeTotal - totalExpense },
+      ...(payrollTotal > 0 ? [{ Category: "Staff Salaries (Payroll)", Type: "Expense", Amount: payrollTotal }] : []),
+      { Category: "Net Profit/Loss", Type: "", Amount: totalIncome + (feeTotal - refundsTotal) - (totalExpense + payrollTotal) },
     ];
 
     if (section === "all") {
@@ -603,7 +647,16 @@ export default function Accounting() {
         <TabsContent value="collections">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Fee Collections</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Fee Collections</CardTitle>
+                {refundsTotal > 0 && (
+                  <div className="flex gap-4 text-sm">
+                    <span>Collections: <strong className="text-green-600">₹{feeTotal.toLocaleString("en-IN")}</strong></span>
+                    <span>Refunds: <strong className="text-orange-600">-₹{refundsTotal.toLocaleString("en-IN")}</strong></span>
+                    <span>Net: <strong>₹{(feeTotal - refundsTotal).toLocaleString("en-IN")}</strong></span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -611,23 +664,39 @@ export default function Accounting() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Invoice</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Method</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {feeCollections.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No fee collections recorded yet. Payments from Billing will appear here.</TableCell></TableRow>
-                  ) : feeCollections.map((p: any) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="text-sm">{format(new Date(p.paid_at), "dd MMM yyyy")}</TableCell>
-                      <TableCell className="font-mono text-sm">{p.invoice?.invoice_number || "—"}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs capitalize">{p.payment_method}</Badge></TableCell>
-                      <TableCell><Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-xs">{p.status}</Badge></TableCell>
-                      <TableCell className="text-right font-semibold text-green-600">₹{Number(p.amount).toLocaleString("en-IN")}</TableCell>
-                    </TableRow>
-                  ))}
+                  {feeCollections.length === 0 && refundsData.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No fee collections recorded yet. Payments from Billing will appear here.</TableCell></TableRow>
+                  ) : (
+                    <>
+                      {feeCollections.map((p: any) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-sm">{format(new Date(p.paid_at), "dd MMM yyyy")}</TableCell>
+                          <TableCell className="font-mono text-sm">{p.invoice?.invoice_number || "—"}</TableCell>
+                          <TableCell><Badge className="bg-green-500/10 text-green-600 text-xs">Collection</Badge></TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs capitalize">{p.payment_method}</Badge></TableCell>
+                          <TableCell><Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-xs">{p.status}</Badge></TableCell>
+                          <TableCell className="text-right font-semibold text-green-600">₹{Number(p.amount).toLocaleString("en-IN")}</TableCell>
+                        </TableRow>
+                      ))}
+                      {refundsData.map((r: any) => (
+                        <TableRow key={`refund-${r.id}`} className="bg-orange-50/50 dark:bg-orange-950/10">
+                          <TableCell className="text-sm">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
+                          <TableCell className="font-mono text-sm">—</TableCell>
+                          <TableCell><Badge className="bg-orange-500/10 text-orange-600 text-xs">Refund</Badge></TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs capitalize">{r.refund_method || 'cash'}</Badge></TableCell>
+                          <TableCell><Badge variant="secondary" className="text-xs">{r.status || 'processed'}</Badge></TableCell>
+                          <TableCell className="text-right font-semibold text-orange-600">-₹{Number(r.amount).toLocaleString("en-IN")}</TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -636,75 +705,103 @@ export default function Accounting() {
 
         {/* Profit & Loss Tab */}
         <TabsContent value="pnl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader><CardTitle className="text-lg text-green-600">Income</CardTitle></CardHeader>
-              <CardContent>
-                {accounts.filter(a => a.account_type === 'income').length === 0 && feeCollections.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No income data yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {feeCollections.length > 0 && (
-                      <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                        <span className="font-medium">Fee Collections</span>
-                        <span className="font-bold text-green-600">₹{feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0).toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                    {accounts.filter(a => a.account_type === 'income').map(a => {
-                      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-                      return total > 0 ? (
-                        <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                          <span>{a.name}</span>
-                          <span className="font-semibold text-green-600">₹{total.toLocaleString("en-IN")}</span>
+          {(() => {
+            const netFeeIncome = feeTotal - refundsTotal;
+            const totalGrossIncome = totalIncome + netFeeIncome;
+            const totalExpenseWithPayroll = totalExpense + payrollTotal;
+            const netPL = totalGrossIncome - totalExpenseWithPayroll;
+            return (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg text-green-600">Income</CardTitle></CardHeader>
+                    <CardContent>
+                      {accounts.filter(a => a.account_type === 'income').length === 0 && feeCollections.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No income data yet</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {feeTotal > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                              <span className="font-medium">Fee Collections</span>
+                              <span className="font-bold text-green-600">₹{feeTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          {refundsTotal > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                              <span className="font-medium">Less: Refunds</span>
+                              <span className="font-bold text-orange-600">-₹{refundsTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          {(feeTotal > 0 && refundsTotal > 0) && (
+                            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                              <span className="font-medium">Net Fee Income</span>
+                              <span className="font-bold text-green-600">₹{netFeeIncome.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          {accounts.filter(a => a.account_type === 'income').map(a => {
+                            const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+                            return total > 0 ? (
+                              <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                                <span>{a.name}</span>
+                                <span className="font-semibold text-green-600">₹{total.toLocaleString("en-IN")}</span>
+                              </div>
+                            ) : null;
+                          })}
+                          <div className="flex justify-between items-center p-3 border-t-2 font-bold">
+                            <span>Total Income</span>
+                            <span className="text-green-600">₹{totalGrossIncome.toLocaleString("en-IN")}</span>
+                          </div>
                         </div>
-                      ) : null;
-                    })}
-                    <div className="flex justify-between items-center p-3 border-t-2 font-bold">
-                      <span>Total Income</span>
-                      <span className="text-green-600">₹{(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0)).toLocaleString("en-IN")}</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-lg text-red-600">Expenses</CardTitle></CardHeader>
-              <CardContent>
-                {accounts.filter(a => a.account_type === 'expense').length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No expense data yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {accounts.filter(a => a.account_type === 'expense').map(a => {
-                      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-                      return total > 0 ? (
-                        <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                          <span>{a.name}</span>
-                          <span className="font-semibold text-red-600">₹{total.toLocaleString("en-IN")}</span>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg text-red-600">Expenses</CardTitle></CardHeader>
+                    <CardContent>
+                      {accounts.filter(a => a.account_type === 'expense').length === 0 && payrollTotal === 0 ? (
+                        <p className="text-muted-foreground text-sm">No expense data yet</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {accounts.filter(a => a.account_type === 'expense').map(a => {
+                            const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
+                            return total > 0 ? (
+                              <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                                <span>{a.name}</span>
+                                <span className="font-semibold text-red-600">₹{total.toLocaleString("en-IN")}</span>
+                              </div>
+                            ) : null;
+                          })}
+                          {payrollTotal > 0 && (
+                            <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                              <span className="font-medium">Staff Salaries (Payroll)</span>
+                              <span className="font-bold text-red-600">₹{payrollTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center p-3 border-t-2 font-bold">
+                            <span>Total Expenses</span>
+                            <span className="text-red-600">₹{totalExpenseWithPayroll.toLocaleString("en-IN")}</span>
+                          </div>
                         </div>
-                      ) : null;
-                    })}
-                    <div className="flex justify-between items-center p-3 border-t-2 font-bold">
-                      <span>Total Expenses</span>
-                      <span className="text-red-600">₹{totalExpense.toLocaleString("en-IN")}</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          <Card className="mt-6">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Net Profit / Loss</p>
-                  <p className={`text-3xl font-bold ${(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0) - totalExpense) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    ₹{(totalIncome + feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0) - totalExpense).toLocaleString("en-IN")}
-                  </p>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
-                <Button variant="outline" onClick={() => exportSectionPDF("all")}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
-              </div>
-            </CardContent>
-          </Card>
+                <Card className="mt-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Net Profit / Loss</p>
+                        <p className={`text-3xl font-bold ${netPL >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          ₹{netPL.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                      <Button variant="outline" onClick={() => exportSectionPDF("all")}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
         </TabsContent>
 
       </Tabs>

@@ -1,4 +1,4 @@
-import { Users, BedDouble, Receipt, AlertTriangle, TrendingUp, TrendingDown, LucideIcon } from "lucide-react";
+import { Users, BedDouble, Receipt, AlertTriangle, TrendingUp, TrendingDown, Undo2, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "@/hooks/useDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,12 +59,21 @@ export const DashboardStats = () => {
       iconBg: "bg-gradient-to-br from-rose-500 to-pink-500",
       glowColor: "group-hover:shadow-rose-500/20",
     },
+    {
+      label: "Refunds",
+      value: formatCurrency(stats.totalRefunds),
+      change: stats.refundsCount > 0 ? `${stats.refundsCount} processed` : "—",
+      trend: stats.refundsCount > 0 ? "down" : "neutral",
+      icon: Undo2,
+      iconBg: "bg-gradient-to-br from-orange-500 to-red-500",
+      glowColor: "group-hover:shadow-orange-500/20",
+    },
   ];
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+        {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="rounded-xl md:rounded-2xl border border-border/50 bg-card p-3 md:p-5">
             <div className="flex items-center justify-between mb-2 md:mb-4">
               <Skeleton className="h-8 w-8 md:h-11 md:w-11 rounded-lg md:rounded-xl" />
@@ -79,7 +88,7 @@ export const DashboardStats = () => {
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
       {statsData.map((stat, index) => (
         <div
           key={stat.label}
