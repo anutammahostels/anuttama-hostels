@@ -12,7 +12,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2, LogOut, IndianRupee } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
 import { useRooms } from "@/hooks/useRooms";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +64,13 @@ const Students = () => {
   const [filterRoom, setFilterRoom] = useState("all");
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
 
+  // Exit student state
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [exitingStudent, setExitingStudent] = useState<StudentWithProfile | null>(null);
+  const [exitInvoices, setExitInvoices] = useState<any[]>([]);
+  const [exitRefunds, setExitRefunds] = useState<Record<string, { amount: string; reason: string; method: string; enabled: boolean }>>({});
+  const [exitLoading, setExitLoading] = useState(false);
+  const [exitProcessing, setExitProcessing] = useState(false);
   const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
   const { toast } = useToast();
@@ -320,6 +329,94 @@ const Students = () => {
     }
   };
 
+  // Exit student handlers
+  const openExitDialog = async (student: StudentWithProfile) => {
+    setExitingStudent(student);
+    setExitDialogOpen(true);
+    setExitLoading(true);
+    setExitRefunds({});
+    try {
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("student_id", student.id)
+        .order("billing_month", { ascending: false });
+      const inv = invoices || [];
+      setExitInvoices(inv);
+      const refundDefaults: Record<string, { amount: string; reason: string; method: string; enabled: boolean }> = {};
+      inv.forEach((invoice: any) => {
+        const paidAmt = Number(invoice.paid_amount || 0);
+        if (paidAmt > 0 && invoice.status !== "refunded") {
+          refundDefaults[invoice.id] = {
+            amount: paidAmt.toString(),
+            reason: "Student exit - pro-rata refund",
+            method: "bank_transfer",
+            enabled: true,
+          };
+        }
+      });
+      setExitRefunds(refundDefaults);
+    } catch {
+      setExitInvoices([]);
+    } finally {
+      setExitLoading(false);
+    }
+  };
+
+  const handleExitStudent = async () => {
+    if (!exitingStudent) return;
+    setExitProcessing(true);
+    try {
+      // 1. Process refunds
+      const selectedRefunds = Object.entries(exitRefunds).filter(([, v]) => v.enabled && Number(v.amount) > 0);
+      const { data: properties } = await supabase.from("properties").select("id").limit(1);
+      const propertyId = properties?.[0]?.id;
+      
+      for (const [invoiceId, refund] of selectedRefunds) {
+        if (!propertyId) continue;
+        const { error: refundErr } = await supabase.from("refunds").insert({
+          invoice_id: invoiceId,
+          student_id: exitingStudent.id,
+          property_id: propertyId,
+          amount: Number(refund.amount),
+          reason: refund.reason,
+          refund_method: refund.method,
+          status: "processed",
+        });
+        if (refundErr) throw refundErr;
+      }
+
+      // 2. Vacate bed
+      if (exitingStudent.bed) {
+        const { error: bedErr } = await supabase
+          .from("beds")
+          .update({ student_id: null, status: "vacant" })
+          .eq("id", exitingStudent.bed.id);
+        if (bedErr) throw bedErr;
+      }
+
+      // 3. Mark student inactive
+      const { error: statusErr } = await supabase
+        .from("students")
+        .update({ status: "inactive" })
+        .eq("id", exitingStudent.id);
+      if (statusErr) throw statusErr;
+
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({
+        title: "Student Exited",
+        description: `${exitingStudent.profile?.full_name} has been marked inactive.${selectedRefunds.length > 0 ? ` ${selectedRefunds.length} refund(s) processed.` : ""}`,
+      });
+      setExitDialogOpen(false);
+      setExitingStudent(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to process exit", variant: "destructive" });
+    } finally {
+      setExitProcessing(false);
+    }
+  };
+
   // Filter students based on search and filters
   const activeFilterCount = [filterStatus, filterCourse, filterYear, filterRoom].filter(f => f !== "all").length;
 
@@ -566,6 +663,14 @@ const Students = () => {
                                   <BedDouble className="h-4 w-4 mr-2" /> Assign Room
                                 </DropdownMenuItem>
                               )}
+                              {student.status === "active" && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => openExitDialog(student)} className="text-orange-600">
+                                    <LogOut className="h-4 w-4 mr-2" /> Exit Student
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => setDeleteConfirmStudent(student)} className="text-destructive">
                                 <Trash2 className="h-4 w-4 mr-2" /> Delete Student
@@ -642,6 +747,14 @@ const Students = () => {
                                   <DropdownMenuItem onClick={() => openAssignRoom(student)}>
                                     <BedDouble className="h-4 w-4 mr-2" /> Assign Room
                                   </DropdownMenuItem>
+                                )}
+                                {student.status === "active" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => openExitDialog(student)} className="text-orange-600">
+                                      <LogOut className="h-4 w-4 mr-2" /> Exit Student
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => setDeleteConfirmStudent(student)} className="text-destructive">
@@ -1043,6 +1156,191 @@ const Students = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Exit Student Dialog */}
+      <Dialog open={exitDialogOpen} onOpenChange={(open) => { if (!exitProcessing) { setExitDialogOpen(open); if (!open) setExitingStudent(null); } }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogOut className="h-5 w-5" /> Exit Student
+            </DialogTitle>
+            <DialogDescription>
+              Process the exit for {exitingStudent?.profile?.full_name || "this student"}. This will vacate their bed, mark them inactive, and process any refunds.
+            </DialogDescription>
+          </DialogHeader>
+
+          {exitLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-6 py-2">
+              {/* Student Summary */}
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <h4 className="text-sm font-semibold">Student Summary</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Name:</span>{" "}
+                    <span className="font-medium">{exitingStudent?.profile?.full_name || "Unknown"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Roll No:</span>{" "}
+                    <span className="font-medium">{exitingStudent?.roll_number || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Room:</span>{" "}
+                    <span className="font-medium">{exitingStudent ? getRoomDisplay(exitingStudent) : "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Admission:</span>{" "}
+                    <span className="font-medium">{exitingStudent?.admission_date || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Invoices & Refunds */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <IndianRupee className="h-4 w-4" /> Refund Processing
+                </h4>
+                {exitInvoices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No invoices found for this student.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {exitInvoices.map((invoice: any) => {
+                      const paidAmt = Number(invoice.paid_amount || 0);
+                      const refund = exitRefunds[invoice.id];
+                      const isRefundable = paidAmt > 0 && invoice.status !== "refunded";
+
+                      return (
+                        <div key={invoice.id} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm">
+                              <span className="font-medium">{invoice.invoice_number}</span>
+                              <span className="text-muted-foreground ml-2">
+                                ({invoice.billing_month}) — ₹{Number(invoice.total_amount).toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                            <Badge variant="secondary" className={
+                              invoice.status === "paid" ? "bg-green-500/10 text-green-600" :
+                              invoice.status === "pending" ? "bg-yellow-500/10 text-yellow-600" :
+                              "bg-muted text-muted-foreground"
+                            }>
+                              {invoice.status}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Paid: ₹{paidAmt.toLocaleString("en-IN")} / Total: ₹{Number(invoice.total_amount).toLocaleString("en-IN")}
+                          </div>
+
+                          {isRefundable && refund && (
+                            <div className="bg-muted/50 rounded p-3 space-y-2 mt-1">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={refund.enabled}
+                                  onChange={(e) => setExitRefunds(prev => ({
+                                    ...prev,
+                                    [invoice.id]: { ...prev[invoice.id], enabled: e.target.checked }
+                                  }))}
+                                  className="rounded"
+                                />
+                                <Label className="text-xs font-semibold">Process Refund</Label>
+                              </div>
+                              {refund.enabled && (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <div>
+                                    <Label className="text-xs">Amount (₹)</Label>
+                                    <Input
+                                      type="number"
+                                      value={refund.amount}
+                                      max={paidAmt}
+                                      onChange={(e) => setExitRefunds(prev => ({
+                                        ...prev,
+                                        [invoice.id]: { ...prev[invoice.id], amount: e.target.value }
+                                      }))}
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Method</Label>
+                                    <Select
+                                      value={refund.method}
+                                      onValueChange={(v) => setExitRefunds(prev => ({
+                                        ...prev,
+                                        [invoice.id]: { ...prev[invoice.id], method: v }
+                                      }))}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="upi">UPI</SelectItem>
+                                        <SelectItem value="cheque">Cheque</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="sm:col-span-1">
+                                    <Label className="text-xs">Reason</Label>
+                                    <Input
+                                      value={refund.reason}
+                                      onChange={(e) => setExitRefunds(prev => ({
+                                        ...prev,
+                                        [invoice.id]: { ...prev[invoice.id], reason: e.target.value }
+                                      }))}
+                                      className="h-8 text-sm"
+                                      placeholder="Reason for refund"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Confirmation Summary */}
+              <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 space-y-2">
+                <h4 className="text-sm font-semibold text-orange-700 dark:text-orange-400">Actions on Confirm</h4>
+                <ul className="text-sm text-orange-600 dark:text-orange-400 space-y-1">
+                  {exitingStudent?.bed && <li>• Vacate bed: {getRoomDisplay(exitingStudent)}</li>}
+                  <li>• Mark student as <strong>inactive</strong></li>
+                  {Object.values(exitRefunds).filter(r => r.enabled && Number(r.amount) > 0).length > 0 && (
+                    <li>
+                      • Process {Object.values(exitRefunds).filter(r => r.enabled && Number(r.amount) > 0).length} refund(s) totalling ₹
+                      {Object.values(exitRefunds)
+                        .filter(r => r.enabled && Number(r.amount) > 0)
+                        .reduce((sum, r) => sum + Number(r.amount), 0)
+                        .toLocaleString("en-IN")}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setExitDialogOpen(false); setExitingStudent(null); }} disabled={exitProcessing}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={handleExitStudent}
+              disabled={exitProcessing || exitLoading}
+            >
+              {exitProcessing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : <><LogOut className="h-4 w-4 mr-2" /> Confirm Exit</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
