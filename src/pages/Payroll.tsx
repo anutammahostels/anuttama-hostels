@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProperties } from "@/hooks/useProperties";
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
-  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus,
+  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, PlayCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -33,10 +33,20 @@ interface Employee {
   salary_amount: number;
   bank_account: string | null;
   bank_name: string | null;
+  bank_ifsc: string | null;
+  pan_number: string | null;
+  last_working_day: string | null;
   uan_number: string | null;
   esi_number: string | null;
   status: string | null;
   created_at: string;
+  employee_number: string | null;
+  gender: string | null;
+  work_location: string | null;
+  hra: number;
+  special_allowance: number;
+  other_additions: number;
+  employer_pf_contribution: number;
 }
 
 interface PayrollRecord {
@@ -74,6 +84,7 @@ interface PayrollRecord {
   status: string | null;
   notes: string | null;
   generated_at: string | null;
+  is_locked: boolean;
   employees?: Employee;
 }
 
@@ -121,12 +132,15 @@ const Payroll = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [empForm, setEmpForm] = useState({
     full_name: "", email: "", phone: "", designation: "", department: "",
-    salary_amount: "", bank_account: "", bank_name: "", uan_number: "", esi_number: "",
+    salary_amount: "", bank_account: "", bank_name: "", bank_ifsc: "", pan_number: "",
+    uan_number: "", esi_number: "",
     employee_number: "", gender: "", work_location: "",
+    hra: "0", special_allowance: "0", other_additions: "0", employer_pf_contribution: "0",
   });
 
   // Payroll generation dialog
   const [payrollDialogOpen, setPayrollDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const defaultPayrollForm = {
     employee_id: "", month: format(new Date(), "yyyy-MM"),
     hra: "0", special_allowance: "0", professional_fees: "0", contract_fees: "0",
@@ -138,6 +152,7 @@ const Payroll = () => {
     notes: "",
   };
   const [payrollForm, setPayrollForm] = useState(defaultPayrollForm);
+  const [bulkMonth, setBulkMonth] = useState(format(new Date(), "yyyy-MM"));
 
   // Fetch employees
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
@@ -177,7 +192,19 @@ const Payroll = () => {
     [employees, payrollForm.employee_id]
   );
 
-  // Auto-calculations
+  // Auto-populate from employee master when employee selected
+  useEffect(() => {
+    if (selectedEmployee) {
+      setPayrollForm(p => ({
+        ...p,
+        hra: String(selectedEmployee.hra || 0),
+        special_allowance: String(selectedEmployee.special_allowance || 0),
+        other_additions: String(selectedEmployee.other_additions || 0),
+      }));
+    }
+  }, [selectedEmployee?.id]);
+
+  // Auto-calculations with PF cap at ₹1,800
   const payrollCalc = useMemo(() => {
     const basic = selectedEmployee?.salary_amount || 0;
     const hra = parseFloat(payrollForm.hra) || 0;
@@ -190,8 +217,9 @@ const Payroll = () => {
     const bonus = parseFloat(payrollForm.bonus) || 0;
     const gross = basic + hra + specialAllowance + professionalFees + contractFees + otherAdditions + ot + incentives + bonus;
 
-    const pfEmployee = payrollForm.pf_enabled ? Math.round(basic * 0.12) : 0;
-    const pfEmployer = payrollForm.pf_enabled ? Math.round(basic * 0.12) : 0;
+    // PF capped at ₹1,800
+    const pfEmployee = payrollForm.pf_enabled ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    const pfEmployer = payrollForm.pf_enabled ? Math.min(Math.round(basic * 0.12), 1800) : 0;
     const esiEmployee = payrollForm.esi_enabled && gross <= 21000 ? Math.round(gross * 0.0075) : 0;
     const esiEmployer = payrollForm.esi_enabled && gross <= 21000 ? Math.round(gross * 0.0325) : 0;
     const lwf = parseFloat(payrollForm.lwf) || 0;
@@ -218,7 +246,7 @@ const Payroll = () => {
   // Create/Update employee
   const employeeMutation = useMutation({
     mutationFn: async (formData: typeof empForm & { id?: string }) => {
-      const payload = {
+      const payload: any = {
         property_id: selectedPropertyId,
         full_name: formData.full_name,
         email: formData.email || null,
@@ -228,11 +256,17 @@ const Payroll = () => {
         salary_amount: parseFloat(formData.salary_amount) || 0,
         bank_account: formData.bank_account || null,
         bank_name: formData.bank_name || null,
+        bank_ifsc: formData.bank_ifsc || null,
+        pan_number: formData.pan_number || null,
         uan_number: formData.uan_number || null,
         esi_number: formData.esi_number || null,
         employee_number: formData.employee_number || null,
         gender: formData.gender || null,
         work_location: formData.work_location || null,
+        hra: parseFloat(formData.hra) || 0,
+        special_allowance: parseFloat(formData.special_allowance) || 0,
+        other_additions: parseFloat(formData.other_additions) || 0,
+        employer_pf_contribution: parseFloat(formData.employer_pf_contribution) || 0,
       };
       if (formData.id) {
         const { error } = await supabase.from("employees").update(payload).eq("id", formData.id);
@@ -265,10 +299,13 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Generate payroll
+  // Generate payroll for single employee
   const payrollMutation = useMutation({
     mutationFn: async () => {
       if (!selectedEmployee) throw new Error("Employee not found");
+      // Check if month is locked
+      const existingLocked = payrollRecords.find(r => r.month === payrollForm.month && r.is_locked);
+      if (existingLocked) throw new Error("This month is locked. Cannot generate new payroll.");
       const c = payrollCalc;
       const { error } = await supabase.from("payroll_records").insert({
         employee_id: payrollForm.employee_id,
@@ -314,7 +351,67 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const resetEmpForm = () => setEmpForm({ full_name: "", email: "", phone: "", designation: "", department: "", salary_amount: "", bank_account: "", bank_name: "", uan_number: "", esi_number: "", employee_number: "", gender: "", work_location: "" });
+  // Bulk payroll run
+  const bulkPayrollMutation = useMutation({
+    mutationFn: async () => {
+      const lockedExists = payrollRecords.find(r => r.month === bulkMonth && r.is_locked);
+      if (lockedExists) throw new Error("This month is locked.");
+      const records = activeEmployees.map(emp => {
+        const basic = emp.salary_amount || 0;
+        const hra = emp.hra || 0;
+        const sa = emp.special_allowance || 0;
+        const oa = emp.other_additions || 0;
+        const gross = basic + hra + sa + oa;
+        const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
+        const pfEr = Math.min(Math.round(basic * 0.12), 1800);
+        const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
+        const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
+        const pt = 200;
+        const totalDed = pfEmp + esiEmp + pt;
+        const net = Math.round(gross - totalDed);
+        return {
+          employee_id: emp.id, property_id: selectedPropertyId, month: bulkMonth,
+          basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
+          professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
+          gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
+          esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
+          professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
+          total_days: 30, lop: 0, days_worked: 30,
+          allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
+        };
+      });
+      const { error } = await supabase.from("payroll_records").insert(records);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
+      setBulkDialogOpen(false);
+      toast({ title: `Payroll generated for ${activeEmployees.length} employees` });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  // Lock month
+  const lockMonthMutation = useMutation({
+    mutationFn: async (month: string) => {
+      const ids = payrollRecords.filter(r => r.month === month).map(r => r.id);
+      if (ids.length === 0) throw new Error("No records for this month");
+      const { error } = await supabase.from("payroll_records").update({ is_locked: true } as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
+      toast({ title: "Month locked successfully" });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const resetEmpForm = () => setEmpForm({
+    full_name: "", email: "", phone: "", designation: "", department: "",
+    salary_amount: "", bank_account: "", bank_name: "", bank_ifsc: "", pan_number: "",
+    uan_number: "", esi_number: "", employee_number: "", gender: "", work_location: "",
+    hra: "0", special_allowance: "0", other_additions: "0", employer_pf_contribution: "0",
+  });
 
   const openEditEmployee = (emp: Employee) => {
     setEditingEmployee(emp);
@@ -322,61 +419,77 @@ const Payroll = () => {
       full_name: emp.full_name, email: emp.email || "", phone: emp.phone || "",
       designation: emp.designation, department: emp.department || "",
       salary_amount: String(emp.salary_amount), bank_account: emp.bank_account || "",
-      bank_name: emp.bank_name || "", uan_number: emp.uan_number || "", esi_number: emp.esi_number || "",
-      employee_number: (emp as any).employee_number || "", gender: (emp as any).gender || "", work_location: (emp as any).work_location || "",
+      bank_name: emp.bank_name || "", bank_ifsc: emp.bank_ifsc || "", pan_number: emp.pan_number || "",
+      uan_number: emp.uan_number || "", esi_number: emp.esi_number || "",
+      employee_number: emp.employee_number || "", gender: emp.gender || "", work_location: emp.work_location || "",
+      hra: String(emp.hra || 0), special_allowance: String(emp.special_allowance || 0),
+      other_additions: String(emp.other_additions || 0), employer_pf_contribution: String(emp.employer_pf_contribution || 0),
     });
     setEmpDialogOpen(true);
   };
 
-  // PDF Payslip generation
+  // PDF Payslip generation — matches uploaded template
   const generatePayslipPDF = (record: PayrollRecord) => {
     const emp = record.employees;
     const empName = emp?.full_name || "Unknown";
     const totalDeductions = Number(record.pf_employee || 0) + Number(record.esi_employee || 0) + Number(record.lwf || 0) + Number(record.salary_advance || 0) + Number(record.professional_tax || 0) + Number(record.tds || 0) + Number(record.tds_194c || 0) + Number(record.tds_194j || 0) + Number(record.other_deduction || 0);
+    const propName = properties?.[0]?.name || "Hostylia";
+    const propAddr = [properties?.[0]?.address, properties?.[0]?.city, properties?.[0]?.state].filter(Boolean).join(", ");
 
     const htmlContent = `<!DOCTYPE html><html><head><title>Payslip - ${empName} - ${record.month}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#1a1a2e;font-size:13px}
-.header{text-align:center;border-bottom:3px solid #16697a;padding-bottom:16px;margin-bottom:20px}
-.header h1{font-size:24px;color:#16697a;margin-bottom:2px}
-.header .subtitle{color:#666;font-size:12px}
-.badge{display:inline-block;background:#16697a;color:white;padding:3px 14px;border-radius:20px;font-size:11px;margin-top:8px}
-.emp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
-.emp-item{display:flex;gap:6px}
-.emp-item .label{color:#888;min-width:90px;font-size:10px;text-transform:uppercase;letter-spacing:0.5px}
-.emp-item .value{font-weight:600;font-size:12px}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
-.section h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#16697a;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e0e0e0}
+body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#1a1a2e;font-size:12px}
+.header{text-align:center;border-bottom:3px solid #16697a;padding-bottom:12px;margin-bottom:16px}
+.header h1{font-size:20px;color:#16697a;margin-bottom:2px}
+.header .addr{color:#666;font-size:11px}
+.badge{display:inline-block;background:#16697a;color:white;padding:3px 14px;border-radius:20px;font-size:10px;margin-top:6px}
+.personal{border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:14px}
+.personal h3{font-size:11px;text-transform:uppercase;color:#16697a;margin-bottom:8px;letter-spacing:0.5px}
+.p-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.p-item{display:flex;gap:4px;font-size:11px}
+.p-item .lbl{color:#888;min-width:80px;font-size:10px}
+.p-item .val{font-weight:600}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+.section h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#16697a;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid #e0e0e0}
 table{width:100%;border-collapse:collapse}
-td{padding:5px 0;font-size:12px}
+td{padding:4px 0;font-size:11px}
 td:last-child{text-align:right;font-weight:600}
-.total-row{border-top:2px solid #16697a;font-weight:700;font-size:13px}
-.total-row td{padding-top:10px}
-.net-box{background:#e8f4f8;border:2px solid #16697a;border-radius:8px;padding:16px;text-align:center;margin-bottom:16px}
-.net-box .amount{font-size:24px;font-weight:800;color:#16697a}
-.net-box .words{font-size:11px;color:#555;margin-top:4px;font-style:italic}
-.employer-box{background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:16px}
-.employer-box h4{font-size:11px;text-transform:uppercase;color:#888;margin-bottom:6px;letter-spacing:0.5px}
-.employer-box .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
-.footer{text-align:center;color:#999;font-size:10px;margin-top:20px;padding-top:16px;border-top:1px solid #eee}
-@media print{body{padding:15px}}
+.total-row{border-top:2px solid #16697a;font-weight:700;font-size:12px}
+.total-row td{padding-top:8px}
+.net-box{background:#e8f4f8;border:2px solid #16697a;border-radius:6px;padding:12px;text-align:center;margin-bottom:12px}
+.net-box .amount{font-size:20px;font-weight:800;color:#16697a}
+.net-box .words{font-size:10px;color:#555;margin-top:3px;font-style:italic}
+.employer-box{background:#f8f9fa;border-radius:6px;padding:10px;margin-bottom:12px}
+.employer-box h4{font-size:10px;text-transform:uppercase;color:#888;margin-bottom:4px;letter-spacing:0.5px}
+.employer-box .row{display:flex;justify-content:space-between;padding:2px 0;font-size:11px}
+.footer{text-align:center;color:#999;font-size:9px;margin-top:16px;padding-top:12px;border-top:1px solid #eee}
+@media print{body{padding:10px}}
 </style></head><body>
 <div class="header">
-  <h1>HOSTYLIA</h1>
-  <p class="subtitle">Hostel Management Suite</p>
+  <h1>${propName.toUpperCase()}</h1>
+  ${propAddr ? `<p class="addr">${propAddr}</p>` : ''}
   <span class="badge">PAYSLIP — ${record.month}</span>
 </div>
-<div class="emp-grid">
-  <div class="emp-item"><span class="label">Emp No.</span><span class="value">${(emp as any)?.employee_number || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Employee</span><span class="value">${empName}</span></div>
-  <div class="emp-item"><span class="label">Gender</span><span class="value">${(emp as any)?.gender || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Designation</span><span class="value">${emp?.designation || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Work Location</span><span class="value">${(emp as any)?.work_location || 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">DOJ</span><span class="value">${emp?.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : 'N/A'}</span></div>
-  <div class="emp-item"><span class="label">Total Days</span><span class="value">${record.total_days || 30}</span></div>
-  <div class="emp-item"><span class="label">LOP</span><span class="value">${record.lop || 0}</span></div>
-  <div class="emp-item"><span class="label">Days Worked</span><span class="value">${record.days_worked || 30}</span></div>
+<div class="personal">
+  <h3>Employee Details</h3>
+  <div class="p-grid">
+    <div class="p-item"><span class="lbl">Emp No.</span><span class="val">${emp?.employee_number || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Name</span><span class="val">${empName}</span></div>
+    <div class="p-item"><span class="lbl">Designation</span><span class="val">${emp?.designation || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">DOJ</span><span class="val">${emp?.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Pay Period</span><span class="val">${record.month}</span></div>
+    <div class="p-item"><span class="lbl">Gender</span><span class="val">${emp?.gender || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Paid Days</span><span class="val">${record.days_worked || 30}</span></div>
+    <div class="p-item"><span class="lbl">LOP Days</span><span class="val">${record.lop || 0}</span></div>
+    <div class="p-item"><span class="lbl">Total Days</span><span class="val">${record.total_days || 30}</span></div>
+    <div class="p-item"><span class="lbl">UAN No.</span><span class="val">${emp?.uan_number || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">ESIC No.</span><span class="val">${emp?.esi_number || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">PAN</span><span class="val">${emp?.pan_number || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Bank Acct</span><span class="val">${emp?.bank_account || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Bank</span><span class="val">${emp?.bank_name || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">IFSC</span><span class="val">${emp?.bank_ifsc || 'N/A'}</span></div>
+  </div>
 </div>
 <div class="two-col">
   <div class="section">
@@ -397,7 +510,7 @@ td:last-child{text-align:right;font-weight:600}
   <div class="section">
     <h3>Deductions</h3>
     <table>
-      <tr><td>Employee PF @ 12%</td><td>₹${fmt(record.pf_employee)}</td></tr>
+      <tr><td>Employee PF (max ₹1,800)</td><td>₹${fmt(record.pf_employee)}</td></tr>
       <tr><td>Employee ESI @ 0.75%</td><td>₹${fmt(record.esi_employee)}</td></tr>
       <tr><td>LWF</td><td>₹${fmt(record.lwf)}</td></tr>
       <tr><td>Salary Advance</td><td>₹${fmt(record.salary_advance)}</td></tr>
@@ -416,12 +529,12 @@ td:last-child{text-align:right;font-weight:600}
 </div>
 <div class="employer-box">
   <h4>Employer Contributions (Not deducted from salary)</h4>
-  <div class="row"><span>Employer PF @ 12%</span><span>₹${fmt(record.pf_employer)}</span></div>
+  <div class="row"><span>Employer PF (max ₹1,800)</span><span>₹${fmt(record.pf_employer)}</span></div>
   <div class="row"><span>Employer ESI @ 3.25%</span><span>₹${fmt(record.esi_employer)}</span></div>
 </div>
-${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</strong> ${record.notes}</p>` : ''}
+${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</strong> ${record.notes}</p>` : ''}
 <div class="footer">
-  <p>This is a system-generated payslip from Hostylia Management Suite.</p>
+  <p>This is a system-generated payslip from ${propName}.</p>
   <p>Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")}</p>
 </div>
 </body></html>`;
@@ -437,12 +550,21 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
   const activeEmployees = employees.filter(e => e.status === "active");
   const totalSalaryBill = activeEmployees.reduce((sum, e) => sum + Number(e.salary_amount), 0);
 
+  // Get unique months from payroll records
+  const uniqueMonths = useMemo(() => {
+    const months = new Set(payrollRecords.map(r => r.month));
+    return Array.from(months).sort().reverse();
+  }, [payrollRecords]);
+
+  // Check if a month has any locked records
+  const isMonthLocked = (month: string) => payrollRecords.some(r => r.month === month && r.is_locked);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Payroll Management</h1>
-          <p className="text-muted-foreground text-sm">Manage employees, generate payslips with ESI & PF</p>
+          <p className="text-muted-foreground text-sm">Manage employees, generate payslips with ESI & PF (capped at ₹1,800)</p>
         </div>
       </div>
 
@@ -494,7 +616,7 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
               <DialogTrigger asChild>
                 <Button><UserPlus className="h-4 w-4 mr-2" /> Add Employee</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
                 </DialogHeader>
@@ -536,22 +658,55 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                       <Input value={empForm.department} onChange={e => setEmpForm(p => ({ ...p, department: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Monthly Salary (₹) *</Label>
-                      <Input required type="number" min="0" value={empForm.salary_amount} onChange={e => setEmpForm(p => ({ ...p, salary_amount: e.target.value }))} />
-                    </div>
-                    <div className="space-y-2">
                       <Label>Work Location</Label>
                       <Input value={empForm.work_location} onChange={e => setEmpForm(p => ({ ...p, work_location: e.target.value }))} />
                     </div>
+                  </div>
+
+                  <Separator />
+                  <h4 className="text-sm font-semibold text-foreground">Salary Structure</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Basic Salary (₹) *</Label>
+                      <Input required type="number" min="0" value={empForm.salary_amount} onChange={e => setEmpForm(p => ({ ...p, salary_amount: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>HRA (₹)</Label>
+                      <Input type="number" min="0" value={empForm.hra} onChange={e => setEmpForm(p => ({ ...p, hra: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Special Allowance (₹)</Label>
+                      <Input type="number" min="0" value={empForm.special_allowance} onChange={e => setEmpForm(p => ({ ...p, special_allowance: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Other Additions (₹)</Label>
+                      <Input type="number" min="0" value={empForm.other_additions} onChange={e => setEmpForm(p => ({ ...p, other_additions: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Employer PF Contribution (₹)</Label>
+                      <Input type="number" min="0" value={empForm.employer_pf_contribution} onChange={e => setEmpForm(p => ({ ...p, employer_pf_contribution: e.target.value }))} />
+                    </div>
+                  </div>
+
+                  <Separator />
+                  <h4 className="text-sm font-semibold text-foreground">Bank & Statutory</h4>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Bank Name</Label>
                       <Input value={empForm.bank_name} onChange={e => setEmpForm(p => ({ ...p, bank_name: e.target.value }))} />
                     </div>
-                    <div className="space-y-2 col-span-2">
+                    <div className="space-y-2">
                       <Label>Bank Account No.</Label>
                       <Input value={empForm.bank_account} onChange={e => setEmpForm(p => ({ ...p, bank_account: e.target.value }))} />
                     </div>
-                    <Separator className="col-span-2" />
+                    <div className="space-y-2">
+                      <Label>Bank IFSC</Label>
+                      <Input value={empForm.bank_ifsc} onChange={e => setEmpForm(p => ({ ...p, bank_ifsc: e.target.value }))} placeholder="e.g. SBIN0001234" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>PAN Number</Label>
+                      <Input value={empForm.pan_number} onChange={e => setEmpForm(p => ({ ...p, pan_number: e.target.value }))} placeholder="e.g. ABCDE1234F" />
+                    </div>
                     <div className="space-y-2">
                       <Label>UAN Number (PF)</Label>
                       <Input placeholder="e.g. 100123456789" value={empForm.uan_number} onChange={e => setEmpForm(p => ({ ...p, uan_number: e.target.value }))} />
@@ -575,10 +730,12 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Emp No.</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Designation</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Salary</TableHead>
+                      <TableHead>Basic</TableHead>
+                      <TableHead>Bank Acct</TableHead>
+                      <TableHead>IFSC</TableHead>
                       <TableHead>UAN</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -586,11 +743,12 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                   </TableHeader>
                   <TableBody>
                     {loadingEmployees ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : employees.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No employees added yet</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No employees added yet</TableCell></TableRow>
                     ) : employees.map(emp => (
                       <TableRow key={emp.id}>
+                        <TableCell className="text-xs text-muted-foreground">{emp.employee_number || "-"}</TableCell>
                         <TableCell>
                           <div>
                             <p className="font-medium">{emp.full_name}</p>
@@ -598,8 +756,9 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                           </div>
                         </TableCell>
                         <TableCell>{emp.designation}</TableCell>
-                        <TableCell>{emp.department || "-"}</TableCell>
                         <TableCell className="font-semibold">₹{Number(emp.salary_amount).toLocaleString("en-IN")}</TableCell>
+                        <TableCell className="text-xs">{emp.bank_account || "-"}</TableCell>
+                        <TableCell className="text-xs">{emp.bank_ifsc || "-"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{emp.uan_number || "-"}</TableCell>
                         <TableCell>
                           <Badge variant={emp.status === "active" ? "default" : "secondary"}>
@@ -627,11 +786,61 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
 
         {/* Payroll Records Tab */}
         <TabsContent value="payroll" className="space-y-4">
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            {/* Lock Month */}
+            {uniqueMonths.length > 0 && (
+              <Select onValueChange={(month) => {
+                if (!isMonthLocked(month) && confirm(`Lock payroll for ${month}? This cannot be undone.`)) {
+                  lockMonthMutation.mutate(month);
+                }
+              }}>
+                <SelectTrigger className="w-[180px]">
+                  <Lock className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Lock Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueMonths.map(m => (
+                    <SelectItem key={m} value={m} disabled={isMonthLocked(m)}>
+                      {m} {isMonthLocked(m) ? "🔒" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Bulk Payroll */}
+            <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline"><PlayCircle className="h-4 w-4 mr-2" />Run Payroll for All</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Payroll Run</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults.
+                  </p>
+                  <div className="space-y-2">
+                    <Label>Month *</Label>
+                    <Input type="month" value={bulkMonth} onChange={e => setBulkMonth(e.target.value)} />
+                  </div>
+                  {isMonthLocked(bulkMonth) && (
+                    <p className="text-sm text-destructive font-medium">⚠️ This month is locked. Cannot generate payroll.</p>
+                  )}
+                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || isMonthLocked(bulkMonth) || activeEmployees.length === 0}>
+                    {bulkPayrollMutation.isPending ? "Processing..." : `Generate for ${activeEmployees.length} Employees`}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Button variant="outline" onClick={() => {
               if (payrollRecords.length === 0) return;
               exportToExcel(payrollRecords.map(r => ({
-                "Employee": (r.employees as any)?.full_name || "", "Month": r.month,
+                "Employee": (r.employees as any)?.full_name || "",
+                "Emp No.": (r.employees as any)?.employee_number || "",
+                "Month": r.month,
                 "Basic": r.basic_salary, "HRA": r.hra, "Special Allowance": r.special_allowance,
                 "Professional Fees": r.professional_fees, "Contract Fees": r.contract_fees,
                 "Other Additions": r.other_additions, "OT": r.ot, "Incentives": r.incentives, "Bonus": r.bonus,
@@ -640,8 +849,13 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                 "TDS": r.tds, "TDS 194C": r.tds_194c, "TDS 194J": r.tds_194j,
                 "Total Deductions": r.deductions, "Total Days": r.total_days, "LOP": r.lop,
                 "Days Worked": r.days_worked, "Net Salary": r.net_salary, "Status": r.status,
+                "Bank Account": (r.employees as any)?.bank_account || "",
+                "Bank Name": (r.employees as any)?.bank_name || "",
+                "Bank IFSC": (r.employees as any)?.bank_ifsc || "",
+                "PAN": (r.employees as any)?.pan_number || "",
               })), `payroll-${format(new Date(), "yyyy-MM-dd")}`, "Payroll");
             }}><Download className="h-4 w-4 mr-2" />Export Excel</Button>
+
             <Dialog open={payrollDialogOpen} onOpenChange={setPayrollDialogOpen}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" /> Generate Payroll</Button>
@@ -668,6 +882,10 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                       <Input type="month" required value={payrollForm.month} onChange={e => setPayrollForm(p => ({ ...p, month: e.target.value }))} />
                     </div>
                   </div>
+
+                  {isMonthLocked(payrollForm.month) && (
+                    <p className="text-sm text-destructive font-medium">⚠️ This month is locked. Cannot generate payroll.</p>
+                  )}
 
                   {selectedEmployee && (
                     <>
@@ -746,8 +964,8 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                             <div className="flex items-center gap-2">
                               <Checkbox checked={payrollForm.pf_enabled} onCheckedChange={v => setPayrollForm(p => ({ ...p, pf_enabled: !!v }))} />
                               <div>
-                                <p className="text-sm font-medium">Employee PF @ 12% of Basic</p>
-                                <p className="text-xs text-muted-foreground">Employer also contributes 12%</p>
+                                <p className="text-sm font-medium">Employee PF @ 12% (max ₹1,800)</p>
+                                <p className="text-xs text-muted-foreground">Employer also contributes (capped at ₹1,800)</p>
                               </div>
                             </div>
                             <span className="font-semibold text-sm">₹{payrollCalc.pfEmployee.toLocaleString("en-IN")}</span>
@@ -815,7 +1033,7 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                     <Label>Notes</Label>
                     <Textarea value={payrollForm.notes} onChange={e => setPayrollForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional notes..." />
                   </div>
-                  <Button type="submit" className="w-full" disabled={payrollMutation.isPending || !payrollForm.employee_id}>
+                  <Button type="submit" className="w-full" disabled={payrollMutation.isPending || !payrollForm.employee_id || isMonthLocked(payrollForm.month)}>
                     Generate Payroll
                   </Button>
                 </form>
@@ -848,13 +1066,22 @@ ${record.notes ? `<p style="margin-bottom:12px;font-size:12px"><strong>Notes:</s
                     ) : payrollRecords.map(record => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</TableCell>
-                        <TableCell>{record.month}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {record.month}
+                            {record.is_locked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                          </div>
+                        </TableCell>
                         <TableCell>₹{Number(record.gross_salary || 0).toLocaleString("en-IN")}</TableCell>
                         <TableCell className="text-muted-foreground">₹{Number(record.pf_employee || 0).toLocaleString("en-IN")}</TableCell>
                         <TableCell className="text-muted-foreground">₹{Number(record.esi_employee || 0).toLocaleString("en-IN")}</TableCell>
                         <TableCell className="text-destructive">-₹{Number(record.deductions || 0).toLocaleString("en-IN")}</TableCell>
                         <TableCell className="font-bold">₹{Number(record.net_salary).toLocaleString("en-IN")}</TableCell>
-                        <TableCell><Badge variant="outline">{record.status}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant={record.is_locked ? "secondary" : "outline"}>
+                            {record.is_locked ? "Locked" : record.status}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => generatePayslipPDF(record)} title="Download Payslip">
                             <Download className="h-4 w-4" />
