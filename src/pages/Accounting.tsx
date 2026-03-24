@@ -303,9 +303,6 @@ export default function Accounting() {
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pnlIncomeData), "P&L");
         XLSX.writeFile(wb, `accounting-full-report-${fileDateStr}.xlsx`);
       });
-      if (collectionsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(collectionsData), "Fee Collections");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pnlIncomeData), "P&L");
-      XLSX.writeFile(wb, `accounting-full-report-${fileDateStr}.xlsx`);
       return;
     }
 
