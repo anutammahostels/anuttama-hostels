@@ -111,23 +111,53 @@ const Students = () => {
     });
   };
 
+  const parseExcel = async (file: File): Promise<Record<string, string>[]> => {
+    const XLSX = await import("xlsx");
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+    return jsonData.map(row => {
+      const normalized: Record<string, string> = {};
+      Object.keys(row).forEach(key => {
+        const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, "_");
+        normalized[normalizedKey] = String(row[key] ?? "").trim();
+      });
+      return normalized;
+    });
+  };
+
   const downloadTemplate = () => {
-    const csv = "full_name,email,phone,roll_number,course,department,year,date_of_birth,blood_group,emergency_contact\nRahul Sharma,rahul@example.com,+919876543210,CS2026001,B.Tech CSE,Computer Science,1,2005-01-15,A+,+919876543211";
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "students_template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    const XLSX = require("xlsx");
+    const templateData = [
+      { full_name: "Rahul Sharma", email: "rahul@example.com", phone: "+919876543210", roll_number: "CS2026001", course: "B.Tech CSE", department: "Computer Science", year: 1, date_of_birth: "2005-01-15", blood_group: "A+", emergency_contact: "+919876543211" }
+    ];
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.writeFile(wb, "students_template.xlsx");
   };
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    const text = await file.text();
-    const rows = parseCSV(text);
+    const fileName = file.name.toLowerCase();
+    const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".xlsb") || fileName.endsWith(".xlsm");
+    
+    let rows: Record<string, string>[];
+    try {
+      if (isExcel) {
+        rows = await parseExcel(file);
+      } else {
+        const text = await file.text();
+        rows = parseCSV(text);
+      }
+    } catch (err: any) {
+      toast({ title: "File Error", description: "Could not parse the file. Please use the template format.", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     
     if (rows.length === 0) {
       toast({ title: "Invalid CSV", description: "No data rows found. Please check the file format.", variant: "destructive" });
@@ -480,7 +510,7 @@ const Students = () => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx,.xls,.xlsb,.xlsm"
               className="hidden"
               onChange={handleBulkUpload}
             />
