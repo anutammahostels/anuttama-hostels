@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageSquare, Clock, CheckCircle, AlertCircle, Filter } from "lucide-react";
 import { format } from "date-fns";
+import { createNotification, getStudentUserId } from "@/lib/notifications";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; icon: typeof Clock }> = {
   pending: { label: "Pending", variant: "outline", icon: Clock },
@@ -79,6 +80,16 @@ export default function Complaints() {
     } else {
       toast({ title: "Complaint updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["admin-complaints"] });
+      // Notify the student about status change
+      if (selectedComplaint.student?.user_id) {
+        createNotification(
+          selectedComplaint.student.user_id,
+          `Complaint ${newStatus === "resolved" ? "Resolved" : "Updated"}`,
+          `Your complaint "${selectedComplaint.subject}" has been ${newStatus === "resolved" ? "resolved" : `updated to ${newStatus}`}.`,
+          "complaint",
+          "/student/complaints"
+        );
+      }
       setSelectedComplaint(null);
       setResolutionNotes("");
       setNewStatus("");

@@ -43,6 +43,7 @@ import { useProperties } from "@/hooks/useProperties";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { createNotification, getAdminUserIds } from "@/lib/notifications";
 
 const getCategoryIcon = (category: string) => {
   switch (category.toLowerCase()) {
@@ -124,9 +125,14 @@ const Maintenance = () => {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["maintenance_tickets"] });
       toast({ title: "Ticket Created", description: "Maintenance ticket has been submitted." });
+      // Notify admins
+      const adminIds = await getAdminUserIds();
+      adminIds.forEach((adminId) =>
+        createNotification(adminId, "New Maintenance Ticket", `New maintenance ticket: ${title}`, "maintenance", "/dashboard/maintenance")
+      );
       setDialogOpen(false);
       setTitle("");
       setDescription("");

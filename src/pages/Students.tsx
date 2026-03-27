@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Progress } from "@/components/ui/progress";
+import { createNotification } from "@/lib/notifications";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -343,6 +344,8 @@ const Students = () => {
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({ title: "Room Assigned", description: `${assigningStudent.profile?.full_name} has been assigned to the selected bed.` });
+      // Notify student
+      createNotification(assigningStudent.user_id, "Room Assigned", "You have been assigned a room. Check your profile for details.", "general", "/student/profile");
       setAssignRoomOpen(false);
       setAssigningStudent(null);
     } catch (err: any) {
@@ -474,6 +477,8 @@ const Students = () => {
         title: "Student Exited",
         description: `${exitingStudent.profile?.full_name} has been marked inactive.${selectedRefunds.length > 0 ? ` ${selectedRefunds.length} refund(s) processed.` : ""}`,
       });
+      // Notify student
+      createNotification(exitingStudent.user_id, "Account Deactivated", "Your hostel account has been deactivated. Contact admin for queries.", "general", "/student/profile");
       setExitDialogOpen(false);
       setExitingStudent(null);
     } catch (err: any) {
