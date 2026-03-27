@@ -106,7 +106,7 @@ serve(async (req) => {
     await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: "student" });
 
     return new Response(
-      JSON.stringify({ student, tempPassword }),
+      JSON.stringify({ student, tempPassword, userId: newUser.user.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
