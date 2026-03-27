@@ -314,7 +314,9 @@ export default function Admissions() {
                         </>
                       )}
                       {a.status === "approved" && (
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus.mutate({ id: a.id, status: "enrolled" })}>Enroll</Button>
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => enrollStudent.mutate(a)} disabled={enrollStudent.isPending}>
+                          {enrollStudent.isPending ? "Enrolling..." : "Enroll"}
+                        </Button>
                       )}
                     </div>
                   </TableCell>
