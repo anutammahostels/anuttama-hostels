@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2, LogOut, IndianRupee } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2, LogOut, IndianRupee, KeyRound } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
@@ -63,6 +63,13 @@ const Students = () => {
   const [filterYear, setFilterYear] = useState("all");
   const [filterRoom, setFilterRoom] = useState("all");
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
+
+  // Reset password state
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordStudent, setResetPasswordStudent] = useState<StudentWithProfile | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetResult, setResetResult] = useState<{ password: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Exit student state
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
@@ -357,6 +364,35 @@ const Students = () => {
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Failed to vacate bed", variant: "destructive" });
     }
+  };
+
+  // Reset password handler
+  const handleResetPassword = async () => {
+    if (!resetPasswordStudent) return;
+    setIsResetting(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("reset-student-password", {
+        body: {
+          user_id: resetPasswordStudent.user_id,
+          new_password: newPassword.trim() || undefined,
+        },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+      setResetResult({ password: data.newPassword });
+      toast({ title: "Password Reset", description: `Password updated for ${resetPasswordStudent.profile?.full_name}` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to reset password", variant: "destructive" });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const openResetPassword = (student: StudentWithProfile) => {
+    setResetPasswordStudent(student);
+    setNewPassword("");
+    setResetResult(null);
+    setResetPasswordOpen(true);
   };
 
   // Exit student handlers
@@ -684,6 +720,9 @@ const Students = () => {
                               <DropdownMenuItem onClick={() => openEditDialog(student)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit Details
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openResetPassword(student)}>
+                                <KeyRound className="h-4 w-4 mr-2" /> Reset Password
+                              </DropdownMenuItem>
                               {student.bed ? (
                                 <DropdownMenuItem onClick={() => handleVacateBed(student)} className="text-destructive">
                                   <BedDouble className="h-4 w-4 mr-2" /> Vacate Room
@@ -768,6 +807,9 @@ const Students = () => {
                               <DropdownMenuContent align="end" className="bg-popover">
                                 <DropdownMenuItem onClick={() => openEditDialog(student)}>
                                   <Pencil className="h-4 w-4 mr-2" /> Edit Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openResetPassword(student)}>
+                                  <KeyRound className="h-4 w-4 mr-2" /> Reset Password
                                 </DropdownMenuItem>
                                 {student.bed ? (
                                   <DropdownMenuItem onClick={() => handleVacateBed(student)} className="text-destructive">
@@ -1368,6 +1410,76 @@ const Students = () => {
             >
               {exitProcessing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : <><LogOut className="h-4 w-4 mr-2" /> Confirm Exit</>}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetPasswordOpen} onOpenChange={(open) => { if (!isResetting) { setResetPasswordOpen(open); if (!open) { setResetPasswordStudent(null); setResetResult(null); } } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Reset Student Password
+            </DialogTitle>
+            <DialogDescription>
+              Reset password for {resetPasswordStudent?.profile?.full_name || "student"} ({resetPasswordStudent?.profile?.email})
+            </DialogDescription>
+          </DialogHeader>
+
+          {resetResult ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <code className="text-sm font-mono bg-background px-2 py-1 rounded flex-1">{resetPasswordStudent?.profile?.email}</code>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { navigator.clipboard.writeText(resetPasswordStudent?.profile?.email || ""); setCopiedField("reset-email"); setTimeout(() => setCopiedField(null), 2000); }}>
+                      {copiedField === "reset-email" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">New Password</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <code className="text-sm font-mono bg-background px-2 py-1 rounded flex-1">{resetResult.password}</code>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { navigator.clipboard.writeText(resetResult.password); setCopiedField("reset-pass"); setTimeout(() => setCopiedField(null), 2000); }}>
+                      {copiedField === "reset-pass" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Share these credentials securely with the student.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="new-password">New Password (leave empty to auto-generate)</Label>
+                <Input
+                  id="new-password"
+                  type="text"
+                  placeholder="Enter new password or leave blank"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">If left empty, a secure random password will be generated.</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {resetResult ? (
+              <Button onClick={() => { setResetPasswordOpen(false); setResetPasswordStudent(null); setResetResult(null); }}>
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setResetPasswordOpen(false)} disabled={isResetting}>Cancel</Button>
+                <Button onClick={handleResetPassword} disabled={isResetting}>
+                  {isResetting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Resetting...</> : "Reset Password"}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
