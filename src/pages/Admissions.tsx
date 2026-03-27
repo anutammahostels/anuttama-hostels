@@ -93,6 +93,49 @@ export default function Admissions() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const enrollStudent = useMutation({
+    mutationFn: async (admission: Admission) => {
+      if (!admission.email) throw new Error("Student email is required for enrollment");
+
+      // Call edge function to create auth user + student record
+      const { data, error } = await supabase.functions.invoke("create-student", {
+        body: {
+          full_name: admission.full_name,
+          email: admission.email,
+          phone: admission.phone,
+          roll_number: admission.roll_number,
+          course: admission.course,
+          department: admission.department,
+          year: admission.year,
+          date_of_birth: admission.date_of_birth,
+          blood_group: admission.blood_group,
+          emergency_contact: admission.parent_phone,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Update admission status to enrolled
+      const { error: updateError } = await supabase.from("admissions").update({
+        status: "enrolled",
+        reviewed_by: user?.id,
+        reviewed_at: new Date().toISOString(),
+      } as any).eq("id", admission.id);
+      if (updateError) throw updateError;
+
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast({
+        title: "Student Enrolled",
+        description: `Student account created. Temporary password: ${data?.tempPassword}`,
+      });
+    },
+    onError: (e: Error) => toast({ title: "Enrollment Failed", description: e.message, variant: "destructive" }),
+  });
+
   const filteredAdmissions = filterStatus === "all" ? admissions : admissions.filter(a => a.status === filterStatus);
   const counts = {
     all: admissions.length,
