@@ -366,6 +366,35 @@ const Students = () => {
     }
   };
 
+  // Reset password handler
+  const handleResetPassword = async () => {
+    if (!resetPasswordStudent) return;
+    setIsResetting(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("reset-student-password", {
+        body: {
+          user_id: resetPasswordStudent.user_id,
+          new_password: newPassword.trim() || undefined,
+        },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+      setResetResult({ password: data.newPassword });
+      toast({ title: "Password Reset", description: `Password updated for ${resetPasswordStudent.profile?.full_name}` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to reset password", variant: "destructive" });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const openResetPassword = (student: StudentWithProfile) => {
+    setResetPasswordStudent(student);
+    setNewPassword("");
+    setResetResult(null);
+    setResetPasswordOpen(true);
+  };
+
   // Exit student handlers
   const openExitDialog = async (student: StudentWithProfile) => {
     setExitingStudent(student);
