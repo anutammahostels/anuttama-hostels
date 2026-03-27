@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus, Clock, CheckCircle, XCircle, Eye, Users } from "lucide-react";
 import { format } from "date-fns";
+import { createNotification } from "@/lib/notifications";
 
 type Admission = {
   id: string; property_id: string; full_name: string; email: string | null;
@@ -132,6 +133,10 @@ export default function Admissions() {
         title: "Student Enrolled",
         description: `Student account created. Temporary password: ${data?.tempPassword}`,
       });
+      // Notify the newly created student
+      if (data?.userId) {
+        createNotification(data.userId, "Welcome!", "Your hostel account has been created. Please update your password.", "admission", "/student/profile");
+      }
     },
     onError: (e: Error) => toast({ title: "Enrollment Failed", description: e.message, variant: "destructive" }),
   });

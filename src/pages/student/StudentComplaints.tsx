@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
+import { createNotification, getAdminUserIds } from "@/lib/notifications";
 
 export default function StudentComplaints() {
   const { user } = useAuth();
@@ -78,6 +79,11 @@ export default function StudentComplaints() {
     } else {
       toast({ title: "Complaint submitted" });
       queryClient.invalidateQueries({ queryKey: ["student-complaints-all"] });
+      // Notify admins
+      const adminIds = await getAdminUserIds();
+      adminIds.forEach((adminId) =>
+        createNotification(adminId, "New Complaint", `New complaint: ${form.subject}`, "complaint", "/dashboard/complaints")
+      );
       setOpen(false);
       setForm({ subject: "", description: "", category: "general" });
     }

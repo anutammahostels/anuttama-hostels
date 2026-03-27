@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { createNotification, getAdminUserIds, getStudentUserId } from '@/lib/notifications';
 
 export type GatePass = Tables<'gate_passes'>;
 export type GatePassInsert = TablesInsert<'gate_passes'>;
@@ -83,12 +84,17 @@ export function useGatePasses(propertyId?: string) {
       if (error) throw error;
       return data as GatePass;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['gate_passes'] });
       toast({
         title: 'Gate Pass Requested',
         description: 'Your gate pass request has been submitted.',
       });
+      // Notify admins about new gate pass request
+      const adminIds = await getAdminUserIds();
+      adminIds.forEach((adminId) =>
+        createNotification(adminId, "New Gate Pass Request", `A new gate pass request has been submitted.`, "gate_pass", "/dashboard/gate-passes")
+      );
     },
     onError: (error: Error) => {
       toast({
@@ -115,12 +121,17 @@ export function useGatePasses(propertyId?: string) {
       if (error) throw error;
       return data as GatePass;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['gate_passes'] });
       toast({
         title: 'Gate Pass Approved',
         description: 'The gate pass has been approved.',
       });
+      // Notify the student
+      const userId = await getStudentUserId(data.student_id);
+      if (userId) {
+        createNotification(userId, "Gate Pass Approved", "Your gate pass request has been approved.", "gate_pass", "/student/gate-passes");
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -146,12 +157,17 @@ export function useGatePasses(propertyId?: string) {
       if (error) throw error;
       return data as GatePass;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['gate_passes'] });
       toast({
         title: 'Gate Pass Rejected',
         description: 'The gate pass has been rejected.',
       });
+      // Notify the student
+      const userId = await getStudentUserId(data.student_id);
+      if (userId) {
+        createNotification(userId, "Gate Pass Rejected", `Your gate pass request has been rejected.${data.notes ? ` Reason: ${data.notes}` : ""}`, "gate_pass", "/student/gate-passes");
+      }
     },
     onError: (error: Error) => {
       toast({

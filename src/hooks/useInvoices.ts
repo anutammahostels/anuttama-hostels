@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { createNotification, getStudentUserId } from '@/lib/notifications';
 
 export type Invoice = Tables<'invoices'>;
 export type InvoiceInsert = TablesInsert<'invoices'>;
@@ -80,9 +81,14 @@ export function useInvoices(studentId?: string) {
       if (error) throw error;
       return data as Invoice;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       toast({ title: 'Invoice Created', description: 'New invoice has been generated.' });
+      // Notify student
+      const userId = await getStudentUserId(data.student_id);
+      if (userId) {
+        createNotification(userId, "New Invoice", `A new invoice (₹${data.total_amount.toLocaleString('en-IN')}) has been generated for you.`, "billing", "/student/invoices");
+      }
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -177,10 +183,15 @@ export function useInvoices(studentId?: string) {
 
       return data as Invoice;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast({ title: 'Payment Recorded', description: 'Payment has been recorded successfully.' });
+      // Notify student
+      const userId = await getStudentUserId(data.student_id);
+      if (userId) {
+        createNotification(userId, "Payment Received", `Your payment has been recorded. Thank you!`, "billing", "/student/invoices");
+      }
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -233,10 +244,15 @@ export function useInvoices(studentId?: string) {
         .eq('id', invoiceId);
       if (updateError) throw updateError;
     },
-    onSuccess: () => {
+    onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       toast({ title: 'Refund Processed', description: 'Refund has been processed successfully.' });
+      // Notify student
+      const userId = await getStudentUserId(variables.studentId);
+      if (userId) {
+        createNotification(userId, "Refund Processed", `A refund of ₹${variables.amount.toLocaleString('en-IN')} has been processed.`, "billing", "/student/invoices");
+      }
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
