@@ -929,7 +929,7 @@ const Students = () => {
           <DialogHeader>
             <DialogTitle>{bulkUploading ? "Uploading Students..." : bulkResults ? "Upload Complete" : "Bulk Upload"}</DialogTitle>
             <DialogDescription>
-              {bulkUploading ? "Please wait while students are being created." : bulkResults ? `${bulkResults.success.length} created, ${bulkResults.errors.length} failed.` : "Upload a CSV file to add multiple students."}
+              {bulkUploading ? "Please wait while students are being created." : bulkResults ? `${bulkResults.success.length} created, ${bulkResults.errors.length} failed.` : "Upload a CSV or Excel file (.xlsx, .xls) to add multiple students."}
             </DialogDescription>
           </DialogHeader>
 
