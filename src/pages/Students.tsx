@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2, LogOut, IndianRupee } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2, LogOut, IndianRupee, KeyRound } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
@@ -63,6 +63,13 @@ const Students = () => {
   const [filterYear, setFilterYear] = useState("all");
   const [filterRoom, setFilterRoom] = useState("all");
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
+
+  // Reset password state
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordStudent, setResetPasswordStudent] = useState<StudentWithProfile | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetResult, setResetResult] = useState<{ password: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Exit student state
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
