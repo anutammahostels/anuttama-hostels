@@ -720,6 +720,9 @@ const Students = () => {
                               <DropdownMenuItem onClick={() => openEditDialog(student)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit Details
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openResetPassword(student)}>
+                                <KeyRound className="h-4 w-4 mr-2" /> Reset Password
+                              </DropdownMenuItem>
                               {student.bed ? (
                                 <DropdownMenuItem onClick={() => handleVacateBed(student)} className="text-destructive">
                                   <BedDouble className="h-4 w-4 mr-2" /> Vacate Room
@@ -804,6 +807,9 @@ const Students = () => {
                               <DropdownMenuContent align="end" className="bg-popover">
                                 <DropdownMenuItem onClick={() => openEditDialog(student)}>
                                   <Pencil className="h-4 w-4 mr-2" /> Edit Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openResetPassword(student)}>
+                                  <KeyRound className="h-4 w-4 mr-2" /> Reset Password
                                 </DropdownMenuItem>
                                 {student.bed ? (
                                   <DropdownMenuItem onClick={() => handleVacateBed(student)} className="text-destructive">
