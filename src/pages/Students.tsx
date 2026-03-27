@@ -1413,6 +1413,76 @@ const Students = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetPasswordOpen} onOpenChange={(open) => { if (!isResetting) { setResetPasswordOpen(open); if (!open) { setResetPasswordStudent(null); setResetResult(null); } } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Reset Student Password
+            </DialogTitle>
+            <DialogDescription>
+              Reset password for {resetPasswordStudent?.profile?.full_name || "student"} ({resetPasswordStudent?.profile?.email})
+            </DialogDescription>
+          </DialogHeader>
+
+          {resetResult ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <code className="text-sm font-mono bg-background px-2 py-1 rounded flex-1">{resetPasswordStudent?.profile?.email}</code>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { navigator.clipboard.writeText(resetPasswordStudent?.profile?.email || ""); setCopiedField("reset-email"); setTimeout(() => setCopiedField(null), 2000); }}>
+                      {copiedField === "reset-email" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">New Password</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <code className="text-sm font-mono bg-background px-2 py-1 rounded flex-1">{resetResult.password}</code>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { navigator.clipboard.writeText(resetResult.password); setCopiedField("reset-pass"); setTimeout(() => setCopiedField(null), 2000); }}>
+                      {copiedField === "reset-pass" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Share these credentials securely with the student.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="new-password">New Password (leave empty to auto-generate)</Label>
+                <Input
+                  id="new-password"
+                  type="text"
+                  placeholder="Enter new password or leave blank"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">If left empty, a secure random password will be generated.</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {resetResult ? (
+              <Button onClick={() => { setResetPasswordOpen(false); setResetPasswordStudent(null); setResetResult(null); }}>
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setResetPasswordOpen(false)} disabled={isResetting}>Cancel</Button>
+                <Button onClick={handleResetPassword} disabled={isResetting}>
+                  {isResetting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Resetting...</> : "Reset Password"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
