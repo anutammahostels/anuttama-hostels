@@ -127,8 +127,8 @@ const Students = () => {
     });
   };
 
-  const downloadTemplate = () => {
-    const XLSX = require("xlsx");
+  const downloadTemplate = async () => {
+    const XLSX = await import("xlsx");
     const templateData = [
       { full_name: "Rahul Sharma", email: "rahul@example.com", phone: "+919876543210", roll_number: "CS2026001", course: "B.Tech CSE", department: "Computer Science", year: 1, date_of_birth: "2005-01-15", blood_group: "A+", emergency_contact: "+919876543211" }
     ];
