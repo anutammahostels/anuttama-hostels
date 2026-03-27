@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Wrench } from "lucide-react";
 import { format } from "date-fns";
+import { createNotification, getAdminUserIds } from "@/lib/notifications";
 
 export default function StudentMaintenance() {
   const { user } = useAuth();
@@ -73,6 +74,11 @@ export default function StudentMaintenance() {
     } else {
       toast({ title: "Ticket submitted" });
       queryClient.invalidateQueries({ queryKey: ["student-maint-tickets"] });
+      // Notify admins
+      const adminIds = await getAdminUserIds();
+      adminIds.forEach((adminId) =>
+        createNotification(adminId, "New Maintenance Ticket", `New ticket: ${form.title}`, "maintenance", "/dashboard/maintenance")
+      );
       setOpen(false);
       setForm({ title: "", description: "", category: "plumbing", priority: "medium" });
     }
