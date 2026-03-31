@@ -33,7 +33,7 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
   if (allowedRoles && allowedRoles.length > 0 && role) {
     if (!allowedRoles.includes(role)) {
       // Redirect based on role
-      const redirectTo = role === 'student' ? '/student' : role === 'super_admin' ? '/superadmin' : '/dashboard';
+      const redirectTo = role === 'student' ? '/student' : role === 'super_admin' ? '/superadmin' : role === 'accountant' ? '/dashboard/accounting' : '/dashboard';
       return <Navigate to={redirectTo} replace />;
     }
   }
