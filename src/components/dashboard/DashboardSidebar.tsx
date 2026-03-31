@@ -62,6 +62,7 @@ const roleLabels: Record<AppRole, string> = {
   student: 'Student',
   parent: 'Parent',
   security_guard: 'Guard',
+  accountant: 'Accountant',
 };
 
 const roleBadgeColors: Record<AppRole, string> = {
@@ -71,6 +72,7 @@ const roleBadgeColors: Record<AppRole, string> = {
   student: 'bg-blue-600 text-white',
   parent: 'bg-purple-600 text-white',
   security_guard: 'bg-slate-600 text-white',
+  accountant: 'bg-teal-600 text-white',
 };
 
 export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) => {
