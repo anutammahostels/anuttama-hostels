@@ -39,20 +39,20 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", shortLabel: "Home", path: "/dashboard" },
+  { icon: LayoutDashboard, label: "Dashboard", shortLabel: "Home", path: "/dashboard", roles: ['super_admin', 'tenant_admin', 'warden'] },
   { icon: Building2, label: "Properties", shortLabel: "Props", path: "/dashboard/properties", roles: ['super_admin', 'tenant_admin', 'warden'] },
   { icon: Users, label: "Students", shortLabel: "Students", path: "/dashboard/students", roles: ['super_admin', 'tenant_admin', 'warden'] },
   { icon: BedDouble, label: "Rooms", shortLabel: "Rooms", path: "/dashboard/rooms", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: QrCode, label: "Gate Passes", shortLabel: "Passes", path: "/dashboard/passes" },
-  { icon: UtensilsCrossed, label: "Mess", shortLabel: "Mess", path: "/dashboard/mess" },
-  { icon: Receipt, label: "Billing", shortLabel: "Bills", path: "/dashboard/billing" },
+  { icon: QrCode, label: "Gate Passes", shortLabel: "Passes", path: "/dashboard/passes", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: UtensilsCrossed, label: "Mess", shortLabel: "Mess", path: "/dashboard/mess", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: Receipt, label: "Billing", shortLabel: "Bills", path: "/dashboard/billing", roles: ['super_admin', 'tenant_admin', 'warden'] },
   { icon: Receipt, label: "Receivables", shortLabel: "Recv.", path: "/dashboard/receivables", roles: ['super_admin', 'tenant_admin'] },
   { icon: Briefcase, label: "Payroll", shortLabel: "Payroll", path: "/dashboard/payroll", roles: ['super_admin', 'tenant_admin'] },
   { icon: BookOpen, label: "Accounting", shortLabel: "Accounts", path: "/dashboard/accounting", roles: ['super_admin', 'tenant_admin', 'accountant'] },
   { icon: UserPlus, label: "Admissions", shortLabel: "Admit", path: "/dashboard/admissions", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/dashboard/maintenance" },
-  { icon: MessageSquareWarning, label: "Complaints", shortLabel: "Compl.", path: "/dashboard/complaints" },
-  { icon: Settings, label: "Settings", shortLabel: "Settings", path: "/dashboard/settings" },
+  { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/dashboard/maintenance", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: MessageSquareWarning, label: "Complaints", shortLabel: "Compl.", path: "/dashboard/complaints", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: Settings, label: "Settings", shortLabel: "Settings", path: "/dashboard/settings", roles: ['super_admin', 'tenant_admin', 'warden'] },
 ];
 
 const roleLabels: Record<AppRole, string> = {
