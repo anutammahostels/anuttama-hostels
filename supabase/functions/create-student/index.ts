@@ -56,6 +56,16 @@ serve(async (req) => {
       });
     }
 
+    // Check if user with this email already exists
+    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
+    const emailExists = existingUsers?.users?.some((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (emailExists) {
+      return new Response(JSON.stringify({ error: "A student with this email already exists. Please use a different email address." }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Create auth user with service role (won't affect admin's session)
     const tempPassword = crypto.randomUUID().slice(0, 12) + "A1!";
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
