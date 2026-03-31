@@ -47,6 +47,8 @@ export default function Auth() {
         navigate('/superadmin');
       } else if (role === 'student') {
         navigate('/student');
+      } else if (role === 'accountant') {
+        navigate('/dashboard/accounting');
       } else {
         navigate('/dashboard');
       }
