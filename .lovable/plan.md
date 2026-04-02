@@ -1,42 +1,28 @@
 
 
-## Add Bulk Selection & Actions to Students Table
+## Preserve Refund Records After Student Deletion
 
-### What We're Building
-A checkbox-based multi-select system on the Students page with a floating action bar for bulk operations: Delete, Mark Inactive, Mark Active, and Vacate Rooms.
+### Problem
+The recent migration added `ON DELETE CASCADE` to `refunds.student_id`, which deletes all refund records when a student is removed. This breaks the accounting requirement — all financial transactions (including refunds) must remain visible in the Accounting tab regardless of student status.
 
-### Implementation
+### Solution
+1. **Database migration**: Drop the CASCADE constraint, make `student_id` nullable, and re-add the foreign key with `ON DELETE SET NULL`. This keeps the refund row intact with a `NULL` student reference after deletion.
 
-**File: `src/pages/Students.tsx`**
+2. **Update Accounting/Billing UI**: Where refund records display student names, handle the `null` student case gracefully (show "Deleted Student" or similar fallback).
 
-1. **Add selection state**: `selectedStudents: Set<string>` to track selected student IDs, plus a `selectAll` toggle.
+### Files to Change
 
-2. **Add Checkbox column** to both desktop table and mobile cards:
-   - Desktop: Add a checkbox `TableHead` + `TableCell` as the first column. Header checkbox toggles select-all for currently filtered students.
-   - Mobile: Add a checkbox to each card's left side.
-
-3. **Add floating bulk action bar**: When `selectedStudents.size > 0`, render a sticky bar at the bottom (or top) showing:
-   - Count: "X students selected"
-   - Buttons: **Mark Inactive**, **Mark Active**, **Delete**, **Vacate Rooms**
-   - **Clear Selection** button
-
-4. **Bulk action handlers**:
-   - `handleBulkMarkInactive`: Update `status = 'inactive'` for all selected student IDs via `supabase.from('students').update({ status: 'inactive' }).in('id', [...selectedStudents])`
-   - `handleBulkMarkActive`: Same but `status = 'active'`
-   - `handleBulkDelete`: Show confirmation AlertDialog, then call `deleteStudent` for each selected student
-   - `handleBulkVacateRooms`: For selected students that have beds, update beds to vacant
-   - All handlers invalidate queries and clear selection on success
-
-5. **Import Checkbox** from `@/components/ui/checkbox`
-
-### Technical Details
-- Uses existing `deleteStudent` mutation from `useStudents` hook for individual deletes in a loop, or a direct `.in('id', ids)` delete for efficiency
-- Bulk status update uses a single Supabase query with `.in()` filter
-- Selection persists across filter changes but clears on successful bulk action
-- Confirmation dialog required for destructive actions (delete)
-
-### Files to Edit
 | File | Change |
 |------|--------|
-| `src/pages/Students.tsx` | Add selection state, checkboxes, bulk action bar, and handlers |
+| DB migration | Alter `refunds.student_id` to nullable + `ON DELETE SET NULL` |
+| `src/pages/Accounting.tsx` | Handle null student references in refund display |
+| `src/pages/Billing.tsx` | Handle null student references in refund/transaction lists |
+
+### Migration SQL
+```sql
+ALTER TABLE public.refunds ALTER COLUMN student_id DROP NOT NULL;
+ALTER TABLE public.refunds DROP CONSTRAINT refunds_student_id_fkey;
+ALTER TABLE public.refunds ADD CONSTRAINT refunds_student_id_fkey 
+  FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE SET NULL;
+```
 
