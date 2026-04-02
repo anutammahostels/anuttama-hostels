@@ -947,7 +947,51 @@ const Students = () => {
         </Card>
       </div>
 
-      {/* Add Student Dialog */}
+        {/* Bulk Action Bar */}
+        {selectedStudents.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium">{selectedStudents.size} selected</span>
+            <Separator orientation="vertical" className="h-6" />
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatusUpdate("active")} disabled={bulkProcessing}>
+              <UserCheck className="h-4 w-4 mr-1" /> Mark Active
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatusUpdate("inactive")} disabled={bulkProcessing}>
+              <UserX className="h-4 w-4 mr-1" /> Mark Inactive
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleBulkVacateRooms} disabled={bulkProcessing}>
+              <BedDouble className="h-4 w-4 mr-1" /> Vacate Rooms
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => setBulkDeleteConfirmOpen(true)} disabled={bulkProcessing}>
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={clearSelection} disabled={bulkProcessing}>
+              <X className="h-4 w-4 mr-1" /> Clear
+            </Button>
+          </div>
+        )}
+
+        {/* Bulk Delete Confirmation */}
+        <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedStudents.size} Students?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove {selectedStudents.size} student(s) and vacate their beds. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bulkProcessing}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleBulkDelete}
+                disabled={bulkProcessing}
+              >
+                {bulkProcessing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Deleting...</> : "Delete All"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           {!createdCredentials ? (
