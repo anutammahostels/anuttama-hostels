@@ -785,6 +785,10 @@ const Students = () => {
                     <Card key={student.id} className="border-border/50">
                       <CardContent className="p-3">
                         <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedStudents.has(student.id)}
+                            onCheckedChange={() => toggleStudent(student.id)}
+                          />
                           <Avatar className="h-9 w-9">
                             <AvatarImage src={student.profile?.avatar_url || ""} />
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
