@@ -867,7 +867,13 @@ const Students = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredStudents.map((student) => (
-                        <TableRow key={student.id}>
+                        <TableRow key={student.id} data-state={selectedStudents.has(student.id) ? "selected" : undefined}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedStudents.has(student.id)}
+                              onCheckedChange={() => toggleStudent(student.id)}
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-9 w-9">
