@@ -600,7 +600,7 @@ export type Database = {
           payment_method: string | null
           room_rent: number | null
           status: string | null
-          student_id: string
+          student_id: string | null
           total_amount: number
         }
         Insert: {
@@ -619,7 +619,7 @@ export type Database = {
           payment_method?: string | null
           room_rent?: number | null
           status?: string | null
-          student_id: string
+          student_id?: string | null
           total_amount: number
         }
         Update: {
@@ -638,7 +638,7 @@ export type Database = {
           payment_method?: string | null
           room_rent?: number | null
           status?: string | null
-          student_id?: string
+          student_id?: string | null
           total_amount?: number
         }
         Relationships: [
@@ -992,7 +992,7 @@ export type Database = {
           property_id: string
           recorded_by: string | null
           status: string
-          student_id: string
+          student_id: string | null
           transaction_id: string | null
         }
         Insert: {
@@ -1006,7 +1006,7 @@ export type Database = {
           property_id: string
           recorded_by?: string | null
           status?: string
-          student_id: string
+          student_id?: string | null
           transaction_id?: string | null
         }
         Update: {
@@ -1020,7 +1020,7 @@ export type Database = {
           property_id?: string
           recorded_by?: string | null
           status?: string
-          student_id?: string
+          student_id?: string | null
           transaction_id?: string | null
         }
         Relationships: [
