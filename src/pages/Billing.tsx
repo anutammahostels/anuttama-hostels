@@ -106,8 +106,8 @@ const Billing = () => {
 
       setRefundsList(data.map(r => ({
         ...r,
-        studentName: studentInfoMap.get(r.student_id)?.name || 'Unknown',
-        studentRollNo: studentInfoMap.get(r.student_id)?.rollNo || '-',
+        studentName: r.student_id ? (studentInfoMap.get(r.student_id)?.name || 'Unknown') : 'Deleted Student',
+        studentRollNo: r.student_id ? (studentInfoMap.get(r.student_id)?.rollNo || '-') : '-',
         invoiceNumber: invoiceMap.get(r.invoice_id) || '-',
       })));
     }
