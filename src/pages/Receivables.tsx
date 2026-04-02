@@ -20,8 +20,8 @@ const Receivables = () => {
       const { data } = await supabase.from('refunds').select('student_id, amount');
       if (data) {
         const map = new Map<string, number>();
-        data.forEach(r => {
-          map.set(r.student_id, (map.get(r.student_id) || 0) + Number(r.amount));
+        data.filter(r => r.student_id).forEach(r => {
+          map.set(r.student_id!, (map.get(r.student_id!) || 0) + Number(r.amount));
         });
         setRefundsMap(map);
       }

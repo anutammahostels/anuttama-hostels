@@ -1,0 +1,3 @@
+ALTER TABLE public.refunds ALTER COLUMN student_id DROP NOT NULL;
+ALTER TABLE public.refunds DROP CONSTRAINT refunds_student_id_fkey;
+ALTER TABLE public.refunds ADD CONSTRAINT refunds_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE SET NULL;

@@ -1326,7 +1326,7 @@ export type Database = {
           reason: string | null
           refund_method: string | null
           status: string | null
-          student_id: string
+          student_id: string | null
         }
         Insert: {
           amount?: number
@@ -1338,7 +1338,7 @@ export type Database = {
           reason?: string | null
           refund_method?: string | null
           status?: string | null
-          student_id: string
+          student_id?: string | null
         }
         Update: {
           amount?: number
@@ -1350,7 +1350,7 @@ export type Database = {
           reason?: string | null
           refund_method?: string | null
           status?: string | null
-          student_id?: string
+          student_id?: string | null
         }
         Relationships: [
           {
