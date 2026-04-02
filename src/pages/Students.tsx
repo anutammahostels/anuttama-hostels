@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2, LogOut, IndianRupee, KeyRound } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Upload, Users, UserCheck, UserX, Clock, Loader2, Copy, CheckCircle2, Download, AlertCircle, BedDouble, Pencil, Trash2, LogOut, IndianRupee, KeyRound, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useStudents, type StudentWithProfile } from "@/hooks/useStudents";
@@ -79,6 +80,12 @@ const Students = () => {
   const [exitRefunds, setExitRefunds] = useState<Record<string, { amount: string; reason: string; method: string; enabled: boolean }>>({});
   const [exitLoading, setExitLoading] = useState(false);
   const [exitProcessing, setExitProcessing] = useState(false);
+
+  // Bulk selection state
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
   const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
   const { toast } = useToast();
@@ -504,6 +511,79 @@ const Students = () => {
     return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
   });
 
+  // Bulk selection helpers
+  const toggleStudent = useCallback((id: string) => {
+    setSelectedStudents(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    if (selectedStudents.size === filteredStudents.length) {
+      setSelectedStudents(new Set());
+    } else {
+      setSelectedStudents(new Set(filteredStudents.map(s => s.id)));
+    }
+  }, [filteredStudents, selectedStudents.size]);
+
+  const clearSelection = useCallback(() => setSelectedStudents(new Set()), []);
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    setBulkProcessing(true);
+    try {
+      const ids = [...selectedStudents];
+      const { error } = await supabase.from("students").update({ status }).in("id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast({ title: "Status Updated", description: `${ids.length} student(s) marked as ${status}.` });
+      clearSelection();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to update status", variant: "destructive" });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkProcessing(true);
+    try {
+      const ids = [...selectedStudents];
+      // Vacate beds first
+      const { error: bedErr } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", ids);
+      if (bedErr) throw bedErr;
+      const { error } = await supabase.from("students").delete().in("id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({ title: "Students Deleted", description: `${ids.length} student(s) deleted.` });
+      clearSelection();
+      setBulkDeleteConfirmOpen(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to delete students", variant: "destructive" });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkVacateRooms = async () => {
+    setBulkProcessing(true);
+    try {
+      const ids = [...selectedStudents];
+      const { error } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({ title: "Rooms Vacated", description: `Beds vacated for ${ids.length} student(s).` });
+      clearSelection();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to vacate rooms", variant: "destructive" });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   const getStatusColor = (status: string | null) => {
     switch (status) {
       case "active": return "bg-green-500/10 text-green-600";
@@ -705,6 +785,10 @@ const Students = () => {
                     <Card key={student.id} className="border-border/50">
                       <CardContent className="p-3">
                         <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedStudents.has(student.id)}
+                            onCheckedChange={() => toggleStudent(student.id)}
+                          />
                           <Avatar className="h-9 w-9">
                             <AvatarImage src={student.profile?.avatar_url || ""} />
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
@@ -768,6 +852,12 @@ const Students = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={filteredStudents.length > 0 && selectedStudents.size === filteredStudents.length}
+                            onCheckedChange={toggleAll}
+                          />
+                        </TableHead>
                         <TableHead>Student</TableHead>
                         <TableHead>Room</TableHead>
                         <TableHead>Course</TableHead>
@@ -777,7 +867,13 @@ const Students = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredStudents.map((student) => (
-                        <TableRow key={student.id}>
+                        <TableRow key={student.id} data-state={selectedStudents.has(student.id) ? "selected" : undefined}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedStudents.has(student.id)}
+                              onCheckedChange={() => toggleStudent(student.id)}
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-9 w-9">
@@ -851,7 +947,51 @@ const Students = () => {
         </Card>
       </div>
 
-      {/* Add Student Dialog */}
+        {/* Bulk Action Bar */}
+        {selectedStudents.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium">{selectedStudents.size} selected</span>
+            <Separator orientation="vertical" className="h-6" />
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatusUpdate("active")} disabled={bulkProcessing}>
+              <UserCheck className="h-4 w-4 mr-1" /> Mark Active
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatusUpdate("inactive")} disabled={bulkProcessing}>
+              <UserX className="h-4 w-4 mr-1" /> Mark Inactive
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleBulkVacateRooms} disabled={bulkProcessing}>
+              <BedDouble className="h-4 w-4 mr-1" /> Vacate Rooms
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => setBulkDeleteConfirmOpen(true)} disabled={bulkProcessing}>
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={clearSelection} disabled={bulkProcessing}>
+              <X className="h-4 w-4 mr-1" /> Clear
+            </Button>
+          </div>
+        )}
+
+        {/* Bulk Delete Confirmation */}
+        <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedStudents.size} Students?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove {selectedStudents.size} student(s) and vacate their beds. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bulkProcessing}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleBulkDelete}
+                disabled={bulkProcessing}
+              >
+                {bulkProcessing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Deleting...</> : "Delete All"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           {!createdCredentials ? (
