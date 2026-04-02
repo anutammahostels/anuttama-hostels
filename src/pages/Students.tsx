@@ -80,6 +80,12 @@ const Students = () => {
   const [exitRefunds, setExitRefunds] = useState<Record<string, { amount: string; reason: string; method: string; enabled: boolean }>>({});
   const [exitLoading, setExitLoading] = useState(false);
   const [exitProcessing, setExitProcessing] = useState(false);
+
+  // Bulk selection state
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
   const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
   const { toast } = useToast();
