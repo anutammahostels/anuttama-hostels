@@ -511,6 +511,79 @@ const Students = () => {
     return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
   });
 
+  // Bulk selection helpers
+  const toggleStudent = useCallback((id: string) => {
+    setSelectedStudents(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    if (selectedStudents.size === filteredStudents.length) {
+      setSelectedStudents(new Set());
+    } else {
+      setSelectedStudents(new Set(filteredStudents.map(s => s.id)));
+    }
+  }, [filteredStudents, selectedStudents.size]);
+
+  const clearSelection = useCallback(() => setSelectedStudents(new Set()), []);
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    setBulkProcessing(true);
+    try {
+      const ids = [...selectedStudents];
+      const { error } = await supabase.from("students").update({ status }).in("id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast({ title: "Status Updated", description: `${ids.length} student(s) marked as ${status}.` });
+      clearSelection();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to update status", variant: "destructive" });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkProcessing(true);
+    try {
+      const ids = [...selectedStudents];
+      // Vacate beds first
+      const { error: bedErr } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", ids);
+      if (bedErr) throw bedErr;
+      const { error } = await supabase.from("students").delete().in("id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({ title: "Students Deleted", description: `${ids.length} student(s) deleted.` });
+      clearSelection();
+      setBulkDeleteConfirmOpen(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to delete students", variant: "destructive" });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkVacateRooms = async () => {
+    setBulkProcessing(true);
+    try {
+      const ids = [...selectedStudents];
+      const { error } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast({ title: "Rooms Vacated", description: `Beds vacated for ${ids.length} student(s).` });
+      clearSelection();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to vacate rooms", variant: "destructive" });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   const getStatusColor = (status: string | null) => {
     switch (status) {
       case "active": return "bg-green-500/10 text-green-600";
