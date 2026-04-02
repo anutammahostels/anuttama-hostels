@@ -852,6 +852,12 @@ const Students = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={filteredStudents.length > 0 && selectedStudents.size === filteredStudents.length}
+                            onCheckedChange={toggleAll}
+                          />
+                        </TableHead>
                         <TableHead>Student</TableHead>
                         <TableHead>Room</TableHead>
                         <TableHead>Course</TableHead>
