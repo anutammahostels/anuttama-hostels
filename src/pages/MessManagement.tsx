@@ -21,8 +21,60 @@ import {
   Pencil,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+type MealData = { items: string; type: string };
+type DayMenu = {
+  day: string;
+  breakfast: MealData;
+  lunch: MealData;
+  dinner: MealData;
+};
 
-const MessManagement = () => {
+const defaultWeeklyMenu: DayMenu[] = [
+  {
+    day: "Monday",
+    breakfast: { items: "Poha, Boiled Eggs, Bread & Butter, Milk", type: "veg" },
+    lunch: { items: "Rice, Dal, Paneer Butter Masala, Roti, Salad", type: "veg" },
+    dinner: { items: "Rice, Chicken Curry, Roti, Raita", type: "non-veg" },
+  },
+  {
+    day: "Tuesday",
+    breakfast: { items: "Idli, Sambar, Coconut Chutney, Tea", type: "veg" },
+    lunch: { items: "Rice, Rajma, Aloo Gobi, Roti, Salad", type: "veg" },
+    dinner: { items: "Rice, Fish Curry, Roti, Dal", type: "non-veg" },
+  },
+  {
+    day: "Wednesday",
+    breakfast: { items: "Paratha, Curd, Pickle, Milk", type: "veg" },
+    lunch: { items: "Rice, Chole, Mix Veg, Roti, Salad", type: "veg" },
+    dinner: { items: "Rice, Egg Curry, Roti, Dal", type: "non-veg" },
+  },
+  {
+    day: "Thursday",
+    breakfast: { items: "Upma, Boiled Eggs, Toast, Tea", type: "veg" },
+    lunch: { items: "Rice, Dal Tadka, Bhindi Fry, Roti, Salad", type: "veg" },
+    dinner: { items: "Biryani (Veg/Non-Veg), Raita, Salad", type: "non-veg" },
+  },
+  {
+    day: "Friday",
+    breakfast: { items: "Dosa, Sambar, Chutney, Coffee", type: "veg" },
+    lunch: { items: "Rice, Sambar, Cabbage Poriyal, Roti", type: "veg" },
+    dinner: { items: "Rice, Mutton Curry, Roti, Dal", type: "non-veg" },
+  },
+  {
+    day: "Saturday",
+    breakfast: { items: "Chole Bhature, Lassi", type: "veg" },
+    lunch: { items: "Rice, Kadhi Pakora, Aloo Matar, Roti", type: "veg" },
+    dinner: { items: "Pulao, Chicken Korma, Naan, Raita", type: "non-veg" },
+  },
+  {
+    day: "Sunday",
+    breakfast: { items: "Special Brunch - Pancakes, Fruits, Juice", type: "veg" },
+    lunch: { items: "Rice, Dal Makhani, Shahi Paneer, Naan, Gulab Jamun", type: "veg" },
+    dinner: { items: "Rice, Butter Chicken, Naan, Dal, Ice Cream", type: "non-veg" },
+  },
+];
+
+
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const { toast } = useToast();
 
