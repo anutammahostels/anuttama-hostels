@@ -156,7 +156,7 @@ const Billing = () => {
   const handleDownloadPdf = (invoice: InvoiceWithStudent) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    const studentName = invoice.student?.profile?.full_name || "Unknown";
+    const studentName = invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown");
     const rollNumber = invoice.student?.roll_number || "";
     const html = `<!DOCTYPE html><html><head><title>Invoice ${invoice.invoice_number}</title>
     <style>
