@@ -485,7 +485,7 @@ const Billing = () => {
                               <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
                               <TableCell>
                                 <div>
-                                  <p className="font-medium">{invoice.student?.profile?.full_name || "Unknown"}</p>
+                                  <p className="font-medium">{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</p>
                                   <p className="text-sm text-muted-foreground">{invoice.student?.roll_number || "-"}</p>
                                 </div>
                               </TableCell>
