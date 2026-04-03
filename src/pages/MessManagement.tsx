@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Table,
@@ -17,18 +16,11 @@ import {
 } from "@/components/ui/table";
 import {
   UtensilsCrossed,
-  Plus,
-  Calendar,
-  Users,
-  TrendingDown,
-  IndianRupee,
   Leaf,
   Drumstick,
-  Clock,
   Pencil,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
 type MealData = { items: string; type: string };
 type DayMenu = {
   day: string;
@@ -82,20 +74,6 @@ const defaultWeeklyMenu: DayMenu[] = [
   },
 ];
 
-const rebateRequests = [
-  { id: 1, student: "Rahul Sharma", dates: "Jan 15-17", meals: 6, amount: 300, status: "approved" },
-  { id: 2, student: "Priya Patel", dates: "Jan 18-20", meals: 9, amount: 450, status: "pending" },
-  { id: 3, student: "Amit Kumar", dates: "Jan 16", meals: 3, amount: 150, status: "approved" },
-  { id: 4, student: "Sneha Reddy", dates: "Jan 19-21", meals: 9, amount: 450, status: "pending" },
-];
-
-const statsData = [
-  { label: "Today's Expected", value: "1,180", icon: Users, color: "text-primary" },
-  { label: "Marked Absent", value: "67", icon: TrendingDown, color: "text-orange-500" },
-  { label: "Monthly Rebates", value: "₹24,500", icon: IndianRupee, color: "text-green-500" },
-  { label: "Pending Requests", value: "12", icon: Clock, color: "text-yellow-500" },
-];
-
 const MessManagement = () => {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const { toast } = useToast();
@@ -143,183 +121,104 @@ const MessManagement = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Mess Management</h1>
             <p className="text-muted-foreground">
-              Weekly menu, attendance and rebate management
+              View and update the weekly mess menu
             </p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statsData.map((stat) => (
-            <Card key={stat.label} className="border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  </div>
+        {/* Today's Menu Highlight */}
+        <Card className="border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <UtensilsCrossed className="h-5 w-5 text-primary" />
+                Today's Menu - {today}
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openEditDay(today)}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit Today
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {weeklyMenu.filter(m => m.day === today).map((menu) => (
+              <div key={menu.day} className="grid md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                  <p className="font-medium text-orange-600 mb-2">🌅 Breakfast</p>
+                  <p className="text-sm">{menu.breakfast.items}</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="menu">
-          <TabsList>
-            <TabsTrigger value="menu">Weekly Menu</TabsTrigger>
-            <TabsTrigger value="rebates">Rebate Requests</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="menu" className="mt-6">
-            {/* Today's Menu Highlight */}
-            <Card className="border-border/50 mb-6 bg-gradient-to-r from-primary/5 to-transparent">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <UtensilsCrossed className="h-5 w-5 text-primary" />
-                    Today's Menu - {today}
-                  </CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => openEditDay(today)}>
-                    <Pencil className="h-4 w-4 mr-1" />
-                    Edit Today
-                  </Button>
+                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="font-medium text-yellow-600 mb-2">☀️ Lunch</p>
+                  <p className="text-sm">{menu.lunch.items}</p>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {weeklyMenu.filter(m => m.day === today).map((menu) => (
-                  <div key={menu.day} className="grid md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                      <p className="font-medium text-orange-600 mb-2">🌅 Breakfast</p>
-                      <p className="text-sm">{menu.breakfast.items}</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                      <p className="font-medium text-yellow-600 mb-2">☀️ Lunch</p>
-                      <p className="text-sm">{menu.lunch.items}</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                      <p className="font-medium text-purple-600 mb-2">🌙 Dinner</p>
-                      <p className="text-sm">{menu.dinner.items}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Full Week Menu */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle>Weekly Menu</CardTitle>
-                <CardDescription>View and manage the mess menu for the entire week</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Day</TableHead>
-                        <TableHead>Breakfast (7:30 - 9:00)</TableHead>
-                        <TableHead>Lunch (12:30 - 14:00)</TableHead>
-                        <TableHead>Dinner (19:30 - 21:00)</TableHead>
-                        <TableHead className="w-[60px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {weeklyMenu.map((menu) => (
-                        <TableRow key={menu.day} className={menu.day === today ? "bg-primary/5" : ""}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {menu.day}
-                              {menu.day === today && (
-                                <Badge className="bg-primary/20 text-primary">Today</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-start gap-2">
-                              <Leaf className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm">{menu.breakfast.items}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-start gap-2">
-                              <Leaf className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm">{menu.lunch.items}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-start gap-2">
-                              <Drumstick className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm">{menu.dinner.items}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDay(menu.day)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                  <p className="font-medium text-purple-600 mb-2">🌙 Dinner</p>
+                  <p className="text-sm">{menu.dinner.items}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-          <TabsContent value="rebates" className="mt-6">
-            <Card className="border-border/50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Rebate Requests</CardTitle>
-                    <CardDescription>
-                      Students who marked absence 24+ hours in advance qualify for meal rebates
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline">₹50/meal rebate</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Absence Dates</TableHead>
-                      <TableHead>Meals</TableHead>
-                      <TableHead>Rebate Amount</TableHead>
-                      <TableHead>Status</TableHead>
+        {/* Full Week Menu */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle>Weekly Menu</CardTitle>
+            <CardDescription>View and manage the mess menu for the entire week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Day</TableHead>
+                    <TableHead>Breakfast (7:30 - 9:00)</TableHead>
+                    <TableHead>Lunch (12:30 - 14:00)</TableHead>
+                    <TableHead>Dinner (19:30 - 21:00)</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {weeklyMenu.map((menu) => (
+                    <TableRow key={menu.day} className={menu.day === today ? "bg-primary/5" : ""}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {menu.day}
+                          {menu.day === today && (
+                            <Badge className="bg-primary/20 text-primary">Today</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-start gap-2">
+                          <Leaf className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{menu.breakfast.items}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-start gap-2">
+                          <Leaf className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{menu.lunch.items}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-start gap-2">
+                          <Drumstick className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{menu.dinner.items}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDay(menu.day)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rebateRequests.map((request) => (
-                      <TableRow key={request.id}>
-                        <TableCell className="font-medium">{request.student}</TableCell>
-                        <TableCell>{request.dates}</TableCell>
-                        <TableCell>{request.meals} meals</TableCell>
-                        <TableCell className="text-green-600 font-medium">₹{request.amount}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              request.status === "approved"
-                                ? "bg-green-500/10 text-green-600"
-                                : "bg-yellow-500/10 text-yellow-600"
-                            }
-                          >
-                            {request.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Edit Menu Dialog */}
