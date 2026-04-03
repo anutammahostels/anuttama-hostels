@@ -145,12 +145,28 @@ const Students = () => {
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
     const templateData = [
-      { full_name: "Rahul Sharma", email: "rahul@example.com", phone: "+919876543210", roll_number: "CS2026001", course: "B.Tech CSE", department: "Computer Science", year: 1, date_of_birth: "2005-01-15", blood_group: "A+", emergency_contact: "+919876543211" }
+      {
+        "Sr. No.": 1,
+        "Enrollment number": "CS2026001",
+        "Student Details": "Rahul Sharma",
+        "Father Name": "Ramesh Sharma",
+        "Phone Number": "9876543210",
+        "Email": "rahul@example.com",
+        "Class": "B.Tech CSE",
+        "Stream": "Computer Science",
+        "Year": 1,
+        "Date of Birth": "2005-01-15",
+        "Blood Group": "A+",
+        "Emergency Contact": "9876543211",
+      }
     ];
     const ws = XLSX.utils.json_to_sheet(templateData);
+    // Auto-size columns
+    const colWidths = Object.keys(templateData[0]).map(key => ({ wch: Math.max(key.length + 2, 18) }));
+    ws["!cols"] = colWidths;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, "students_template.xlsx");
+    XLSX.writeFile(wb, "anuttama_students_template.xlsx");
   };
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
