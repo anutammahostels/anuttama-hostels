@@ -591,7 +591,7 @@ const Billing = () => {
                       {invoices.filter(inv => inv.status === 'pending' || inv.status === 'partial').map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
-                          <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
+                          <TableCell>{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</TableCell>
                           <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
                           <TableCell className="text-red-500 font-medium">
                             {formatCurrency(invoice.total_amount - (invoice.paid_amount || 0))}

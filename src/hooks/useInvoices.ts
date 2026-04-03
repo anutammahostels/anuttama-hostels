@@ -62,7 +62,12 @@ export function useInvoices(studentId?: string) {
         student: invoice.student ? {
           ...invoice.student,
           profile: profilesMap.get(invoice.student.user_id) || null,
-        } : null,
+        } : (invoice.student_id === null ? {
+          id: '',
+          roll_number: '-',
+          user_id: '',
+          profile: { full_name: 'Deleted Student', email: null, phone: null },
+        } : null),
       }));
 
       return result as InvoiceWithStudent[];
