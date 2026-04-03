@@ -204,16 +204,16 @@ const Students = () => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const formData = {
-        full_name: row.full_name || row.name || "",
+        full_name: row.student_details || row["student details"] || row.full_name || row.name || "",
         email: row.email || "",
-        phone: row.phone || "",
-        roll_number: row.roll_number || "",
-        course: row.course || "",
-        department: row.department || "",
+        phone: row.phone_number || row["phone number"] || row.phone || "",
+        roll_number: row.enrollment_number || row["enrollment number"] || row.roll_number || "",
+        course: row.class || row.course || "",
+        department: row.stream || row.department || "",
         year: row.year || "",
-        date_of_birth: row.date_of_birth || "",
-        blood_group: row.blood_group || "",
-        emergency_contact: row.emergency_contact || "",
+        date_of_birth: row.date_of_birth || row["date of birth"] || "",
+        blood_group: row.blood_group || row["blood group"] || "",
+        emergency_contact: row.emergency_contact || row["emergency contact"] || "",
       };
 
       if (!formData.full_name || !formData.email) {
