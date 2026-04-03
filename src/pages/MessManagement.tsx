@@ -148,33 +148,7 @@ const MessManagement = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statsData.map((stat) => (
-            <Card key={stat.label} className="border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="menu">
-          <TabsList>
-            <TabsTrigger value="menu">Weekly Menu</TabsTrigger>
-            <TabsTrigger value="rebates">Rebate Requests</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="menu" className="mt-6">
+        <div className="space-y-6">
             {/* Today's Menu Highlight */}
             <Card className="border-border/50 mb-6 bg-gradient-to-r from-primary/5 to-transparent">
               <CardHeader>
