@@ -332,7 +332,7 @@ const About = () => {
           <div className="relative rounded-2xl md:rounded-3xl bg-gradient-to-r from-primary to-secondary p-6 md:p-12 lg:p-16 text-center overflow-hidden">
             <div className="relative z-10">
               <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-4">
-                Ready to Join the Hostylia Family?
+                Ready to Join the Anuttama Family?
               </h2>
               <p className="text-white/80 text-sm md:text-base max-w-xl mx-auto mb-6 md:mb-8">
                 Start your free trial today and see the difference.
