@@ -129,41 +129,64 @@ const Students = () => {
   const parseExcel = async (file: File): Promise<Record<string, string>[]> => {
     const XLSX = await import("xlsx");
     const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, { type: "array" });
+    const wb = XLSX.read(data, { type: "array", cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
-    return jsonData.map(row => {
-      const normalized: Record<string, string> = {};
-      Object.keys(row).forEach(key => {
-        const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, "_");
-        normalized[normalizedKey] = String(row[key] ?? "").trim();
-      });
-      return normalized;
+
+    // Auto-detect header row: find first row containing "Student Details" or "Enrollment number"
+    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+    let headerRow = range.s.r; // default to first row
+    const knownHeaders = ["student details", "enrollment number", "full_name", "email", "sr. no."];
+    for (let r = range.s.r; r <= Math.min(range.s.r + 20, range.e.r); r++) {
+      const cellValues: string[] = [];
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        const cell = ws[addr];
+        if (cell?.v) cellValues.push(String(cell.v).trim().toLowerCase());
+      }
+      if (cellValues.some(v => knownHeaders.includes(v))) {
+        headerRow = r;
+        break;
+      }
+    }
+
+    // Parse from detected header row
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(ws, {
+      defval: "",
+      range: headerRow,
+      raw: false,
     });
+
+    return jsonData
+      .filter(row => {
+        // Skip completely empty rows and summary/total rows
+        const vals = Object.values(row).filter(v => v !== "" && v != null);
+        return vals.length >= 3;
+      })
+      .map(row => {
+        const normalized: Record<string, string> = {};
+        Object.keys(row).forEach(key => {
+          const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, "_");
+          normalized[normalizedKey] = String(row[key] ?? "").trim();
+        });
+        return normalized;
+      });
   };
 
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
-    const templateData = [
-      {
-        "Sr. No.": 1,
-        "Enrollment number": "CS2026001",
-        "Student Details": "Rahul Sharma",
-        "Father Name": "Ramesh Sharma",
-        "Phone Number": "9876543210",
-        "Email": "rahul@example.com",
-        "Class": "B.Tech CSE",
-        "Stream": "Computer Science",
-        "Year": 1,
-        "Date of Birth": "2005-01-15",
-        "Blood Group": "A+",
-        "Emergency Contact": "9876543211",
-      }
+    const headers = [
+      "Sr. No.", "Enrollment number", "Student Details", "Father Name",
+      "Phone Number", "Email", "Class", "Stream", "Year",
+      "Date of Birth", "Blood Group", "Emergency Contact"
     ];
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    // Auto-size columns
-    const colWidths = Object.keys(templateData[0]).map(key => ({ wch: Math.max(key.length + 2, 18) }));
-    ws["!cols"] = colWidths;
+    const sampleRow = [
+      1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
+      "9876543210", "rahul@example.com", "B.Tech CSE", "Computer Science", 1,
+      "2005-01-15", "A+", "9876543211"
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+    ws["!cols"] = headers.map(h => ({ wch: Math.max(h.length + 2, 18) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
     XLSX.writeFile(wb, "anuttama_students_template.xlsx");
