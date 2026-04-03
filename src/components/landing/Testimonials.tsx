@@ -11,7 +11,7 @@ const testimonials = [
     location: "Jaipur, Rajasthan",
     image: null,
     rating: 5,
-    quote: "Hostylia transformed how we manage our 800-student facility. Parent satisfaction increased by 40% within 3 months. The gate pass system alone saved us 15 hours per week in manual paperwork.",
+    quote: "Anuttama transformed how we manage our 800-student facility. Parent satisfaction increased by 40% within 3 months. The gate pass system alone saved us 15 hours per week in manual paperwork.",
     stats: { students: 800, savings: "15 hrs/week", satisfaction: "+40%" },
     icon: GraduationCap,
   },
