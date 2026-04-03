@@ -23,7 +23,7 @@ const testimonials = [
     location: "Bangalore, Karnataka",
     image: null,
     rating: 5,
-    quote: "We manage 12 properties with over 2000 beds. Before Hostylia, we needed 8 staff members for billing alone. Now 2 people handle everything with the automated invoicing system.",
+    quote: "We manage 12 properties with over 2000 beds. Before Anuttama, we needed 8 staff members for billing alone. Now 2 people handle everything with the automated invoicing system.",
     stats: { properties: 12, beds: 2000, staffReduction: "75%" },
     icon: Building2,
   },
