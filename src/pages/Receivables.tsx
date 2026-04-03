@@ -36,9 +36,9 @@ const Receivables = () => {
   }>();
 
   invoices.forEach(inv => {
-    const sid = inv.student_id;
+    const sid = inv.student_id || '__deleted__';
     const existing = studentMap.get(sid) || {
-      name: inv.student?.profile?.full_name || "Unknown",
+      name: inv.student?.profile?.full_name || (inv.student_id === null ? "Deleted Student" : "Unknown"),
       rollNo: inv.student?.roll_number || "-",
       gross: 0, discounts: 0, received: 0, refunds: 0, paymentModes: new Set<string>(), net: 0,
     };

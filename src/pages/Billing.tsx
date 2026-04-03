@@ -156,7 +156,7 @@ const Billing = () => {
   const handleDownloadPdf = (invoice: InvoiceWithStudent) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    const studentName = invoice.student?.profile?.full_name || "Unknown";
+    const studentName = invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown");
     const rollNumber = invoice.student?.roll_number || "";
     const html = `<!DOCTYPE html><html><head><title>Invoice ${invoice.invoice_number}</title>
     <style>
@@ -485,7 +485,7 @@ const Billing = () => {
                               <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
                               <TableCell>
                                 <div>
-                                  <p className="font-medium">{invoice.student?.profile?.full_name || "Unknown"}</p>
+                                  <p className="font-medium">{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</p>
                                   <p className="text-sm text-muted-foreground">{invoice.student?.roll_number || "-"}</p>
                                 </div>
                               </TableCell>
@@ -591,7 +591,7 @@ const Billing = () => {
                       {invoices.filter(inv => inv.status === 'pending' || inv.status === 'partial').map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
-                          <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
+                          <TableCell>{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</TableCell>
                           <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
                           <TableCell className="text-red-500 font-medium">
                             {formatCurrency(invoice.total_amount - (invoice.paid_amount || 0))}
