@@ -35,7 +35,7 @@ const testimonials = [
     location: "Chennai, Tamil Nadu",
     image: null,
     rating: 5,
-    quote: "The real-time attendance and curfew tracking gives me complete peace of mind. Parents love the instant notifications. We've achieved 99.8% compliance with hostel rules since implementing Hostylia.",
+    quote: "The real-time attendance and curfew tracking gives me complete peace of mind. Parents love the instant notifications. We've achieved 99.8% compliance with hostel rules since implementing Anuttama.",
     stats: { compliance: "99.8%", response: "< 2 min", parentRating: "4.9/5" },
     icon: School,
   },
