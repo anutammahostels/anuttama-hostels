@@ -145,12 +145,28 @@ const Students = () => {
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
     const templateData = [
-      { full_name: "Rahul Sharma", email: "rahul@example.com", phone: "+919876543210", roll_number: "CS2026001", course: "B.Tech CSE", department: "Computer Science", year: 1, date_of_birth: "2005-01-15", blood_group: "A+", emergency_contact: "+919876543211" }
+      {
+        "Sr. No.": 1,
+        "Enrollment number": "CS2026001",
+        "Student Details": "Rahul Sharma",
+        "Father Name": "Ramesh Sharma",
+        "Phone Number": "9876543210",
+        "Email": "rahul@example.com",
+        "Class": "B.Tech CSE",
+        "Stream": "Computer Science",
+        "Year": 1,
+        "Date of Birth": "2005-01-15",
+        "Blood Group": "A+",
+        "Emergency Contact": "9876543211",
+      }
     ];
     const ws = XLSX.utils.json_to_sheet(templateData);
+    // Auto-size columns
+    const colWidths = Object.keys(templateData[0]).map(key => ({ wch: Math.max(key.length + 2, 18) }));
+    ws["!cols"] = colWidths;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, "students_template.xlsx");
+    XLSX.writeFile(wb, "anuttama_students_template.xlsx");
   };
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,16 +204,16 @@ const Students = () => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const formData = {
-        full_name: row.full_name || row.name || "",
+        full_name: row.student_details || row["student details"] || row.full_name || row.name || "",
         email: row.email || "",
-        phone: row.phone || "",
-        roll_number: row.roll_number || "",
-        course: row.course || "",
-        department: row.department || "",
+        phone: row.phone_number || row["phone number"] || row.phone || "",
+        roll_number: row.enrollment_number || row["enrollment number"] || row.roll_number || "",
+        course: row.class || row.course || "",
+        department: row.stream || row.department || "",
         year: row.year || "",
-        date_of_birth: row.date_of_birth || "",
-        blood_group: row.blood_group || "",
-        emergency_contact: row.emergency_contact || "",
+        date_of_birth: row.date_of_birth || row["date of birth"] || "",
+        blood_group: row.blood_group || row["blood group"] || "",
+        emergency_contact: row.emergency_contact || row["emergency contact"] || "",
       };
 
       if (!formData.full_name || !formData.email) {
@@ -1165,7 +1181,7 @@ const Students = () => {
             <div className="py-4 space-y-3">
               <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full">
                 <Download className="h-4 w-4 mr-2" />
-                Download CSV Template
+                Download Excel Template
               </Button>
               <p className="text-xs text-muted-foreground">
                 Required columns: <code className="bg-muted px-1 rounded">full_name</code>, <code className="bg-muted px-1 rounded">email</code>. Optional: phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact.
