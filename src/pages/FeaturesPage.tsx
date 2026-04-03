@@ -305,7 +305,7 @@ const FeaturesPage = () => {
             {[
               { title: "Manual/Excel", items: ["Hours of data entry", "Prone to errors", "No real-time updates", "Lost paperwork"], bad: true },
               { title: "Generic Software", items: ["Not built for hostels", "Complex setup", "Limited customization", "Poor support"], bad: true },
-              { title: "Hostylia", items: ["10-minute setup", "Zero errors", "Real-time everything", "24/7 support"], bad: false },
+              { title: "Anuttama", items: ["10-minute setup", "Zero errors", "Real-time everything", "24/7 support"], bad: false },
             ].map((col, index) => (
               <div 
                 key={col.title}

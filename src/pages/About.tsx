@@ -79,7 +79,7 @@ const About = () => {
               Our Story
             </span>
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 animate-slide-up stagger-2">
-              About <span className="text-gradient">Hostylia</span>
+              About <span className="text-gradient">Anuttama</span>
             </h1>
             <p className="text-sm md:text-lg lg:text-xl text-white/60 max-w-2xl mx-auto animate-slide-up stagger-3 px-4">
               Empowering residential institutions with smart, technology-driven management solutions.

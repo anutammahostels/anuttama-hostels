@@ -18,7 +18,7 @@ const solutions = [
     benefits: ["Reduce admin work by 70%", "Zero billing errors", "Complete transparency"],
     gradient: "from-primary to-blue-500",
     image: hostelRoom,
-    stats: { value: "2,500+", label: "Hostels using Hostylia" },
+    stats: { value: "2,500+", label: "Hostels using Anuttama" },
   },
   {
     icon: GraduationCap,

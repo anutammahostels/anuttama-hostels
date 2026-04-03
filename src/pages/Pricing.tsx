@@ -246,7 +246,7 @@ const Pricing = () => {
                 Ready to Transform Your Hostel?
               </h2>
               <p className="text-white/80 max-w-xl mx-auto mb-6 lg:mb-8 text-sm lg:text-base">
-                Join 500+ institutions already using Hostylia. Starting at just ₹2/student/day.
+                Join 500+ institutions already using Anuttama. Starting at just ₹2/student/day.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 justify-center">
                 <Link to="/onboarding">

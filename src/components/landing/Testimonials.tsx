@@ -97,7 +97,7 @@ export const Testimonials = () => {
             <span className="text-gradient"> from Leaders</span>
           </h2>
           <p className="text-white/60 text-sm lg:text-lg max-w-xl mx-auto animate-slide-up stagger-1">
-            See how institutions transform with Hostylia
+            See how institutions transform with Anuttama
           </p>
         </div>
 
