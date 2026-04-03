@@ -74,7 +74,7 @@ const defaultWeeklyMenu: DayMenu[] = [
   },
 ];
 
-
+const MessManagement = () => {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const { toast } = useToast();
 
