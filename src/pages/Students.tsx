@@ -1181,7 +1181,7 @@ const Students = () => {
             <div className="py-4 space-y-3">
               <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full">
                 <Download className="h-4 w-4 mr-2" />
-                Download CSV Template
+                Download Excel Template
               </Button>
               <p className="text-xs text-muted-foreground">
                 Required columns: <code className="bg-muted px-1 rounded">full_name</code>, <code className="bg-muted px-1 rounded">email</code>. Optional: phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact.
