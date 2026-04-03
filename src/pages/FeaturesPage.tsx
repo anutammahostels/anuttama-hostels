@@ -297,7 +297,7 @@ const FeaturesPage = () => {
         <div className="container mx-auto px-4 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Why Choose <span className="text-gradient">Hostylia</span>?
+              Why Choose <span className="text-gradient">Anuttama</span>?
             </h2>
           </div>
           
@@ -305,7 +305,7 @@ const FeaturesPage = () => {
             {[
               { title: "Manual/Excel", items: ["Hours of data entry", "Prone to errors", "No real-time updates", "Lost paperwork"], bad: true },
               { title: "Generic Software", items: ["Not built for hostels", "Complex setup", "Limited customization", "Poor support"], bad: true },
-              { title: "Hostylia", items: ["10-minute setup", "Zero errors", "Real-time everything", "24/7 support"], bad: false },
+              { title: "Anuttama", items: ["10-minute setup", "Zero errors", "Real-time everything", "24/7 support"], bad: false },
             ].map((col, index) => (
               <div 
                 key={col.title}

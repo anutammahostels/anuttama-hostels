@@ -11,7 +11,7 @@ const testimonials = [
     location: "Jaipur, Rajasthan",
     image: null,
     rating: 5,
-    quote: "Hostylia transformed how we manage our 800-student facility. Parent satisfaction increased by 40% within 3 months. The gate pass system alone saved us 15 hours per week in manual paperwork.",
+    quote: "Anuttama transformed how we manage our 800-student facility. Parent satisfaction increased by 40% within 3 months. The gate pass system alone saved us 15 hours per week in manual paperwork.",
     stats: { students: 800, savings: "15 hrs/week", satisfaction: "+40%" },
     icon: GraduationCap,
   },
@@ -23,7 +23,7 @@ const testimonials = [
     location: "Bangalore, Karnataka",
     image: null,
     rating: 5,
-    quote: "We manage 12 properties with over 2000 beds. Before Hostylia, we needed 8 staff members for billing alone. Now 2 people handle everything with the automated invoicing system.",
+    quote: "We manage 12 properties with over 2000 beds. Before Anuttama, we needed 8 staff members for billing alone. Now 2 people handle everything with the automated invoicing system.",
     stats: { properties: 12, beds: 2000, staffReduction: "75%" },
     icon: Building2,
   },
@@ -35,7 +35,7 @@ const testimonials = [
     location: "Chennai, Tamil Nadu",
     image: null,
     rating: 5,
-    quote: "The real-time attendance and curfew tracking gives me complete peace of mind. Parents love the instant notifications. We've achieved 99.8% compliance with hostel rules since implementing Hostylia.",
+    quote: "The real-time attendance and curfew tracking gives me complete peace of mind. Parents love the instant notifications. We've achieved 99.8% compliance with hostel rules since implementing Anuttama.",
     stats: { compliance: "99.8%", response: "< 2 min", parentRating: "4.9/5" },
     icon: School,
   },
@@ -97,7 +97,7 @@ export const Testimonials = () => {
             <span className="text-gradient"> from Leaders</span>
           </h2>
           <p className="text-white/60 text-sm lg:text-lg max-w-xl mx-auto animate-slide-up stagger-1">
-            See how institutions transform with Hostylia
+            See how institutions transform with Anuttama
           </p>
         </div>
 

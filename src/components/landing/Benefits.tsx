@@ -78,7 +78,7 @@ export const Benefits = () => {
         <div className="text-center mb-10 lg:mb-16">
           <span className="inline-flex items-center gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full bg-secondary/10 text-secondary text-xs lg:text-sm font-medium mb-3 lg:mb-4">
             <Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />
-            Why Choose Hostylia
+            Why Choose Anuttama
           </span>
           <h2 className="text-2xl lg:text-5xl font-bold text-foreground mb-3 lg:mb-4">
             Real Results for
