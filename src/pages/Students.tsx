@@ -225,17 +225,17 @@ const Students = () => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const formData = {
-        full_name: row.student_name || row["student_name"] || row.student_details || row["student_details"] || row.full_name || row.name || "",
+        full_name: row.student_name || row.student_details || row.full_name || row.name || "",
         email: row.email || "",
-        phone: row.contact_no1 || row["contact_no1"] || row.phone_number || row["phone_number"] || row.phone || "",
-        roll_number: row.form_no || row["form_no"] || row.enrollment_number || row["enrollment_number"] || row.roll_number || "",
+        phone: row.contact_no1 || row.phone_number || row.phone || "",
+        roll_number: row.form_no || row.enrollment_number || row.roll_number || "",
         course: row.grade || row.class || row.course || "",
         department: row.stream || row.department || "",
         year: row.year || "",
-        date_of_birth: row.date_of_birth || row["date_of_birth"] || "",
-        blood_group: row.blood_group || row["blood_group"] || "",
-        emergency_contact: row.contact_no_2 || row["contact_no_2"] || row.emergency_contact || row["emergency_contact"] || "",
-        father_name: row.father_name || row["father_name"] || "",
+        date_of_birth: row.date_of_birth || "",
+        blood_group: row.blood_group || "",
+        emergency_contact: row.contact_no_2 || row.emergency_contact || "",
+        father_name: row.father_name || "",
         gender: row.gender || "",
       };
 
