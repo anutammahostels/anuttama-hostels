@@ -89,7 +89,7 @@ serve(async (req) => {
       const { data: student, error: studentError } = await adminClient
         .from("students")
         .insert({
-          user_id: existingAuthUser.user.id,
+          user_id: existingAuthUserRecord.id,
           roll_number: roll_number || null,
           course: course || null,
           department: department || null,
