@@ -48,6 +48,9 @@ const Students = () => {
     blood_group: "",
     emergency_contact: "",
     status: "",
+    father_name: "",
+    gender: "",
+    remarks: "",
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
