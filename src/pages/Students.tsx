@@ -420,6 +420,9 @@ const Students = () => {
         blood_group: editForm.blood_group || null,
         emergency_contact: editForm.emergency_contact || null,
         status: editForm.status || "active",
+        father_name: editForm.father_name || null,
+        gender: editForm.gender || null,
+        remarks: editForm.remarks || null,
       });
       setEditDialogOpen(false);
       setEditingStudent(null);
