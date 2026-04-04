@@ -48,6 +48,9 @@ const Students = () => {
     blood_group: "",
     emergency_contact: "",
     status: "",
+    father_name: "",
+    gender: "",
+    remarks: "",
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -396,6 +399,9 @@ const Students = () => {
       blood_group: student.blood_group || "",
       emergency_contact: student.emergency_contact || "",
       status: student.status || "active",
+      father_name: (student as any).father_name || "",
+      gender: student.gender || "",
+      remarks: (student as any).remarks || "",
     });
     setEditDialogOpen(true);
   };
@@ -414,6 +420,9 @@ const Students = () => {
         blood_group: editForm.blood_group || null,
         emergency_contact: editForm.emergency_contact || null,
         status: editForm.status || "active",
+        father_name: editForm.father_name || null,
+        gender: editForm.gender || null,
+        remarks: editForm.remarks || null,
       });
       setEditDialogOpen(false);
       setEditingStudent(null);
@@ -936,6 +945,14 @@ const Students = () => {
                             {student.status || "unknown"}
                           </Badge>
                         </div>
+                        <div className="grid grid-cols-2 gap-1 mt-2 text-xs text-muted-foreground">
+                          {(student as any).father_name && <p>Father: {(student as any).father_name}</p>}
+                          {student.gender && <p>Gender: {student.gender}</p>}
+                          {student.profile?.phone && <p>Phone: {student.profile.phone}</p>}
+                          {student.emergency_contact && <p>Contact 2: {student.emergency_contact}</p>}
+                          {student.department && <p>Stream: {student.department}</p>}
+                          {(student as any).remarks && <p className="col-span-2">Remarks: {(student as any).remarks}</p>}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -953,9 +970,15 @@ const Students = () => {
                           />
                         </TableHead>
                         <TableHead>Student</TableHead>
+                        <TableHead>Father Name</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Contact 2</TableHead>
                         <TableHead>Room</TableHead>
                         <TableHead>Course</TableHead>
+                        <TableHead>Stream</TableHead>
                         <TableHead>Final Fee</TableHead>
+                        <TableHead>Remarks</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -984,6 +1007,18 @@ const Students = () => {
                             </div>
                           </TableCell>
                           <TableCell>
+                            <p className="text-sm">{(student as any).father_name || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{student.gender || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{student.profile?.phone || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{student.emergency_contact || "-"}</p>
+                          </TableCell>
+                          <TableCell>
                             <p className="text-sm">{getRoomDisplay(student)}</p>
                             {(student as any).alloted_room_no && !student.bed?.room && (
                               <p className="text-xs text-muted-foreground">Allotted: {(student as any).alloted_room_no}</p>
@@ -994,11 +1029,17 @@ const Students = () => {
                             <p className="text-xs text-muted-foreground">{student.year ? `Year ${student.year}` : ""}</p>
                           </TableCell>
                           <TableCell>
+                            <p className="text-sm">{student.department || "-"}</p>
+                          </TableCell>
+                          <TableCell>
                             {(student as any).final_fee > 0 ? (
                               <p className="text-sm font-medium">₹{Number((student as any).final_fee).toLocaleString("en-IN")}</p>
                             ) : (
                               <p className="text-sm text-muted-foreground">-</p>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm truncate max-w-[150px]" title={(student as any).remarks || ""}>{(student as any).remarks || "-"}</p>
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className={getStatusColor(student.status)}>
