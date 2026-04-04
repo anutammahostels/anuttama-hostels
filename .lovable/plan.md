@@ -1,30 +1,25 @@
 
 
-## Plan: Show Additional Student Fields in Student List
+## Plan: Clear All Financial & Payroll Records
 
-### What's Happening
-The fields FATHER NAME, Gender, CONTACT NO1, CONTACT NO 2, STREAM, and REMARKS are already correctly extracted during bulk upload and stored in the database. They're just not displayed in the students table.
+### What Will Be Deleted
 
-### Changes Required
+| Table | Current Records | Action |
+|---|---|---|
+| invoices | 110 | Delete all |
+| payments | 28 | Delete all |
+| refunds | 2 | Delete all |
+| payroll_records | 5 | Delete all |
+| transactions | 0 | Already empty |
+| journal_entries | 0 | Already empty |
+| accounts | 0 | Already empty |
 
-**Single file: `src/pages/Students.tsx`**
+### Execution
 
-1. **Desktop table (lines ~955-960)**: Add new `<TableHead>` columns for Father Name, Gender, Phone, Contact 2, Stream, and Remarks after the existing columns.
+A single database migration will truncate the data tables in the correct order (payments/refunds first due to `invoice_id` references, then invoices, then payroll_records). This gives you a clean slate for billing, receivables, accounting, and payroll.
 
-2. **Desktop table body (lines ~972-1001)**: Add corresponding `<TableCell>` entries:
-   - Father Name → `student.father_name`
-   - Gender → `student.gender`
-   - Phone (Contact 1) → `student.profile?.phone`
-   - Contact 2 → `student.emergency_contact`
-   - Stream → `student.department`
-   - Remarks → `student.remarks`
+### Files Changed
+- **1 migration** — DELETE statements for `payments`, `refunds`, `invoices`, and `payroll_records`
 
-3. **Mobile cards (lines ~893-938)**: Add a small details section showing these fields below the existing info.
-
-4. **Edit dialog**: The edit form (lines ~391-398) currently doesn't populate `father_name`, `gender`, or `remarks` when editing — add those to the `editForm` state initialization so edits preserve these fields.
-
-### Technical Notes
-- No database or edge function changes needed — all data is already stored
-- The `Student` type from Supabase types already includes `father_name`, `gender`, `emergency_contact`, `department`, and `remarks`
-- `phone` comes from the `profile` relation, `emergency_contact` maps to Contact No 2
+No code changes needed.
 
