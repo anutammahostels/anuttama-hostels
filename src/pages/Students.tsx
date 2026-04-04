@@ -172,22 +172,40 @@ const Students = () => {
       });
   };
 
+  const parseAmount = (val: string | undefined): number => {
+    if (!val) return 0;
+    const str = String(val).trim();
+    // Handle sum expressions like "90,000 + 21,000"
+    if (str.includes("+")) {
+      return str.split("+").reduce((sum, part) => sum + parseAmount(part.trim()), 0);
+    }
+    // Remove Indian-style commas and parse
+    return parseFloat(str.replace(/,/g, "")) || 0;
+  };
+
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
     const headers = [
       "S.NO", "FORM NO", "STUDENT NAME", "FATHER NAME",
-      "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM"
+      "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM",
+      "DATE OF THE PAYMENT", "FINAL FEE", "PAYMENT MODE-1", "AMOUNT 1",
+      "TRANSCETION DETAILS-1", "PAYMENT MODE-2", "AMOUNT 2",
+      "BALANCE PAYMENT DATE/AMT", "TRANSCETION DETAILS-2",
+      "ACCOUNT NUMBER", "ALLOTED ROOM NO", "REMARKS"
     ];
     const sampleRow = [
       1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
-      "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science"
+      "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science",
+      "01-04-2026", "1,80,000", "RTGS", "1,00,000",
+      "UTR123456", "UPI", "80,000",
+      "", "", "1234567890", "A-101", ""
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
     ws["!cols"] = headers.map(h => ({ wch: Math.max(h.length + 2, 18) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, "anuttama_students_template.xlsx");
+    XLSX.writeFile(wb, "hostel_payment_template.xlsx");
   };
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
