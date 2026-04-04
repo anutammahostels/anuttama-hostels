@@ -33,7 +33,7 @@ const Students = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
-  const [bulkResults, setBulkResults] = useState<{ success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } | null>(null);
+  const [bulkResults, setBulkResults] = useState<{ success: { enrollmentNumber: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit student state
