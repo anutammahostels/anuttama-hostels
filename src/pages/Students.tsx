@@ -964,9 +964,15 @@ const Students = () => {
                           />
                         </TableHead>
                         <TableHead>Student</TableHead>
+                        <TableHead>Father Name</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Contact 2</TableHead>
                         <TableHead>Room</TableHead>
                         <TableHead>Course</TableHead>
+                        <TableHead>Stream</TableHead>
                         <TableHead>Final Fee</TableHead>
+                        <TableHead>Remarks</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
