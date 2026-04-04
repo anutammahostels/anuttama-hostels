@@ -1045,27 +1045,46 @@ const Students = () => {
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">
-                    <Label className="text-xs font-semibold">Full Name *</Label>
+                    <Label className="text-xs font-semibold">Student Name *</Label>
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Form No (Enrollment Number) *</Label>
+                    <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Father Name</Label>
+                    <Input placeholder="e.g. Ramesh Sharma" value={form.father_name} onChange={(e) => setForm(f => ({ ...f, father_name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Gender</Label>
+                    <Select value={form.gender} onValueChange={(v) => setForm(f => ({ ...f, gender: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Contact No 1</Label>
+                    <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Contact No 2</Label>
+                    <Input placeholder="+91 9876543210" value={form.emergency_contact} onChange={(e) => setForm(f => ({ ...f, emergency_contact: e.target.value }))} />
                   </div>
                   <div>
                     <Label className="text-xs font-semibold">Email</Label>
                     <Input type="email" placeholder="student@email.com (optional)" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Phone</Label>
-                    <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Enrollment Number *</Label>
-                    <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Course</Label>
+                    <Label className="text-xs font-semibold">Grade</Label>
                     <Input placeholder="B.Tech CSE" value={form.course} onChange={(e) => setForm(f => ({ ...f, course: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Department</Label>
+                    <Label className="text-xs font-semibold">Stream</Label>
                     <Input placeholder="Computer Science" value={form.department} onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))} />
                   </div>
                   <div>
@@ -1095,10 +1114,6 @@ const Students = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Emergency Contact</Label>
-                    <Input placeholder="+91 9876543210" value={form.emergency_contact} onChange={(e) => setForm(f => ({ ...f, emergency_contact: e.target.value }))} />
                   </div>
                 </div>
               </div>
