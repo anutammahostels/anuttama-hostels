@@ -955,6 +955,7 @@ const Students = () => {
                         <TableHead>Student</TableHead>
                         <TableHead>Room</TableHead>
                         <TableHead>Course</TableHead>
+                        <TableHead>Final Fee</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -982,10 +983,22 @@ const Students = () => {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell><p className="text-sm">{getRoomDisplay(student)}</p></TableCell>
+                          <TableCell>
+                            <p className="text-sm">{getRoomDisplay(student)}</p>
+                            {(student as any).alloted_room_no && !student.bed?.room && (
+                              <p className="text-xs text-muted-foreground">Allotted: {(student as any).alloted_room_no}</p>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <p className="text-sm">{student.course || "-"}</p>
                             <p className="text-xs text-muted-foreground">{student.year ? `Year ${student.year}` : ""}</p>
+                          </TableCell>
+                          <TableCell>
+                            {(student as any).final_fee > 0 ? (
+                              <p className="text-sm font-medium">₹{Number((student as any).final_fee).toLocaleString("en-IN")}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className={getStatusColor(student.status)}>
