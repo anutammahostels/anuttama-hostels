@@ -294,8 +294,8 @@ const Students = () => {
   };
 
   const handleSubmit = async () => {
-    if (!form.full_name.trim() || !form.email.trim()) {
-      toast({ title: "Validation Error", description: "Name and email are required.", variant: "destructive" });
+    if (!form.full_name.trim() || !form.roll_number.trim()) {
+      toast({ title: "Validation Error", description: "Student name and enrollment number are required.", variant: "destructive" });
       return;
     }
 
@@ -308,7 +308,7 @@ const Students = () => {
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
 
-      setCreatedCredentials({ email: form.email, password: data.tempPassword });
+      setCreatedCredentials({ enrollmentNumber: form.roll_number, password: data.tempPassword });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       toast({ title: "Student Added", description: `${form.full_name} has been registered successfully.` });
     } catch (err: any) {
