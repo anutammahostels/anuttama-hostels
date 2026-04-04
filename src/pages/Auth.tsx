@@ -58,9 +58,14 @@ export default function Auth() {
   }, [user, role, navigate]);
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {};
-    const emailResult = emailSchema.safeParse(email);
-    if (!emailResult.success) newErrors.email = emailResult.error.errors[0].message;
+    const newErrors: { email?: string; enrollment?: string; password?: string } = {};
+    if (isStudent) {
+      const enrollResult = enrollmentSchema.safeParse(enrollmentNumber);
+      if (!enrollResult.success) newErrors.enrollment = enrollResult.error.errors[0].message;
+    } else {
+      const emailResult = emailSchema.safeParse(email);
+      if (!emailResult.success) newErrors.email = emailResult.error.errors[0].message;
+    }
     const passwordResult = passwordSchema.safeParse(password);
     if (!passwordResult.success) newErrors.password = passwordResult.error.errors[0].message;
     setErrors(newErrors);
