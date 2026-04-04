@@ -135,7 +135,7 @@ const Students = () => {
     // Auto-detect header row: find first row containing "Student Details" or "Enrollment number"
     const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
     let headerRow = range.s.r; // default to first row
-    const knownHeaders = ["student details", "enrollment number", "full_name", "email", "sr. no."];
+    const knownHeaders = ["student details", "enrollment number", "full_name", "email", "sr. no.", "form no", "student name", "father name", "contact no1", "gender", "grade", "stream"];
     for (let r = range.s.r; r <= Math.min(range.s.r + 20, range.e.r); r++) {
       const cellValues: string[] = [];
       for (let c = range.s.c; c <= range.e.c; c++) {
@@ -175,14 +175,12 @@ const Students = () => {
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
     const headers = [
-      "Sr. No.", "Enrollment number", "Student Details", "Father Name",
-      "Phone Number", "Email", "Class", "Stream", "Year",
-      "Date of Birth", "Blood Group", "Emergency Contact"
+      "S.NO", "FORM NO", "STUDENT NAME", "FATHER NAME",
+      "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM"
     ];
     const sampleRow = [
       1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
-      "9876543210", "rahul@example.com", "B.Tech CSE", "Computer Science", 1,
-      "2005-01-15", "A+", "9876543211"
+      "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science"
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
@@ -227,20 +225,22 @@ const Students = () => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const formData = {
-        full_name: row.student_details || row["student details"] || row.full_name || row.name || "",
+        full_name: row.student_name || row.student_details || row.full_name || row.name || "",
         email: row.email || "",
-        phone: row.phone_number || row["phone number"] || row.phone || "",
-        roll_number: row.enrollment_number || row["enrollment number"] || row.roll_number || "",
-        course: row.class || row.course || "",
+        phone: row.contact_no1 || row.phone_number || row.phone || "",
+        roll_number: row.form_no || row.enrollment_number || row.roll_number || "",
+        course: row.grade || row.class || row.course || "",
         department: row.stream || row.department || "",
         year: row.year || "",
-        date_of_birth: row.date_of_birth || row["date of birth"] || "",
-        blood_group: row.blood_group || row["blood group"] || "",
-        emergency_contact: row.emergency_contact || row["emergency contact"] || "",
+        date_of_birth: row.date_of_birth || "",
+        blood_group: row.blood_group || "",
+        emergency_contact: row.contact_no_2 || row.emergency_contact || "",
+        father_name: row.father_name || "",
+        gender: row.gender || "",
       };
 
       if (!formData.full_name || !formData.roll_number) {
-        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Student name and enrollment number are required" });
+        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Student name (STUDENT NAME) and Form No (FORM NO) are required" });
         setBulkProgress(((i + 1) / rows.length) * 100);
         continue;
       }
@@ -286,10 +286,12 @@ const Students = () => {
     date_of_birth: "",
     blood_group: "",
     emergency_contact: "",
+    father_name: "",
+    gender: "",
   });
 
   const resetForm = () => {
-    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "" });
+    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "", father_name: "", gender: "" });
     setCreatedCredentials(null);
   };
 
@@ -1043,27 +1045,46 @@ const Students = () => {
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">
-                    <Label className="text-xs font-semibold">Full Name *</Label>
+                    <Label className="text-xs font-semibold">Student Name *</Label>
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Form No (Enrollment Number) *</Label>
+                    <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Father Name</Label>
+                    <Input placeholder="e.g. Ramesh Sharma" value={form.father_name} onChange={(e) => setForm(f => ({ ...f, father_name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Gender</Label>
+                    <Select value={form.gender} onValueChange={(v) => setForm(f => ({ ...f, gender: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Contact No 1</Label>
+                    <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Contact No 2</Label>
+                    <Input placeholder="+91 9876543210" value={form.emergency_contact} onChange={(e) => setForm(f => ({ ...f, emergency_contact: e.target.value }))} />
                   </div>
                   <div>
                     <Label className="text-xs font-semibold">Email</Label>
                     <Input type="email" placeholder="student@email.com (optional)" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Phone</Label>
-                    <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Enrollment Number *</Label>
-                    <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Course</Label>
+                    <Label className="text-xs font-semibold">Grade</Label>
                     <Input placeholder="B.Tech CSE" value={form.course} onChange={(e) => setForm(f => ({ ...f, course: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Department</Label>
+                    <Label className="text-xs font-semibold">Stream</Label>
                     <Input placeholder="Computer Science" value={form.department} onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))} />
                   </div>
                   <div>
@@ -1093,10 +1114,6 @@ const Students = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Emergency Contact</Label>
-                    <Input placeholder="+91 9876543210" value={form.emergency_contact} onChange={(e) => setForm(f => ({ ...f, emergency_contact: e.target.value }))} />
                   </div>
                 </div>
               </div>
@@ -1207,7 +1224,7 @@ const Students = () => {
                 Download Excel Template
               </Button>
               <p className="text-xs text-muted-foreground">
-                Required columns: <code className="bg-muted px-1 rounded">Student Details</code>, <code className="bg-muted px-1 rounded">Enrollment number</code>. Optional: Phone Number, Email, Class, Stream, Year, Date of Birth, Blood Group, Emergency Contact.
+                Required columns: <code className="bg-muted px-1 rounded">STUDENT NAME</code>, <code className="bg-muted px-1 rounded">FORM NO</code>. Optional: FATHER NAME, Gender, CONTACT NO1, CONTACT NO 2, GRADE, STREAM.
               </p>
             </div>
           )}

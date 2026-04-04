@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { full_name, email, phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact } = body;
+    const { full_name, email, phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact, father_name, gender } = body;
 
     if (!full_name || !roll_number) {
       return new Response(JSON.stringify({ error: "Student name and enrollment number are required" }), {
@@ -96,6 +96,8 @@ serve(async (req) => {
           date_of_birth: date_of_birth || null,
           blood_group: blood_group || null,
           emergency_contact: emergency_contact || null,
+          father_name: father_name || null,
+          gender: gender || null,
           admission_date: new Date().toISOString().split("T")[0],
           status: "active",
         })
@@ -161,6 +163,8 @@ serve(async (req) => {
         date_of_birth: date_of_birth || null,
         blood_group: blood_group || null,
         emergency_contact: emergency_contact || null,
+        father_name: father_name || null,
+        gender: gender || null,
         admission_date: new Date().toISOString().split("T")[0],
         status: "active",
       })
