@@ -225,20 +225,22 @@ const Students = () => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const formData = {
-        full_name: row.student_details || row["student details"] || row.full_name || row.name || "",
+        full_name: row.student_name || row["student_name"] || row.student_details || row["student_details"] || row.full_name || row.name || "",
         email: row.email || "",
-        phone: row.phone_number || row["phone number"] || row.phone || "",
-        roll_number: row.enrollment_number || row["enrollment number"] || row.roll_number || "",
-        course: row.class || row.course || "",
+        phone: row.contact_no1 || row["contact_no1"] || row.phone_number || row["phone_number"] || row.phone || "",
+        roll_number: row.form_no || row["form_no"] || row.enrollment_number || row["enrollment_number"] || row.roll_number || "",
+        course: row.grade || row.class || row.course || "",
         department: row.stream || row.department || "",
         year: row.year || "",
-        date_of_birth: row.date_of_birth || row["date of birth"] || "",
-        blood_group: row.blood_group || row["blood group"] || "",
-        emergency_contact: row.emergency_contact || row["emergency contact"] || "",
+        date_of_birth: row.date_of_birth || row["date_of_birth"] || "",
+        blood_group: row.blood_group || row["blood_group"] || "",
+        emergency_contact: row.contact_no_2 || row["contact_no_2"] || row.emergency_contact || row["emergency_contact"] || "",
+        father_name: row.father_name || row["father_name"] || "",
+        gender: row.gender || "",
       };
 
       if (!formData.full_name || !formData.roll_number) {
-        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Student name and enrollment number are required" });
+        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Student name (STUDENT NAME) and Form No (FORM NO) are required" });
         setBulkProgress(((i + 1) / rows.length) * 100);
         continue;
       }
