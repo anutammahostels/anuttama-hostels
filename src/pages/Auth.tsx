@@ -300,7 +300,6 @@ export default function Auth() {
                       {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                     </div>
                   )}
-                  </div>
                   <div className="space-y-2">
                     <Label>Password</Label>
                     <div className="relative group">
