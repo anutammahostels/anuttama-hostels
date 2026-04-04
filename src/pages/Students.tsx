@@ -398,6 +398,9 @@ const Students = () => {
   const openEditDialog = (student: StudentWithProfile) => {
     setEditingStudent(student);
     setEditForm({
+      full_name: student.profile?.full_name || "",
+      email: student.profile?.email || "",
+      phone: student.profile?.phone || "",
       roll_number: student.roll_number || "",
       course: student.course || "",
       department: student.department || "",
@@ -409,6 +412,10 @@ const Students = () => {
       father_name: (student as any).father_name || "",
       gender: student.gender || "",
       remarks: (student as any).remarks || "",
+      alloted_room_no: (student as any).alloted_room_no || "",
+      account_number: (student as any).account_number || "",
+      payment_date: (student as any).payment_date || "",
+      final_fee: (student as any).final_fee?.toString() || "",
     });
     setEditDialogOpen(true);
   };
