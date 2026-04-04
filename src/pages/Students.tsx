@@ -248,8 +248,13 @@ const Students = () => {
       try {
         const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: formData });
         if (fnError) throw fnError;
-        if (data?.error) throw new Error(data.error);
-        results.success.push({ enrollmentNumber: formData.roll_number, password: data.tempPassword, name: formData.full_name });
+        if (data?.existing) {
+          results.errors.push({ row: i + 2, name: formData.full_name, error: `Enrollment ${formData.roll_number} already exists (skipped)` });
+        } else if (data?.error) {
+          throw new Error(data.error);
+        } else {
+          results.success.push({ enrollmentNumber: formData.roll_number, password: data.tempPassword, name: formData.full_name });
+        }
       } catch (err: any) {
         results.errors.push({ row: i + 2, name: formData.full_name, error: err.message || "Failed" });
       }
