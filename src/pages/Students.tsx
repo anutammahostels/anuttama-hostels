@@ -939,6 +939,14 @@ const Students = () => {
                             {student.status || "unknown"}
                           </Badge>
                         </div>
+                        <div className="grid grid-cols-2 gap-1 mt-2 text-xs text-muted-foreground">
+                          {(student as any).father_name && <p>Father: {(student as any).father_name}</p>}
+                          {student.gender && <p>Gender: {student.gender}</p>}
+                          {student.profile?.phone && <p>Phone: {student.profile.phone}</p>}
+                          {student.emergency_contact && <p>Contact 2: {student.emergency_contact}</p>}
+                          {student.department && <p>Stream: {student.department}</p>}
+                          {(student as any).remarks && <p className="col-span-2">Remarks: {(student as any).remarks}</p>}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
