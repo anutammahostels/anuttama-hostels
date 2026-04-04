@@ -83,7 +83,7 @@ serve(async (req) => {
       const profileUpdate: Record<string, string> = { full_name };
       if (phone) profileUpdate.phone = phone;
       if (email) profileUpdate.email = email;
-      await adminClient.from("profiles").update(profileUpdate).eq("id", existingAuthUser.user.id);
+      await adminClient.from("profiles").update(profileUpdate).eq("id", existingAuthUserRecord.id);
 
       // Create student record linked to existing auth user
       const { data: student, error: studentError } = await adminClient
