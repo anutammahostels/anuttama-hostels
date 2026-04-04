@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { full_name, email, phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact } = body;
+    const { full_name, email, phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact, father_name, gender } = body;
 
     if (!full_name || !roll_number) {
       return new Response(JSON.stringify({ error: "Student name and enrollment number are required" }), {
