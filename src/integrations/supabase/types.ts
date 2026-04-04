@@ -1432,6 +1432,8 @@ export type Database = {
           date_of_birth: string | null
           department: string | null
           emergency_contact: string | null
+          father_name: string | null
+          gender: string | null
           id: string
           parent_id: string | null
           roll_number: string | null
@@ -1448,6 +1450,8 @@ export type Database = {
           date_of_birth?: string | null
           department?: string | null
           emergency_contact?: string | null
+          father_name?: string | null
+          gender?: string | null
           id?: string
           parent_id?: string | null
           roll_number?: string | null
@@ -1464,6 +1468,8 @@ export type Database = {
           date_of_birth?: string | null
           department?: string | null
           emergency_contact?: string | null
+          father_name?: string | null
+          gender?: string | null
           id?: string
           parent_id?: string | null
           roll_number?: string | null
