@@ -1047,15 +1047,15 @@ const Students = () => {
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Email *</Label>
-                    <Input type="email" placeholder="student@email.com" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+                    <Label className="text-xs font-semibold">Email</Label>
+                    <Input type="email" placeholder="student@email.com (optional)" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
                   </div>
                   <div>
                     <Label className="text-xs font-semibold">Phone</Label>
                     <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Roll Number</Label>
+                    <Label className="text-xs font-semibold">Enrollment Number *</Label>
                     <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
                   </div>
                   <div>
