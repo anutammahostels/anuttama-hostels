@@ -33,9 +33,10 @@ type LoginMode = 'select' | 'admin' | 'student';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
+  const [enrollmentNumber, setEnrollmentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; enrollment?: string; password?: string }>({});
   const [mode, setMode] = useState<LoginMode>('select');
   
   const { signIn, user, role } = useAuth();
