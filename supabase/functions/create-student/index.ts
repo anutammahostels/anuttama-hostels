@@ -114,7 +114,7 @@ serve(async (req) => {
 
       // Ensure student role exists
       await adminClient.from("user_roles").upsert(
-        { user_id: existingAuthUser.user.id, role: "student" },
+        { user_id: existingAuthUserRecord.id, role: "student" },
         { onConflict: "user_id,role" }
       );
 
