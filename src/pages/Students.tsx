@@ -1224,7 +1224,7 @@ const Students = () => {
                 Download Excel Template
               </Button>
               <p className="text-xs text-muted-foreground">
-                Required columns: <code className="bg-muted px-1 rounded">Student Details</code>, <code className="bg-muted px-1 rounded">Enrollment number</code>. Optional: Phone Number, Email, Class, Stream, Year, Date of Birth, Blood Group, Emergency Contact.
+                Required columns: <code className="bg-muted px-1 rounded">STUDENT NAME</code>, <code className="bg-muted px-1 rounded">FORM NO</code>. Optional: FATHER NAME, Gender, CONTACT NO1, CONTACT NO 2, GRADE, STREAM.
               </p>
             </div>
           )}
