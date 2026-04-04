@@ -239,8 +239,8 @@ const Students = () => {
         emergency_contact: row.emergency_contact || row["emergency contact"] || "",
       };
 
-      if (!formData.full_name || !formData.email) {
-        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Name and email are required" });
+      if (!formData.full_name || !formData.roll_number) {
+        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Student name and enrollment number are required" });
         setBulkProgress(((i + 1) / rows.length) * 100);
         continue;
       }
