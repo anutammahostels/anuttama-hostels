@@ -222,7 +222,7 @@ const Students = () => {
     setBulkDialogOpen(true);
     setBulkUploading(true);
     setBulkProgress(0);
-    const results: { success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } = { success: [], errors: [] };
+    const results: { success: { enrollmentNumber: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } = { success: [], errors: [] };
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
