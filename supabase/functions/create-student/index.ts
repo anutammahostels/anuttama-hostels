@@ -75,8 +75,30 @@ serve(async (req) => {
     }
 
     // Also check if auth user with this email exists (e.g. from a previous partial creation)
-    const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers();
-    const existingAuthUserRecord = existingUsers?.find((u: any) => u.email === loginEmail);
+    let existingAuthUserRecord = null;
+    try {
+      const { data: listData } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1 });
+      // listUsers doesn't support email filter, so try creating and catch duplicate
+    } catch (_) {}
+    // Try to create the user first; if email is taken, handle the recovery
+    const tempPasswordAttempt = crypto.randomUUID().slice(0, 12) + "A1!";
+    const { data: tryCreate, error: tryCreateError } = await adminClient.auth.admin.createUser({
+      email: loginEmail,
+      password: tempPasswordAttempt,
+      email_confirm: true,
+      user_metadata: { full_name, phone, roll_number },
+    });
+
+    if (tryCreateError && tryCreateError.message?.includes("already been registered")) {
+      // Find the existing user by listing with a workaround
+      const { data: allUsersData } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      existingAuthUserRecord = allUsersData?.users?.find((u: any) => u.email === loginEmail) || null;
+    } else if (tryCreateError) {
+      return new Response(JSON.stringify({ error: tryCreateError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (existingAuthUserRecord) {
       // Auth user exists but no student record - clean up by using existing auth user
       // Update profile
