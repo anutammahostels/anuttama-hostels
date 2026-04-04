@@ -120,7 +120,7 @@ serve(async (req) => {
 
       // Generate a new password for the existing auth user
       const tempPassword = crypto.randomUUID().slice(0, 12) + "A1!";
-      await adminClient.auth.admin.updateUser(existingAuthUser.user.id, { password: tempPassword });
+      await adminClient.auth.admin.updateUser(existingAuthUserRecord.id, { password: tempPassword });
 
       return new Response(
         JSON.stringify({ student, tempPassword, userId: existingAuthUser.user.id, loginId: roll_number }),
