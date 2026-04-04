@@ -75,8 +75,9 @@ serve(async (req) => {
     }
 
     // Also check if auth user with this email exists (e.g. from a previous partial creation)
-    const { data: existingAuthUser } = await adminClient.auth.admin.getUserByEmail(loginEmail);
-    if (existingAuthUser?.user) {
+    const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers();
+    const existingAuthUserRecord = existingUsers?.find((u: any) => u.email === loginEmail);
+    if (existingAuthUserRecord) {
       // Auth user exists but no student record - clean up by using existing auth user
       // Update profile
       const profileUpdate: Record<string, string> = { full_name };
