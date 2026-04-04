@@ -57,14 +57,72 @@ serve(async (req) => {
     // Generate a deterministic email from enrollment number for Supabase Auth
     const loginEmail = email || `${roll_number.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`;
 
-    // Check if user with this email already exists
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const emailExists = existingUsers?.users?.some((u) => u.email?.toLowerCase() === loginEmail.toLowerCase());
-    if (emailExists) {
-      return new Response(JSON.stringify({ error: `A student with enrollment number "${roll_number}" already exists.` }), {
+    // Check if a student with this enrollment number already exists in the students table
+    const { data: existingStudent } = await adminClient
+      .from("students")
+      .select("id, user_id, roll_number")
+      .eq("roll_number", roll_number)
+      .maybeSingle();
+
+    if (existingStudent) {
+      return new Response(JSON.stringify({ 
+        error: `A student with enrollment number "${roll_number}" already exists.`,
+        existing: true 
+      }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Also check if auth user with this email exists (e.g. from a previous partial creation)
+    const { data: existingAuthUser } = await adminClient.auth.admin.getUserByEmail(loginEmail);
+    if (existingAuthUser?.user) {
+      // Auth user exists but no student record - clean up by using existing auth user
+      // Update profile
+      const profileUpdate: Record<string, string> = { full_name };
+      if (phone) profileUpdate.phone = phone;
+      if (email) profileUpdate.email = email;
+      await adminClient.from("profiles").update(profileUpdate).eq("id", existingAuthUser.user.id);
+
+      // Create student record linked to existing auth user
+      const { data: student, error: studentError } = await adminClient
+        .from("students")
+        .insert({
+          user_id: existingAuthUser.user.id,
+          roll_number: roll_number || null,
+          course: course || null,
+          department: department || null,
+          year: year ? parseInt(year) : null,
+          date_of_birth: date_of_birth || null,
+          blood_group: blood_group || null,
+          emergency_contact: emergency_contact || null,
+          admission_date: new Date().toISOString().split("T")[0],
+          status: "active",
+        })
+        .select()
+        .single();
+
+      if (studentError) {
+        return new Response(JSON.stringify({ error: studentError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Ensure student role exists
+      await adminClient.from("user_roles").upsert(
+        { user_id: existingAuthUser.user.id, role: "student" },
+        { onConflict: "user_id,role" }
+      );
+
+      // Generate a new password for the existing auth user
+      const tempPassword = crypto.randomUUID().slice(0, 12) + "A1!";
+      await adminClient.auth.admin.updateUser(existingAuthUser.user.id, { password: tempPassword });
+
+      return new Response(
+        JSON.stringify({ student, tempPassword, userId: existingAuthUser.user.id, loginId: roll_number }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Create auth user with enrollment number as the login credential
