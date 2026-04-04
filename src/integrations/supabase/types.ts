@@ -988,12 +988,15 @@ export type Database = {
           id: string
           invoice_id: string
           paid_at: string
+          payment_label: string | null
           payment_method: string
+          payment_mode_label: string | null
           property_id: string
           recorded_by: string | null
           status: string
           student_id: string | null
           transaction_id: string | null
+          transaction_reference: string | null
         }
         Insert: {
           amount?: number
@@ -1002,12 +1005,15 @@ export type Database = {
           id?: string
           invoice_id: string
           paid_at?: string
+          payment_label?: string | null
           payment_method?: string
+          payment_mode_label?: string | null
           property_id: string
           recorded_by?: string | null
           status?: string
           student_id?: string | null
           transaction_id?: string | null
+          transaction_reference?: string | null
         }
         Update: {
           amount?: number
@@ -1016,12 +1022,15 @@ export type Database = {
           id?: string
           invoice_id?: string
           paid_at?: string
+          payment_label?: string | null
           payment_method?: string
+          payment_mode_label?: string | null
           property_id?: string
           recorded_by?: string | null
           status?: string
           student_id?: string | null
           transaction_id?: string | null
+          transaction_reference?: string | null
         }
         Relationships: [
           {
@@ -1425,7 +1434,9 @@ export type Database = {
       }
       students: {
         Row: {
+          account_number: string | null
           admission_date: string | null
+          alloted_room_no: string | null
           blood_group: string | null
           course: string | null
           created_at: string
@@ -1433,9 +1444,12 @@ export type Database = {
           department: string | null
           emergency_contact: string | null
           father_name: string | null
+          final_fee: number | null
           gender: string | null
           id: string
           parent_id: string | null
+          payment_date: string | null
+          remarks: string | null
           roll_number: string | null
           status: string | null
           updated_at: string
@@ -1443,7 +1457,9 @@ export type Database = {
           year: number | null
         }
         Insert: {
+          account_number?: string | null
           admission_date?: string | null
+          alloted_room_no?: string | null
           blood_group?: string | null
           course?: string | null
           created_at?: string
@@ -1451,9 +1467,12 @@ export type Database = {
           department?: string | null
           emergency_contact?: string | null
           father_name?: string | null
+          final_fee?: number | null
           gender?: string | null
           id?: string
           parent_id?: string | null
+          payment_date?: string | null
+          remarks?: string | null
           roll_number?: string | null
           status?: string | null
           updated_at?: string
@@ -1461,7 +1480,9 @@ export type Database = {
           year?: number | null
         }
         Update: {
+          account_number?: string | null
           admission_date?: string | null
+          alloted_room_no?: string | null
           blood_group?: string | null
           course?: string | null
           created_at?: string
@@ -1469,9 +1490,12 @@ export type Database = {
           department?: string | null
           emergency_contact?: string | null
           father_name?: string | null
+          final_fee?: number | null
           gender?: string | null
           id?: string
           parent_id?: string | null
+          payment_date?: string | null
+          remarks?: string | null
           roll_number?: string | null
           status?: string | null
           updated_at?: string

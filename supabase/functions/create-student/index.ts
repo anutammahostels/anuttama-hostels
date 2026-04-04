@@ -43,7 +43,15 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { full_name, email, phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact, father_name, gender } = body;
+    const {
+      full_name, email, phone, roll_number, course, department, year,
+      date_of_birth, blood_group, emergency_contact, father_name, gender,
+      // New finance fields
+      final_fee, payment_date, account_number, alloted_room_no, remarks,
+      payment_mode_1, amount_1, transaction_details_1,
+      payment_mode_2, amount_2, transaction_details_2,
+      balance_payment,
+    } = body;
 
     if (!full_name || !roll_number) {
       return new Response(JSON.stringify({ error: "Student name and enrollment number are required" }), {
@@ -85,8 +93,6 @@ serve(async (req) => {
 
     if (createError) {
       if (createError.message?.includes("already been registered")) {
-        // Auth user exists but no student record (orphaned from previous deletion)
-        // Find the existing auth user
         const { data: allUsersData } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
         const existingAuthUser = allUsersData?.users?.find((u: any) => u.email === loginEmail);
         
@@ -98,13 +104,10 @@ serve(async (req) => {
         }
 
         userId = existingAuthUser.id;
-
-        // Reset password for the orphaned auth user
         const newPassword = crypto.randomUUID().slice(0, 12) + "A1!";
         await adminClient.auth.admin.updateUserById(userId, { password: newPassword });
         finalPassword = newPassword;
 
-        // Update profile
         const profileUpdate: Record<string, string> = { full_name };
         if (phone) profileUpdate.phone = phone;
         if (email) profileUpdate.email = email;
@@ -117,8 +120,6 @@ serve(async (req) => {
       }
     } else {
       userId = newUser.user.id;
-
-      // Update profile with phone and email
       const profileUpdate: Record<string, string> = {};
       if (phone) profileUpdate.phone = phone;
       if (email) profileUpdate.email = email;
@@ -127,7 +128,9 @@ serve(async (req) => {
       }
     }
 
-    // Create student record
+    // Create student record with new fields
+    const parsedFinalFee = parseFloat(String(final_fee || "0").replace(/,/g, "")) || 0;
+
     const { data: student, error: studentError } = await adminClient
       .from("students")
       .insert({
@@ -143,6 +146,11 @@ serve(async (req) => {
         gender: gender || null,
         admission_date: new Date().toISOString().split("T")[0],
         status: "active",
+        final_fee: parsedFinalFee,
+        payment_date: payment_date || null,
+        account_number: account_number || null,
+        alloted_room_no: alloted_room_no || null,
+        remarks: remarks || null,
       })
       .select()
       .single();
@@ -159,6 +167,75 @@ serve(async (req) => {
       { user_id: userId, role: "student" },
       { onConflict: "user_id,role" }
     );
+
+    // Auto-create invoice and payment records if final_fee > 0
+    if (parsedFinalFee > 0) {
+      // Get property_id
+      const { data: propData } = await adminClient.from("properties").select("id").limit(1).single();
+      const propertyId = propData?.id;
+
+      if (propertyId) {
+        const parsedAmt1 = parseFloat(String(amount_1 || "0").replace(/,/g, "")) || 0;
+        const parsedAmt2 = parseFloat(String(amount_2 || "0").replace(/,/g, "")) || 0;
+        const totalPaid = parsedAmt1 + parsedAmt2;
+        const invoiceStatus = totalPaid >= parsedFinalFee ? "paid" : (totalPaid > 0 ? "partial" : "pending");
+
+        const invoiceNumber = `INV-${roll_number}-${Date.now().toString(36).toUpperCase()}`;
+        const billingDate = payment_date || new Date().toISOString().split("T")[0];
+
+        const noteParts: string[] = [];
+        if (balance_payment) noteParts.push(`Balance: ${balance_payment}`);
+        if (remarks) noteParts.push(`Remarks: ${remarks}`);
+
+        const { data: invoice, error: invError } = await adminClient.from("invoices").insert({
+          student_id: student.id,
+          invoice_number: invoiceNumber,
+          billing_month: billingDate,
+          due_date: billingDate,
+          total_amount: parsedFinalFee,
+          paid_amount: totalPaid,
+          room_rent: parsedFinalFee,
+          status: invoiceStatus,
+          notes: noteParts.join(" | ") || null,
+        }).select().single();
+
+        if (!invError && invoice) {
+          // Create payment record for Amount 1
+          if (parsedAmt1 > 0) {
+            await adminClient.from("payments").insert({
+              invoice_id: invoice.id,
+              student_id: student.id,
+              property_id: propertyId,
+              amount: parsedAmt1,
+              payment_method: (payment_mode_1 || "cash").toLowerCase(),
+              payment_mode_label: payment_mode_1 || null,
+              transaction_id: transaction_details_1 || null,
+              transaction_reference: transaction_details_1 || null,
+              payment_label: "Amount 1",
+              status: "completed",
+              paid_at: billingDate ? new Date(billingDate).toISOString() : new Date().toISOString(),
+            });
+          }
+
+          // Create payment record for Amount 2
+          if (parsedAmt2 > 0) {
+            await adminClient.from("payments").insert({
+              invoice_id: invoice.id,
+              student_id: student.id,
+              property_id: propertyId,
+              amount: parsedAmt2,
+              payment_method: (payment_mode_2 || "cash").toLowerCase(),
+              payment_mode_label: payment_mode_2 || null,
+              transaction_id: transaction_details_2 || null,
+              transaction_reference: transaction_details_2 || null,
+              payment_label: "Amount 2",
+              status: "completed",
+              paid_at: billingDate ? new Date(billingDate).toISOString() : new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({ student, tempPassword: finalPassword, userId, loginId: roll_number }),
