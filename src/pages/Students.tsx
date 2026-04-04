@@ -175,14 +175,12 @@ const Students = () => {
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
     const headers = [
-      "Sr. No.", "Enrollment number", "Student Details", "Father Name",
-      "Phone Number", "Email", "Class", "Stream", "Year",
-      "Date of Birth", "Blood Group", "Emergency Contact"
+      "S.NO", "FORM NO", "STUDENT NAME", "FATHER NAME",
+      "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM"
     ];
     const sampleRow = [
       1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
-      "9876543210", "rahul@example.com", "B.Tech CSE", "Computer Science", 1,
-      "2005-01-15", "A+", "9876543211"
+      "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science"
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
