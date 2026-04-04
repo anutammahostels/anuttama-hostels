@@ -1001,6 +1001,18 @@ const Students = () => {
                             </div>
                           </TableCell>
                           <TableCell>
+                            <p className="text-sm">{(student as any).father_name || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{student.gender || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{student.profile?.phone || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{student.emergency_contact || "-"}</p>
+                          </TableCell>
+                          <TableCell>
                             <p className="text-sm">{getRoomDisplay(student)}</p>
                             {(student as any).alloted_room_no && !student.bed?.room && (
                               <p className="text-xs text-muted-foreground">Allotted: {(student as any).alloted_room_no}</p>
@@ -1011,11 +1023,17 @@ const Students = () => {
                             <p className="text-xs text-muted-foreground">{student.year ? `Year ${student.year}` : ""}</p>
                           </TableCell>
                           <TableCell>
+                            <p className="text-sm">{student.department || "-"}</p>
+                          </TableCell>
+                          <TableCell>
                             {(student as any).final_fee > 0 ? (
                               <p className="text-sm font-medium">₹{Number((student as any).final_fee).toLocaleString("en-IN")}</p>
                             ) : (
                               <p className="text-sm text-muted-foreground">-</p>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm truncate max-w-[150px]" title={(student as any).remarks || ""}>{(student as any).remarks || "-"}</p>
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className={getStatusColor(student.status)}>
