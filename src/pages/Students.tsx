@@ -286,10 +286,12 @@ const Students = () => {
     date_of_birth: "",
     blood_group: "",
     emergency_contact: "",
+    father_name: "",
+    gender: "",
   });
 
   const resetForm = () => {
-    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "" });
+    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "", father_name: "", gender: "" });
     setCreatedCredentials(null);
   };
 
