@@ -40,6 +40,9 @@ const Students = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentWithProfile | null>(null);
   const [editForm, setEditForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
     roll_number: "",
     course: "",
     department: "",
@@ -51,6 +54,10 @@ const Students = () => {
     father_name: "",
     gender: "",
     remarks: "",
+    alloted_room_no: "",
+    account_number: "",
+    payment_date: "",
+    final_fee: "",
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -391,6 +398,9 @@ const Students = () => {
   const openEditDialog = (student: StudentWithProfile) => {
     setEditingStudent(student);
     setEditForm({
+      full_name: student.profile?.full_name || "",
+      email: student.profile?.email || "",
+      phone: student.profile?.phone || "",
       roll_number: student.roll_number || "",
       course: student.course || "",
       department: student.department || "",
@@ -402,6 +412,10 @@ const Students = () => {
       father_name: (student as any).father_name || "",
       gender: student.gender || "",
       remarks: (student as any).remarks || "",
+      alloted_room_no: (student as any).alloted_room_no || "",
+      account_number: (student as any).account_number || "",
+      payment_date: (student as any).payment_date || "",
+      final_fee: (student as any).final_fee?.toString() || "",
     });
     setEditDialogOpen(true);
   };
@@ -410,6 +424,14 @@ const Students = () => {
     if (!editingStudent) return;
     setIsUpdating(true);
     try {
+      // Update profile (name, email, phone)
+      if (editingStudent.user_id) {
+        await supabase.from("profiles").update({
+          full_name: editForm.full_name || null,
+          email: editForm.email || null,
+          phone: editForm.phone || null,
+        }).eq("id", editingStudent.user_id);
+      }
       await updateStudent.mutateAsync({
         id: editingStudent.id,
         roll_number: editForm.roll_number || null,
@@ -423,6 +445,10 @@ const Students = () => {
         father_name: editForm.father_name || null,
         gender: editForm.gender || null,
         remarks: editForm.remarks || null,
+        alloted_room_no: editForm.alloted_room_no || null,
+        account_number: editForm.account_number || null,
+        payment_date: editForm.payment_date || null,
+        final_fee: editForm.final_fee ? parseFloat(editForm.final_fee) : 0,
       });
       setEditDialogOpen(false);
       setEditingStudent(null);
@@ -1356,8 +1382,40 @@ const Students = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+            <p className="text-xs text-muted-foreground px-1">Enrollment ID: {editingStudent?.id?.slice(0, 8)}...</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold">Full Name</Label>
+                <Input value={editForm.full_name} onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Email</Label>
+                <Input type="email" value={editForm.email} onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Phone (Contact 1)</Label>
+                <Input value={editForm.phone} onChange={(e) => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Father Name</Label>
+                <Input value={editForm.father_name} onChange={(e) => setEditForm(f => ({ ...f, father_name: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Gender</Label>
+                <Select value={editForm.gender} onValueChange={(v) => setEditForm(f => ({ ...f, gender: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Emergency Contact (Contact 2)</Label>
+                <Input value={editForm.emergency_contact} onChange={(e) => setEditForm(f => ({ ...f, emergency_contact: e.target.value }))} />
+              </div>
               <div>
                 <Label className="text-xs font-semibold">Roll Number</Label>
                 <Input value={editForm.roll_number} onChange={(e) => setEditForm(f => ({ ...f, roll_number: e.target.value }))} />
@@ -1367,7 +1425,7 @@ const Students = () => {
                 <Input value={editForm.course} onChange={(e) => setEditForm(f => ({ ...f, course: e.target.value }))} />
               </div>
               <div>
-                <Label className="text-xs font-semibold">Department</Label>
+                <Label className="text-xs font-semibold">Stream (Department)</Label>
                 <Input value={editForm.department} onChange={(e) => setEditForm(f => ({ ...f, department: e.target.value }))} />
               </div>
               <div>
@@ -1399,8 +1457,20 @@ const Students = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Emergency Contact</Label>
-                <Input value={editForm.emergency_contact} onChange={(e) => setEditForm(f => ({ ...f, emergency_contact: e.target.value }))} />
+                <Label className="text-xs font-semibold">Allotted Room No</Label>
+                <Input value={editForm.alloted_room_no} onChange={(e) => setEditForm(f => ({ ...f, alloted_room_no: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Final Fee (₹)</Label>
+                <Input type="number" value={editForm.final_fee} onChange={(e) => setEditForm(f => ({ ...f, final_fee: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Account Number</Label>
+                <Input value={editForm.account_number} onChange={(e) => setEditForm(f => ({ ...f, account_number: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Payment Date</Label>
+                <Input value={editForm.payment_date} onChange={(e) => setEditForm(f => ({ ...f, payment_date: e.target.value }))} />
               </div>
               <div>
                 <Label className="text-xs font-semibold">Status</Label>
@@ -1412,6 +1482,10 @@ const Students = () => {
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="sm:col-span-2">
+                <Label className="text-xs font-semibold">Remarks</Label>
+                <Input value={editForm.remarks} onChange={(e) => setEditForm(f => ({ ...f, remarks: e.target.value }))} />
               </div>
             </div>
           </div>
