@@ -264,7 +264,7 @@ const Students = () => {
 
   const downloadCredentials = () => {
     if (!bulkResults) return;
-    const csv = "name,email,temporary_password\n" + bulkResults.success.map(s => `${s.name},${s.email},${s.password}`).join("\n");
+    const csv = "name,enrollment_number,temporary_password\n" + bulkResults.success.map(s => `${s.name},${s.enrollmentNumber},${s.password}`).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
