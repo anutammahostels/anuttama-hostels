@@ -28,12 +28,12 @@ const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ enrollmentNumber: string; password: string } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
-  const [bulkResults, setBulkResults] = useState<{ success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } | null>(null);
+  const [bulkResults, setBulkResults] = useState<{ success: { enrollmentNumber: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit student state
@@ -222,7 +222,7 @@ const Students = () => {
     setBulkDialogOpen(true);
     setBulkUploading(true);
     setBulkProgress(0);
-    const results: { success: { email: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } = { success: [], errors: [] };
+    const results: { success: { enrollmentNumber: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } = { success: [], errors: [] };
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -239,8 +239,8 @@ const Students = () => {
         emergency_contact: row.emergency_contact || row["emergency contact"] || "",
       };
 
-      if (!formData.full_name || !formData.email) {
-        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Name and email are required" });
+      if (!formData.full_name || !formData.roll_number) {
+        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Student name and enrollment number are required" });
         setBulkProgress(((i + 1) / rows.length) * 100);
         continue;
       }
@@ -249,7 +249,7 @@ const Students = () => {
         const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: formData });
         if (fnError) throw fnError;
         if (data?.error) throw new Error(data.error);
-        results.success.push({ email: formData.email, password: data.tempPassword, name: formData.full_name });
+        results.success.push({ enrollmentNumber: formData.roll_number, password: data.tempPassword, name: formData.full_name });
       } catch (err: any) {
         results.errors.push({ row: i + 2, name: formData.full_name, error: err.message || "Failed" });
       }
@@ -264,7 +264,7 @@ const Students = () => {
 
   const downloadCredentials = () => {
     if (!bulkResults) return;
-    const csv = "name,email,temporary_password\n" + bulkResults.success.map(s => `${s.name},${s.email},${s.password}`).join("\n");
+    const csv = "name,enrollment_number,temporary_password\n" + bulkResults.success.map(s => `${s.name},${s.enrollmentNumber},${s.password}`).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -294,8 +294,8 @@ const Students = () => {
   };
 
   const handleSubmit = async () => {
-    if (!form.full_name.trim() || !form.email.trim()) {
-      toast({ title: "Validation Error", description: "Name and email are required.", variant: "destructive" });
+    if (!form.full_name.trim() || !form.roll_number.trim()) {
+      toast({ title: "Validation Error", description: "Student name and enrollment number are required.", variant: "destructive" });
       return;
     }
 
@@ -308,7 +308,7 @@ const Students = () => {
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
 
-      setCreatedCredentials({ email: form.email, password: data.tempPassword });
+      setCreatedCredentials({ enrollmentNumber: form.roll_number, password: data.tempPassword });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       toast({ title: "Student Added", description: `${form.full_name} has been registered successfully.` });
     } catch (err: any) {
@@ -1047,15 +1047,15 @@ const Students = () => {
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Email *</Label>
-                    <Input type="email" placeholder="student@email.com" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+                    <Label className="text-xs font-semibold">Email</Label>
+                    <Input type="email" placeholder="student@email.com (optional)" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
                   </div>
                   <div>
                     <Label className="text-xs font-semibold">Phone</Label>
                     <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Roll Number</Label>
+                    <Label className="text-xs font-semibold">Enrollment Number *</Label>
                     <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
                   </div>
                   <div>
@@ -1114,17 +1114,17 @@ const Students = () => {
                 <DialogTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" /> Student Created!
                 </DialogTitle>
-                <DialogDescription>Share these login credentials with the student. The password cannot be retrieved later.</DialogDescription>
+                <DialogDescription>Share these login credentials with the student. They will use their enrollment number to sign in.</DialogDescription>
               </DialogHeader>
 
               <div className="space-y-3 py-4">
                 <div className="bg-muted rounded-lg p-4 space-y-3">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Email</p>
+                    <p className="text-xs text-muted-foreground mb-1">Enrollment Number (Login ID)</p>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm font-mono bg-background rounded px-2 py-1">{createdCredentials.email}</code>
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCopy(createdCredentials.email, "email")}>
-                        {copiedField === "email" ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      <code className="flex-1 text-sm font-mono bg-background rounded px-2 py-1">{createdCredentials.enrollmentNumber}</code>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCopy(createdCredentials.enrollmentNumber, "enrollment")}>
+                        {copiedField === "enrollment" ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   </div>
@@ -1207,7 +1207,7 @@ const Students = () => {
                 Download Excel Template
               </Button>
               <p className="text-xs text-muted-foreground">
-                Required columns: <code className="bg-muted px-1 rounded">full_name</code>, <code className="bg-muted px-1 rounded">email</code>. Optional: phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact.
+                Required columns: <code className="bg-muted px-1 rounded">Student Details</code>, <code className="bg-muted px-1 rounded">Enrollment number</code>. Optional: Phone Number, Email, Class, Stream, Year, Date of Birth, Blood Group, Emergency Contact.
               </p>
             </div>
           )}

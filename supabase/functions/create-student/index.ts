@@ -17,10 +17,8 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("authorization")!;
 
-    // Use service role client to verify the calling user's token
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Extract JWT and get user
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: callingUser }, error: authError } = await adminClient.auth.getUser(token);
     if (authError || !callingUser) {
@@ -31,7 +29,6 @@ serve(async (req) => {
     }
     const callingUserId = callingUser.id;
 
-    // Check admin role
     const { data: roleData } = await adminClient
       .from("user_roles")
       .select("role")
@@ -49,30 +46,34 @@ serve(async (req) => {
     const body = await req.json();
     const { full_name, email, phone, roll_number, course, department, year, date_of_birth, blood_group, emergency_contact } = body;
 
-    if (!full_name || !email) {
-      return new Response(JSON.stringify({ error: "Name and email are required" }), {
+    if (!full_name || !roll_number) {
+      return new Response(JSON.stringify({ error: "Student name and enrollment number are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Use enrollment number as login identifier
+    // Generate a deterministic email from enrollment number for Supabase Auth
+    const loginEmail = email || `${roll_number.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`;
+
     // Check if user with this email already exists
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const emailExists = existingUsers?.users?.some((u) => u.email?.toLowerCase() === email.toLowerCase());
+    const emailExists = existingUsers?.users?.some((u) => u.email?.toLowerCase() === loginEmail.toLowerCase());
     if (emailExists) {
-      return new Response(JSON.stringify({ error: "A student with this email already exists. Please use a different email address." }), {
+      return new Response(JSON.stringify({ error: `A student with enrollment number "${roll_number}" already exists.` }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Create auth user with service role (won't affect admin's session)
+    // Create auth user with enrollment number as the login credential
     const tempPassword = crypto.randomUUID().slice(0, 12) + "A1!";
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email,
+      email: loginEmail,
       password: tempPassword,
       email_confirm: true,
-      user_metadata: { full_name, phone },
+      user_metadata: { full_name, phone, roll_number },
     });
 
     if (createError) {
@@ -82,9 +83,12 @@ serve(async (req) => {
       });
     }
 
-    // Update profile with phone
-    if (phone) {
-      await adminClient.from("profiles").update({ phone }).eq("id", newUser.user.id);
+    // Update profile with phone and email
+    const profileUpdate: Record<string, string> = {};
+    if (phone) profileUpdate.phone = phone;
+    if (email) profileUpdate.email = email;
+    if (Object.keys(profileUpdate).length > 0) {
+      await adminClient.from("profiles").update(profileUpdate).eq("id", newUser.user.id);
     }
 
     // Create student record
@@ -116,7 +120,7 @@ serve(async (req) => {
     await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: "student" });
 
     return new Response(
-      JSON.stringify({ student, tempPassword, userId: newUser.user.id }),
+      JSON.stringify({ student, tempPassword, userId: newUser.user.id, loginId: roll_number }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

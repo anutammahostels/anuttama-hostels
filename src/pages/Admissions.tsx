@@ -96,7 +96,7 @@ export default function Admissions() {
 
   const enrollStudent = useMutation({
     mutationFn: async (admission: Admission) => {
-      if (!admission.email) throw new Error("Student email is required for enrollment");
+      if (!admission.roll_number) throw new Error("Enrollment number is required for enrollment");
 
       // Call edge function to create auth user + student record
       const { data, error } = await supabase.functions.invoke("create-student", {

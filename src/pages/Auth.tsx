@@ -12,6 +12,7 @@ import heroBuilding from '@/assets/hero-building.jpg';
 import { cn } from '@/lib/utils';
 
 const emailSchema = z.string().email('Please enter a valid email address');
+const enrollmentSchema = z.string().min(1, 'Please enter your enrollment number');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
 const adminFeatures = [
@@ -32,9 +33,10 @@ type LoginMode = 'select' | 'admin' | 'student';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
+  const [enrollmentNumber, setEnrollmentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; enrollment?: string; password?: string }>({});
   const [mode, setMode] = useState<LoginMode>('select');
   
   const { signIn, user, role } = useAuth();
@@ -56,9 +58,14 @@ export default function Auth() {
   }, [user, role, navigate]);
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {};
-    const emailResult = emailSchema.safeParse(email);
-    if (!emailResult.success) newErrors.email = emailResult.error.errors[0].message;
+    const newErrors: { email?: string; enrollment?: string; password?: string } = {};
+    if (isStudent) {
+      const enrollResult = enrollmentSchema.safeParse(enrollmentNumber);
+      if (!enrollResult.success) newErrors.enrollment = enrollResult.error.errors[0].message;
+    } else {
+      const emailResult = emailSchema.safeParse(email);
+      if (!emailResult.success) newErrors.email = emailResult.error.errors[0].message;
+    }
     const passwordResult = passwordSchema.safeParse(password);
     if (!passwordResult.success) newErrors.password = passwordResult.error.errors[0].message;
     setErrors(newErrors);
@@ -69,10 +76,14 @@ export default function Auth() {
     e.preventDefault();
     if (!validateForm()) return;
     setIsLoading(true);
-    const { error } = await signIn(email, password);
+    // For students, convert enrollment number to the generated email format
+    const loginEmail = isStudent 
+      ? `${enrollmentNumber.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`
+      : email;
+    const { error } = await signIn(loginEmail, password);
     setIsLoading(false);
     if (error) {
-      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? 'Invalid email or password.' : error.message, variant: 'destructive' });
+      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? (isStudent ? 'Invalid enrollment number or password.' : 'Invalid email or password.') : error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Welcome back!', description: 'You have successfully signed in.' });
     }
@@ -225,7 +236,7 @@ export default function Auth() {
             <>
               <div className="space-y-2">
                 <button 
-                  onClick={() => { setMode('select'); setEmail(''); setPassword(''); setErrors({}); }}
+                  onClick={() => { setMode('select'); setEmail(''); setEnrollmentNumber(''); setPassword(''); setErrors({}); }}
                   className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" /> Back
@@ -245,7 +256,7 @@ export default function Auth() {
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {isStudent 
-                      ? 'Sign in with the credentials provided by your hostel admin'
+                      ? 'Sign in with your enrollment number and password'
                       : 'Sign in to manage your properties and operations'
                     }
                   </p>
@@ -254,22 +265,41 @@ export default function Auth() {
 
               <div className="bg-card rounded-2xl border border-border/50 shadow-xl p-6 sm:p-8">
                 <form onSubmit={handleSignIn} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <div className="relative group">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        type="email" 
-                        placeholder="you@example.com" 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)} 
-                        className="pl-10 h-12 rounded-xl" 
-                        required 
-                        autoFocus
-                      />
+                  {isStudent ? (
+                    <div className="space-y-2">
+                      <Label>Enrollment Number</Label>
+                      <div className="relative group">
+                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          type="text" 
+                          placeholder="e.g. CS2026001" 
+                          value={enrollmentNumber} 
+                          onChange={(e) => setEnrollmentNumber(e.target.value)} 
+                          className="pl-10 h-12 rounded-xl" 
+                          required 
+                          autoFocus
+                        />
+                      </div>
+                      {errors.enrollment && <p className="text-sm text-destructive">{errors.enrollment}</p>}
                     </div>
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                  </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <div className="relative group">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          type="email" 
+                          placeholder="you@example.com" 
+                          value={email} 
+                          onChange={(e) => setEmail(e.target.value)} 
+                          className="pl-10 h-12 rounded-xl" 
+                          required 
+                          autoFocus
+                        />
+                      </div>
+                      {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Password</Label>
                     <div className="relative group">
