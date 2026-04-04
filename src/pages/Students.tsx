@@ -396,6 +396,9 @@ const Students = () => {
       blood_group: student.blood_group || "",
       emergency_contact: student.emergency_contact || "",
       status: student.status || "active",
+      father_name: (student as any).father_name || "",
+      gender: student.gender || "",
+      remarks: (student as any).remarks || "",
     });
     setEditDialogOpen(true);
   };
