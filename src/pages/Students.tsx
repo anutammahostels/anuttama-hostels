@@ -424,6 +424,14 @@ const Students = () => {
     if (!editingStudent) return;
     setIsUpdating(true);
     try {
+      // Update profile (name, email, phone)
+      if (editingStudent.user_id) {
+        await supabase.from("profiles").update({
+          full_name: editForm.full_name || null,
+          email: editForm.email || null,
+          phone: editForm.phone || null,
+        }).eq("id", editingStudent.user_id);
+      }
       await updateStudent.mutateAsync({
         id: editingStudent.id,
         roll_number: editForm.roll_number || null,
@@ -437,6 +445,10 @@ const Students = () => {
         father_name: editForm.father_name || null,
         gender: editForm.gender || null,
         remarks: editForm.remarks || null,
+        alloted_room_no: editForm.alloted_room_no || null,
+        account_number: editForm.account_number || null,
+        payment_date: editForm.payment_date || null,
+        final_fee: editForm.final_fee ? parseFloat(editForm.final_fee) : 0,
       });
       setEditDialogOpen(false);
       setEditingStudent(null);
