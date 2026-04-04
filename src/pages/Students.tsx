@@ -135,7 +135,7 @@ const Students = () => {
     // Auto-detect header row: find first row containing "Student Details" or "Enrollment number"
     const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
     let headerRow = range.s.r; // default to first row
-    const knownHeaders = ["student details", "enrollment number", "full_name", "email", "sr. no."];
+    const knownHeaders = ["student details", "enrollment number", "full_name", "email", "sr. no.", "form no", "student name", "father name", "contact no1", "gender", "grade", "stream"];
     for (let r = range.s.r; r <= Math.min(range.s.r + 20, range.e.r); r++) {
       const cellValues: string[] = [];
       for (let c = range.s.c; c <= range.e.c; c++) {
