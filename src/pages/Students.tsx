@@ -40,6 +40,9 @@ const Students = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentWithProfile | null>(null);
   const [editForm, setEditForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
     roll_number: "",
     course: "",
     department: "",
@@ -51,6 +54,10 @@ const Students = () => {
     father_name: "",
     gender: "",
     remarks: "",
+    alloted_room_no: "",
+    account_number: "",
+    payment_date: "",
+    final_fee: "",
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
