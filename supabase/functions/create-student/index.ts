@@ -75,20 +75,21 @@ serve(async (req) => {
     }
 
     // Also check if auth user with this email exists (e.g. from a previous partial creation)
-    const { data: existingAuthUser } = await adminClient.auth.admin.getUserByEmail(loginEmail);
-    if (existingAuthUser?.user) {
+    const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers();
+    const existingAuthUserRecord = existingUsers?.find((u: any) => u.email === loginEmail);
+    if (existingAuthUserRecord) {
       // Auth user exists but no student record - clean up by using existing auth user
       // Update profile
       const profileUpdate: Record<string, string> = { full_name };
       if (phone) profileUpdate.phone = phone;
       if (email) profileUpdate.email = email;
-      await adminClient.from("profiles").update(profileUpdate).eq("id", existingAuthUser.user.id);
+      await adminClient.from("profiles").update(profileUpdate).eq("id", existingAuthUserRecord.id);
 
       // Create student record linked to existing auth user
       const { data: student, error: studentError } = await adminClient
         .from("students")
         .insert({
-          user_id: existingAuthUser.user.id,
+          user_id: existingAuthUserRecord.id,
           roll_number: roll_number || null,
           course: course || null,
           department: department || null,
@@ -113,16 +114,16 @@ serve(async (req) => {
 
       // Ensure student role exists
       await adminClient.from("user_roles").upsert(
-        { user_id: existingAuthUser.user.id, role: "student" },
+        { user_id: existingAuthUserRecord.id, role: "student" },
         { onConflict: "user_id,role" }
       );
 
       // Generate a new password for the existing auth user
       const tempPassword = crypto.randomUUID().slice(0, 12) + "A1!";
-      await adminClient.auth.admin.updateUser(existingAuthUser.user.id, { password: tempPassword });
+      await adminClient.auth.admin.updateUser(existingAuthUserRecord.id, { password: tempPassword });
 
       return new Response(
-        JSON.stringify({ student, tempPassword, userId: existingAuthUser.user.id, loginId: roll_number }),
+        JSON.stringify({ student, tempPassword, userId: existingAuthUserRecord.id, loginId: roll_number }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
