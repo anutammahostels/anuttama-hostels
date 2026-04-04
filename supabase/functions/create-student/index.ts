@@ -123,7 +123,7 @@ serve(async (req) => {
       await adminClient.auth.admin.updateUser(existingAuthUserRecord.id, { password: tempPassword });
 
       return new Response(
-        JSON.stringify({ student, tempPassword, userId: existingAuthUser.user.id, loginId: roll_number }),
+        JSON.stringify({ student, tempPassword, userId: existingAuthUserRecord.id, loginId: roll_number }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
