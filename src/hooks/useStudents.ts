@@ -180,26 +180,11 @@ export function useStudents(propertyId?: string) {
 
   const deleteStudent = useMutation({
     mutationFn: async (id: string) => {
-      // Vacate any assigned bed first
-      const { data: beds } = await supabase
-        .from('beds')
-        .select('id')
-        .eq('student_id', id);
-      
-      if (beds && beds.length > 0) {
-        const { error: bedError } = await supabase
-          .from('beds')
-          .update({ student_id: null, status: 'vacant' })
-          .eq('student_id', id);
-        if (bedError) throw bedError;
-      }
-
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
-      
+      const { data, error } = await supabase.functions.invoke('delete-student', {
+        body: { student_id: id },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
