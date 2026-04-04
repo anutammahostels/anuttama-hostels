@@ -242,6 +242,23 @@ const Students = () => {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
+      // Map all columns from row keys (already lowercased & underscored)
+      const keys = Object.keys(row);
+      const findCol = (patterns: string[]) => {
+        for (const p of patterns) {
+          const found = keys.find(k => k.includes(p));
+          if (found && row[found]) return row[found];
+        }
+        return "";
+      };
+
+      // Transaction details columns: there are two with same header "transcetion_details-1"
+      // First occurrence → transaction_details_1, second → transaction_details_2
+      // In the normalized keys they may appear as transcetion_details-1 or similar
+      const txnKeys = keys.filter(k => k.includes("transcetion") || k.includes("transaction"));
+      const txn1 = txnKeys.length > 0 ? row[txnKeys[0]] || "" : "";
+      const txn2 = txnKeys.length > 1 ? row[txnKeys[1]] || "" : "";
+
       const formData = {
         full_name: row.student_name || row.student_details || row.full_name || row.name || "",
         email: row.email || "",
@@ -255,6 +272,19 @@ const Students = () => {
         emergency_contact: row.contact_no_2 || row.emergency_contact || "",
         father_name: row.father_name || "",
         gender: row.gender || "",
+        // Finance fields
+        payment_date: findCol(["date_of_the_payment", "payment_date"]),
+        final_fee: String(parseAmount(findCol(["final_fee"]))),
+        payment_mode_1: findCol(["payment_mode-1", "payment_mode_1"]),
+        amount_1: String(parseAmount(findCol(["amount_1", "amount1"]))),
+        transaction_details_1: txn1,
+        payment_mode_2: findCol(["payment_mode-2", "payment_mode_2"]),
+        amount_2: String(parseAmount(findCol(["amount_2", "amount2"]))),
+        balance_payment: findCol(["balance_payment", "balance"]),
+        transaction_details_2: txn2,
+        account_number: findCol(["account_number"]),
+        alloted_room_no: findCol(["alloted_room", "alloted_room_no"]),
+        remarks: findCol(["remarks"]),
       };
 
       if (!formData.full_name || !formData.roll_number) {
