@@ -12,6 +12,7 @@ import heroBuilding from '@/assets/hero-building.jpg';
 import { cn } from '@/lib/utils';
 
 const emailSchema = z.string().email('Please enter a valid email address');
+const enrollmentSchema = z.string().min(1, 'Please enter your enrollment number');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
 const adminFeatures = [
