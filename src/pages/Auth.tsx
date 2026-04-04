@@ -236,7 +236,7 @@ export default function Auth() {
             <>
               <div className="space-y-2">
                 <button 
-                  onClick={() => { setMode('select'); setEmail(''); setPassword(''); setErrors({}); }}
+                  onClick={() => { setMode('select'); setEmail(''); setEnrollmentNumber(''); setPassword(''); setErrors({}); }}
                   className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" /> Back
