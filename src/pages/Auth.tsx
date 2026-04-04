@@ -76,10 +76,14 @@ export default function Auth() {
     e.preventDefault();
     if (!validateForm()) return;
     setIsLoading(true);
-    const { error } = await signIn(email, password);
+    // For students, convert enrollment number to the generated email format
+    const loginEmail = isStudent 
+      ? `${enrollmentNumber.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`
+      : email;
+    const { error } = await signIn(loginEmail, password);
     setIsLoading(false);
     if (error) {
-      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? 'Invalid email or password.' : error.message, variant: 'destructive' });
+      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? (isStudent ? 'Invalid enrollment number or password.' : 'Invalid email or password.') : error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Welcome back!', description: 'You have successfully signed in.' });
     }
