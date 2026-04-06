@@ -227,40 +227,10 @@ const About = () => {
         </div>
       </section>
 
-      {/* Team */}
+      {/* Powered By Section */}
       <section className="py-12 md:py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-8 md:mb-12">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-medium mb-3 md:mb-4">
-              <Users className="h-3 w-3 md:h-4 md:w-4" />
-              Meet the People
-            </span>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2 md:mb-4">
-              Leadership <span className="text-gradient">Team</span>
-            </h2>
-            <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
-              A passionate team dedicated to transforming hostel management
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6 max-w-5xl mx-auto">
-            {team.map((member, index) => (
-              <div 
-                key={member.name}
-                className="text-center p-3 md:p-6 rounded-xl md:rounded-2xl bg-card border border-border hover:shadow-xl hover:-translate-y-2 transition-all duration-500 animate-slide-up"
-                style={{ animationDelay: `${0.1 * (index + 1)}s` }}
-              >
-                <div className="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full bg-gradient-to-br from-primary to-secondary mx-auto mb-2 md:mb-4 flex items-center justify-center text-white text-sm md:text-lg lg:text-2xl font-bold">
-                  {member.initial}
-                </div>
-                <h4 className="font-bold text-foreground text-xs md:text-sm lg:text-base">{member.name}</h4>
-                <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground">{member.role}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Powered By Section */}
-          <div className="mt-8 md:mt-12 text-center p-4 md:p-8 rounded-xl md:rounded-2xl bg-card border border-border max-w-2xl mx-auto">
+          <div className="text-center p-4 md:p-8 rounded-xl md:rounded-2xl bg-card border border-border max-w-2xl mx-auto">
             <p className="text-xs md:text-sm text-muted-foreground mb-2">Powered by</p>
             <h3 className="text-lg md:text-2xl font-bold text-foreground mb-2">
               Jeevijay Technologies Private Limited
