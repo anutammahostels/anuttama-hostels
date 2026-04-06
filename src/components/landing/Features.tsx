@@ -199,7 +199,7 @@ export const Features = () => {
             Role-Based Access
           </span>
           <h2 className="text-xl lg:text-3xl font-bold text-foreground mb-2 lg:mb-3">
-            6 Tailored Dashboards
+            3 Tailored Dashboards
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto text-xs lg:text-base">
             Each role gets a dedicated interface.
