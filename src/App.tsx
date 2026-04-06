@@ -12,7 +12,7 @@ import { StudentLayoutRoute } from "@/components/student/StudentLayoutRoute";
 import { SuperAdminLayoutRoute } from "@/components/superadmin/SuperAdminLayoutRoute";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 
-import Pricing from "./pages/Pricing";
+
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -69,7 +69,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/solutions" element={<Solutions />} />
               <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/pricing" element={<Pricing />} />
+              
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
             </Route>
