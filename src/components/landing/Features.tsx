@@ -98,11 +98,8 @@ const features = [
 
 const roles = [
   { icon: Shield, label: "Super Admin", desc: "Platform control", color: "bg-violet-500" },
-  { icon: Building2, label: "Owner", desc: "Multi-property", color: "bg-primary" },
-  { icon: UserCheck, label: "Warden", desc: "Block level", color: "bg-secondary" },
+  { icon: Building2, label: "Hostel Admin", desc: "Property management", color: "bg-primary" },
   { icon: Users, label: "Student", desc: "Self-service", color: "bg-orange-500" },
-  { icon: ClipboardList, label: "Security", desc: "Gate passes", color: "bg-pink-500" },
-  { icon: Bell, label: "Parent", desc: "Monitoring", color: "bg-cyan-500" },
 ];
 
 export const Features = () => {
