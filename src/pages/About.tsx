@@ -314,7 +314,7 @@ const About = () => {
                   </Button>
                 </Link>
                 <Link to="/contact">
-                  <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 w-full sm:w-auto text-sm md:text-base">
+                  <Button size="lg" variant="outline" className="border-white/30 text-foreground bg-white hover:bg-white/90 w-full sm:w-auto text-sm md:text-base">
                     Contact Us
                   </Button>
                 </Link>
