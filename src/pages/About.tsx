@@ -49,13 +49,6 @@ const milestones = [
   { year: "2024", title: "Series A", desc: "Raised funding to accelerate growth" },
 ];
 
-const team = [
-  { name: "Vikas Patel", role: "Founder & CEO", initial: "VP" },
-  { name: "Lakshya Saxena", role: "CTO", initial: "LS" },
-  { name: "Vitthal Gautam", role: "CPO", initial: "VG" },
-  { name: "Zaid Khan", role: "COO", initial: "ZK" },
-  { name: "Aayush Saxena", role: "Chief Marketing Head", initial: "AS" },
-];
 
 const About = () => {
   return (
