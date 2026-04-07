@@ -2,21 +2,17 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Receipt, Download, IndianRupee, Loader2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { useInvoices } from "@/hooks/useInvoices";
 
 export default function StudentInvoices() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
   const { data: student } = useQuery({
     queryKey: ["student-record", user?.id],
@@ -45,29 +41,46 @@ export default function StudentInvoices() {
     enabled: !!student,
   });
 
-  const { recordPayment } = useInvoices();
-
-  const [payDialog, setPayDialog] = useState<{ open: boolean; invoice: any | null }>({ open: false, invoice: null });
-  const [payAmount, setPayAmount] = useState("");
-  const [payMethod, setPayMethod] = useState("upi");
-
   const totalDue = invoices.filter((i) => i.status !== "paid").reduce((s, i) => s + (i.total_amount - (i.paid_amount || 0)), 0);
   const totalPaid = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total_amount, 0);
 
-  const handlePay = async () => {
-    if (!payDialog.invoice || !payAmount) return;
+  const handlePayOnline = async (invoice: any) => {
+    const balance = invoice.total_amount - (invoice.paid_amount || 0);
+    if (balance <= 0) return;
+
+    setPayingInvoiceId(invoice.id);
+
     try {
-      await recordPayment.mutateAsync({
-        id: payDialog.invoice.id,
-        amount: parseFloat(payAmount),
-        method: payMethod,
-        studentId: student?.id,
+      const { data, error } = await supabase.functions.invoke("hdfc-create-order", {
+        body: {
+          invoice_id: invoice.id,
+          amount: balance,
+          return_url: `${window.location.origin}/payment/status`,
+        },
       });
-      setPayDialog({ open: false, invoice: null });
-      setPayAmount("");
-      setPayMethod("upi");
-    } catch {
-      // error handled in hook
+
+      if (error) throw error;
+
+      if (data?.payment_links?.payment_links?.web) {
+        // Redirect to HDFC hosted checkout
+        window.location.href = data.payment_links.payment_links.web;
+      } else if (data?.payment_links?.url) {
+        window.location.href = data.payment_links.url;
+      } else if (data?.order_id) {
+        // Fallback: navigate to status page with order ID for polling
+        window.location.href = `/payment/status?order_id=${data.order_id}`;
+      } else {
+        throw new Error("No payment URL received from gateway");
+      }
+    } catch (err: any) {
+      console.error("Payment initiation failed:", err);
+      toast({
+        title: "Payment Failed",
+        description: err.message || "Could not initiate payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPayingInvoiceId(null);
     }
   };
 
@@ -165,160 +178,96 @@ export default function StudentInvoices() {
   };
 
   return (
-    <>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">My Invoices</h1>
-          <p className="text-sm text-muted-foreground">View, pay, and download your billing invoices</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">My Invoices</h1>
+        <p className="text-sm text-muted-foreground">View, pay, and download your billing invoices</p>
+      </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <Card><CardContent className="p-4 text-center"><p className="text-xs text-muted-foreground">Total Invoices</p><p className="text-2xl font-bold text-foreground">{invoices.length}</p></CardContent></Card>
-          <Card className="border-amber-200"><CardContent className="p-4 text-center"><p className="text-xs text-muted-foreground">Pending Due</p><p className="text-2xl font-bold text-amber-600">₹{totalDue.toLocaleString()}</p></CardContent></Card>
-          <Card className="border-green-200"><CardContent className="p-4 text-center"><p className="text-xs text-muted-foreground">Total Paid</p><p className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</p></CardContent></Card>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <Card><CardContent className="p-4 text-center"><p className="text-xs text-muted-foreground">Total Invoices</p><p className="text-2xl font-bold text-foreground">{invoices.length}</p></CardContent></Card>
+        <Card className="border-amber-200"><CardContent className="p-4 text-center"><p className="text-xs text-muted-foreground">Pending Due</p><p className="text-2xl font-bold text-amber-600">₹{totalDue.toLocaleString()}</p></CardContent></Card>
+        <Card className="border-green-200"><CardContent className="p-4 text-center"><p className="text-xs text-muted-foreground">Total Paid</p><p className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</p></CardContent></Card>
+      </div>
 
-        {/* Pay All Dues Banner */}
-        {totalDue > 0 && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <IndianRupee className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Total Dues: ₹{totalDue.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Across {invoices.filter(i => i.status !== 'paid').length} unpaid invoice(s)</p>
-                </div>
+      {totalDue > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-primary/10">
+                <IndianRupee className="h-5 w-5 text-primary" />
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <div>
+                <p className="font-semibold text-foreground">Total Dues: ₹{totalDue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Across {invoices.filter(i => i.status !== 'paid').length} unpaid invoice(s)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="space-y-3">
-          {invoices.length === 0 ? (
-            <Card><CardContent className="p-8 text-center text-muted-foreground">No invoices yet</CardContent></Card>
-          ) : (
-            invoices.map((inv) => {
-              const balance = inv.total_amount - (inv.paid_amount || 0);
-              return (
-                <Card key={inv.id} className="border-border/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <h3 className="font-semibold text-foreground">{inv.invoice_number}</h3>
-                          <Badge variant={inv.status === "paid" ? "default" : inv.status === "overdue" ? "destructive" : "secondary"} className="text-xs">{inv.status}</Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-x-4 text-xs text-muted-foreground mt-2">
-                          <span>Month: {format(new Date(inv.billing_month), "MMM yyyy")}</span>
-                          <span>Due: {format(new Date(inv.due_date), "MMM d, yyyy")}</span>
-                          {inv.room_rent ? <span>Rent: ₹{inv.room_rent}</span> : null}
-                          {inv.mess_charges ? <span>Mess: ₹{inv.mess_charges}</span> : null}
-                          {inv.electricity_charges ? <span>Elec: ₹{inv.electricity_charges}</span> : null}
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(inv)}>
-                            <Download className="h-3 w-3 mr-1" />
-                            Download
-                          </Button>
-                          {inv.status !== "paid" && (
-                            <Button 
-                              size="sm" 
-                              className="gradient-primary text-white"
-                              onClick={() => {
-                                setPayAmount(balance.toString());
-                                setPayDialog({ open: true, invoice: inv });
-                              }}
-                            >
-                              <CreditCard className="h-3 w-3 mr-1" />
-                              Pay Now
-                            </Button>
-                          )}
-                        </div>
+      <div className="space-y-3">
+        {invoices.length === 0 ? (
+          <Card><CardContent className="p-8 text-center text-muted-foreground">No invoices yet</CardContent></Card>
+        ) : (
+          invoices.map((inv) => {
+            const balance = inv.total_amount - (inv.paid_amount || 0);
+            const isPaying = payingInvoiceId === inv.id;
+            return (
+              <Card key={inv.id} className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <h3 className="font-semibold text-foreground">{inv.invoice_number}</h3>
+                        <Badge variant={inv.status === "paid" ? "default" : inv.status === "overdue" ? "destructive" : "secondary"} className="text-xs">{inv.status}</Badge>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-lg font-bold text-foreground">₹{inv.total_amount.toLocaleString()}</p>
-                        {inv.status === "paid" && inv.payment_date && (
-                          <p className="text-xs text-green-600">Paid on {format(new Date(inv.payment_date), "MMM d")}</p>
-                        )}
-                        {balance > 0 && inv.status !== "paid" && (
-                          <p className="text-xs text-red-500">Due: ₹{balance.toLocaleString()}</p>
+                      <div className="flex flex-wrap gap-x-4 text-xs text-muted-foreground mt-2">
+                        <span>Month: {format(new Date(inv.billing_month), "MMM yyyy")}</span>
+                        <span>Due: {format(new Date(inv.due_date), "MMM d, yyyy")}</span>
+                        {inv.room_rent ? <span>Rent: ₹{inv.room_rent}</span> : null}
+                        {inv.mess_charges ? <span>Mess: ₹{inv.mess_charges}</span> : null}
+                        {inv.electricity_charges ? <span>Elec: ₹{inv.electricity_charges}</span> : null}
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(inv)}>
+                          <Download className="h-3 w-3 mr-1" />
+                          Download
+                        </Button>
+                        {inv.status !== "paid" && (
+                          <Button 
+                            size="sm" 
+                            className="gradient-primary text-white"
+                            onClick={() => handlePayOnline(inv)}
+                            disabled={isPaying}
+                          >
+                            {isPaying ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <CreditCard className="h-3 w-3 mr-1" />
+                            )}
+                            {isPaying ? "Processing..." : "Pay Online"}
+                          </Button>
                         )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg font-bold text-foreground">₹{inv.total_amount.toLocaleString()}</p>
+                      {inv.status === "paid" && inv.payment_date && (
+                        <p className="text-xs text-green-600">Paid on {format(new Date(inv.payment_date), "MMM d")}</p>
+                      )}
+                      {balance > 0 && inv.status !== "paid" && (
+                        <p className="text-xs text-destructive">Due: ₹{balance.toLocaleString()}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
-
-      {/* Pay Now Dialog */}
-      <Dialog open={payDialog.open} onOpenChange={(open) => { if (!open) setPayDialog({ open: false, invoice: null }); }}>
-        <DialogContent className="bg-background">
-          <DialogHeader>
-            <DialogTitle>Pay Invoice</DialogTitle>
-            <DialogDescription>
-              Invoice {payDialog.invoice?.invoice_number}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Amount:</span>
-                <span className="font-medium">₹{(payDialog.invoice?.total_amount || 0).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Already Paid:</span>
-                <span className="text-green-600">₹{(payDialog.invoice?.paid_amount || 0).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <span className="text-muted-foreground">Balance Due:</span>
-                <span className="font-bold text-red-500">
-                  ₹{((payDialog.invoice?.total_amount || 0) - (payDialog.invoice?.paid_amount || 0)).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Payment Amount (₹)</Label>
-              <Input 
-                type="number" 
-                value={payAmount} 
-                onChange={(e) => setPayAmount(e.target.value)} 
-                placeholder="Enter amount..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Payment Method</Label>
-              <Select value={payMethod} onValueChange={setPayMethod}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-popover">
-                  <SelectItem value="upi">UPI</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Payment gateway integration coming soon. Currently records payment for admin verification.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayDialog({ open: false, invoice: null })}>Cancel</Button>
-            <Button 
-              onClick={handlePay} 
-              disabled={!payAmount || recordPayment.isPending}
-              className="gradient-primary text-white"
-            >
-              {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Payment"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
