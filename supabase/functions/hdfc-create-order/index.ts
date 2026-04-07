@@ -1,5 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.49.1/cors";
+import { createSign } from "node:crypto";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const HDFC_MERCHANT_ID = Deno.env.get("HDFC_MERCHANT_ID")!;
 const HDFC_API_KEY = Deno.env.get("HDFC_API_KEY")!;
@@ -10,44 +15,21 @@ const HDFC_PRIVATE_KEY = Deno.env.get("HDFC_PRIVATE_KEY")!;
 // HDFC SmartGateway API base URL
 const HDFC_API_BASE = "https://smartgateway.hdfcbank.com";
 
-async function signJWT(payload: Record<string, unknown>): Promise<string> {
+function signJWT(payload: Record<string, unknown>): string {
   const header = { alg: "RS256", typ: "JWT", kid: HDFC_KEY_UUID };
 
-  const encode = (obj: unknown) =>
-    btoa(JSON.stringify(obj))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+  const toBase64Url = (str: string) =>
+    btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-  const headerB64 = encode(header);
-  const payloadB64 = encode(payload);
+  const headerB64 = toBase64Url(JSON.stringify(header));
+  const payloadB64 = toBase64Url(JSON.stringify(payload));
   const signingInput = `${headerB64}.${payloadB64}`;
 
-  // Import private key
-  const pemBody = HDFC_PRIVATE_KEY
-    .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-    .replace("-----END RSA PRIVATE KEY-----", "")
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\s/g, "");
-
-  const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
-
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(signingInput)
-  );
-
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+  // Use node:crypto which handles both PKCS#1 and PKCS#8 PEM keys
+  const sign = createSign("RSA-SHA256");
+  sign.update(signingInput);
+  const signatureBuffer = sign.sign(HDFC_PRIVATE_KEY);
+  const sigB64 = Buffer.from(signatureBuffer).toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
@@ -76,16 +58,14 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsErr || !claims?.claims) {
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claims.claims.sub as string;
+    const userId = user.id;
 
     // Parse request body
     const { invoice_id, amount, return_url } = await req.json();
