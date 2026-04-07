@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.49.1/cors";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const HDFC_MERCHANT_ID = Deno.env.get("HDFC_MERCHANT_ID")!;
 const HDFC_API_KEY = Deno.env.get("HDFC_API_KEY")!;
