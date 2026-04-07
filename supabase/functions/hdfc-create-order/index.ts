@@ -14,6 +14,44 @@ const HDFC_PRIVATE_KEY = Deno.env.get("HDFC_PRIVATE_KEY")!;
 // HDFC SmartGateway API base URL
 const HDFC_API_BASE = "https://smartgateway.hdfcbank.com";
 
+// Convert PKCS#1 RSA private key to PKCS#8 format
+function pkcs1ToPkcs8(pkcs1Der: Uint8Array): Uint8Array {
+  // PKCS#8 wraps PKCS#1 with an AlgorithmIdentifier for rsaEncryption
+  const rsaOid = new Uint8Array([
+    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+    0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00
+  ]);
+
+  // Wrap the PKCS#1 key in an OCTET STRING
+  const octetString = wrapAsn1(0x04, pkcs1Der);
+  // Build the SEQUENCE: version(0) + algorithmIdentifier + octetString
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+  const inner = new Uint8Array(version.length + rsaOid.length + octetString.length);
+  inner.set(version, 0);
+  inner.set(rsaOid, version.length);
+  inner.set(octetString, version.length + rsaOid.length);
+  return wrapAsn1(0x30, inner);
+}
+
+function wrapAsn1(tag: number, data: Uint8Array): Uint8Array {
+  const len = data.length;
+  let lenBytes: Uint8Array;
+  if (len < 128) {
+    lenBytes = new Uint8Array([len]);
+  } else if (len < 256) {
+    lenBytes = new Uint8Array([0x81, len]);
+  } else if (len < 65536) {
+    lenBytes = new Uint8Array([0x82, (len >> 8) & 0xff, len & 0xff]);
+  } else {
+    lenBytes = new Uint8Array([0x83, (len >> 16) & 0xff, (len >> 8) & 0xff, len & 0xff]);
+  }
+  const result = new Uint8Array(1 + lenBytes.length + data.length);
+  result[0] = tag;
+  result.set(lenBytes, 1);
+  result.set(data, 1 + lenBytes.length);
+  return result;
+}
+
 async function signJWT(payload: Record<string, unknown>): Promise<string> {
   const header = { alg: "RS256", typ: "JWT", kid: HDFC_KEY_UUID };
 
@@ -27,15 +65,17 @@ async function signJWT(payload: Record<string, unknown>): Promise<string> {
   const payloadB64 = encode(payload);
   const signingInput = `${headerB64}.${payloadB64}`;
 
-  // Import private key
+  // Import private key - handle both PKCS#1 and PKCS#8 formats
+  const isPkcs1 = HDFC_PRIVATE_KEY.includes("BEGIN RSA PRIVATE KEY");
   const pemBody = HDFC_PRIVATE_KEY
-    .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-    .replace("-----END RSA PRIVATE KEY-----", "")
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/-----BEGIN (?:RSA )?PRIVATE KEY-----/g, "")
+    .replace(/-----END (?:RSA )?PRIVATE KEY-----/g, "")
     .replace(/\s/g, "");
 
-  const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+  let binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+  if (isPkcs1) {
+    binaryKey = pkcs1ToPkcs8(binaryKey);
+  }
 
   const key = await crypto.subtle.importKey(
     "pkcs8",
