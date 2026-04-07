@@ -1,25 +1,30 @@
 
 
-## Plan: Clear All Financial & Payroll Records
+## Plan: Delete 10 Unwanted Properties
 
-### What Will Be Deleted
+### Properties to Keep
+| Name | ID |
+|---|---|
+| Anuttama | `f95d011a-0699-4fd8-85aa-560c03d3db4d` |
+| Demo 2 | `1c946068-e780-4ae0-896d-bd7f0cadff70` |
 
-| Table | Current Records | Action |
-|---|---|---|
-| invoices | 110 | Delete all |
-| payments | 28 | Delete all |
-| refunds | 2 | Delete all |
-| payroll_records | 5 | Delete all |
-| transactions | 0 | Already empty |
-| journal_entries | 0 | Already empty |
-| accounts | 0 | Already empty |
+### Properties to Delete (10)
+Anuttama (2 duplicates), Agtg, anamol watika residency, Demo1, Kanta girls hostel, lklk (×2), Prabhu ji, prabhu ji residency
 
-### Execution
+### Dependent Data to Clean First
+| Table | Records to Delete |
+|---|---|
+| maintenance_tickets | 3 |
+| policy_settings | 56 |
+| blocks (+ floors, rooms, beds) | 2 blocks + child records |
 
-A single database migration will truncate the data tables in the correct order (payments/refunds first due to `invoice_id` references, then invoices, then payroll_records). This gives you a clean slate for billing, receivables, accounting, and payroll.
+### Execution Order (1 migration)
+1. Delete beds → rooms → floors → blocks for those properties
+2. Delete maintenance_tickets, policy_settings for those properties
+3. Delete the 10 properties themselves
+
+All via a single migration using `DELETE ... WHERE property_id NOT IN (keep_id_1, keep_id_2)`.
 
 ### Files Changed
-- **1 migration** — DELETE statements for `payments`, `refunds`, `invoices`, and `payroll_records`
-
-No code changes needed.
+- **1 migration** — cascading deletes of dependent data then properties
 
