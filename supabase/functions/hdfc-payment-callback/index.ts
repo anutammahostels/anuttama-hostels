@@ -2,7 +2,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.49.1/cors";
 
 const HDFC_PUBLIC_KEY = Deno.env.get("HDFC_PUBLIC_KEY")!;
-const HDFC_API_KEY = Deno.env.get("HDFC_API_KEY")!;
 
 async function verifySignature(payload: string, signature: string): Promise<boolean> {
   try {
