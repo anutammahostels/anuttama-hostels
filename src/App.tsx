@@ -35,6 +35,7 @@ import Accounting from "./pages/Accounting";
 import Admissions from "./pages/Admissions";
 import Receivables from "./pages/Receivables";
 import NotFound from "./pages/NotFound";
+import PaymentStatus from "./pages/PaymentStatus";
 
 // Student pages
 import StudentDashboard from "./pages/student/StudentDashboard";
