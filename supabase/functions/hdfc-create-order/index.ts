@@ -36,11 +36,6 @@ function signJWT(payload: Record<string, unknown>): string {
 
   return `${headerB64}.${payloadB64}.${sigB64}`;
 }
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-
-  return `${headerB64}.${payloadB64}.${sigB64}`;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
