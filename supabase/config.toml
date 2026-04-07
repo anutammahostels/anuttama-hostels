@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.delete-student]
 verify_jwt = false
+
+[functions.hdfc-create-order]
+verify_jwt = false
+
+[functions.hdfc-payment-callback]
+verify_jwt = false

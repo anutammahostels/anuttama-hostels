@@ -35,6 +35,7 @@ import Accounting from "./pages/Accounting";
 import Admissions from "./pages/Admissions";
 import Receivables from "./pages/Receivables";
 import NotFound from "./pages/NotFound";
+import PaymentStatus from "./pages/PaymentStatus";
 
 // Student pages
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -76,6 +77,7 @@ const App = () => (
 
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/payment/status" element={<PaymentStatus />} />
 
             {/* Admin / Staff Dashboard - shared layout */}
             <Route element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden', 'accountant']}><DashboardLayoutRoute /></ProtectedRoute>}>
