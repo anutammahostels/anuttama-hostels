@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { createSign } from "node:crypto";
+import { decode as base64Decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,29 +10,98 @@ const HDFC_MERCHANT_ID = Deno.env.get("HDFC_MERCHANT_ID")!;
 const HDFC_API_KEY = Deno.env.get("HDFC_API_KEY")!;
 const HDFC_CLIENT_ID = Deno.env.get("HDFC_CLIENT_ID")!;
 const HDFC_KEY_UUID = Deno.env.get("HDFC_KEY_UUID")!;
-const HDFC_PRIVATE_KEY = Deno.env.get("HDFC_PRIVATE_KEY")!;
+const HDFC_PRIVATE_KEY_RAW = Deno.env.get("HDFC_PRIVATE_KEY")!;
 
 // HDFC SmartGateway API base URL
 const HDFC_API_BASE = "https://smartgateway.hdfcbank.com";
 
-function signJWT(payload: Record<string, unknown>): string {
+function normalizePem(raw: string): string {
+  // Fix escaped newlines and ensure proper PEM format
+  let pem = raw.replace(/\\n/g, "\n").trim();
+  return pem;
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const normalized = normalizePem(pem);
+  // Remove PEM headers/footers and whitespace
+  const b64 = normalized
+    .replace(/-----BEGIN .*?-----/g, "")
+    .replace(/-----END .*?-----/g, "")
+    .replace(/\s+/g, "");
+  const binary = base64Decode(b64);
+  return binary.buffer;
+}
+
+async function importPrivateKey(pem: string): Promise<CryptoKey> {
+  const keyData = pemToArrayBuffer(pem);
+  
+  // Try PKCS#8 first, then fall back to PKCS#1 by wrapping
+  try {
+    return await crypto.subtle.importKey(
+      "pkcs8",
+      keyData,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+  } catch {
+    // PKCS#1 key — wrap it in PKCS#8 ASN.1 envelope
+    const pkcs1 = new Uint8Array(keyData);
+    // PKCS#8 header for RSA
+    const header = new Uint8Array([
+      0x30, 0x82, 0x00, 0x00, // SEQUENCE (length placeholder)
+      0x02, 0x01, 0x00,       // INTEGER 0 (version)
+      0x30, 0x0d,             // SEQUENCE
+      0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, // OID rsaEncryption
+      0x05, 0x00,             // NULL
+      0x04, 0x82, 0x00, 0x00  // OCTET STRING (length placeholder)
+    ]);
+    
+    const totalLen = header.length - 4 + pkcs1.length;
+    const octetLen = pkcs1.length;
+    
+    const pkcs8 = new Uint8Array(4 + totalLen);
+    pkcs8.set(header);
+    pkcs8.set(pkcs1, header.length);
+    
+    // Fix SEQUENCE length (total - 4 bytes for outer tag+length)
+    const seqLen = totalLen;
+    pkcs8[2] = (seqLen >> 8) & 0xff;
+    pkcs8[3] = seqLen & 0xff;
+    
+    // Fix OCTET STRING length
+    pkcs8[header.length - 2] = (octetLen >> 8) & 0xff;
+    pkcs8[header.length - 1] = octetLen & 0xff;
+    
+    return await crypto.subtle.importKey(
+      "pkcs8",
+      pkcs8.buffer,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+  }
+}
+
+async function signJWT(payload: Record<string, unknown>): Promise<string> {
   const header = { alg: "RS256", typ: "JWT", kid: HDFC_KEY_UUID };
 
-  const toBase64Url = (str: string) =>
-    btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const toBase64Url = (data: Uint8Array | string) => {
+    const str = typeof data === "string" ? btoa(data) : btoa(String.fromCharCode(...data));
+    return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  };
 
   const headerB64 = toBase64Url(JSON.stringify(header));
   const payloadB64 = toBase64Url(JSON.stringify(payload));
   const signingInput = `${headerB64}.${payloadB64}`;
 
-  // Use node:crypto which handles both PKCS#1 and PKCS#8 PEM keys
-  const sign = createSign("RSA-SHA256");
-  sign.update(signingInput);
-  const signatureBuffer = sign.sign(HDFC_PRIVATE_KEY);
-  const sigB64 = Buffer.from(signatureBuffer).toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const key = await importPrivateKey(HDFC_PRIVATE_KEY_RAW);
+  const sigBuffer = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(signingInput)
+  );
+  const sigB64 = toBase64Url(new Uint8Array(sigBuffer));
 
   return `${headerB64}.${payloadB64}.${sigB64}`;
 }
