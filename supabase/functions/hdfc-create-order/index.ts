@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { decode as base64Decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,8 +27,10 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
     .replace(/-----BEGIN .*?-----/g, "")
     .replace(/-----END .*?-----/g, "")
     .replace(/\s+/g, "");
-  const binary = base64Decode(b64);
-  return binary.buffer;
+  const binaryStr = atob(b64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  return bytes.buffer;
 }
 
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
