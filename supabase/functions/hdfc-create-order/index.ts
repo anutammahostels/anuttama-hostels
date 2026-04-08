@@ -1,110 +1,70 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const HDFC_MERCHANT_ID = Deno.env.get("HDFC_MERCHANT_ID")!;
 const HDFC_API_KEY = Deno.env.get("HDFC_API_KEY")!;
 const HDFC_CLIENT_ID = Deno.env.get("HDFC_CLIENT_ID")!;
-const HDFC_KEY_UUID = Deno.env.get("HDFC_KEY_UUID")!;
-const HDFC_PRIVATE_KEY_RAW = Deno.env.get("HDFC_PRIVATE_KEY")!;
 
-// HDFC SmartGateway API base URL
-const HDFC_API_BASE = "https://smartgateway.hdfcbank.com";
+const HDFC_RESELLER_ID = "hdfc_reseller";
+const HDFC_API_BASE = HDFC_CLIENT_ID === "hdfcmaster"
+  ? "https://smartgateway.hdfcuat.bank.in"
+  : "https://smartgateway.hdfc.bank.in";
 
-function normalizePem(raw: string): string {
-  // Fix escaped newlines and ensure proper PEM format
-  let pem = raw.replace(/\\n/g, "\n").trim();
-  return pem;
+function jsonResponse(payload: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
-function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const normalized = normalizePem(pem);
-  // Remove PEM headers/footers and whitespace
-  const b64 = normalized
-    .replace(/-----BEGIN .*?-----/g, "")
-    .replace(/-----END .*?-----/g, "")
-    .replace(/\s+/g, "");
-  const binaryStr = atob(b64);
-  const bytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-  return bytes.buffer;
+function buildBasicAuth(apiKey: string) {
+  return `Basic ${btoa(`${apiKey}:`)}`;
 }
 
-async function importPrivateKey(pem: string): Promise<CryptoKey> {
-  const keyData = pemToArrayBuffer(pem);
-  
-  // Try PKCS#8 first, then fall back to PKCS#1 by wrapping
-  try {
-    return await crypto.subtle.importKey(
-      "pkcs8",
-      keyData,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-  } catch {
-    // PKCS#1 key — wrap it in PKCS#8 ASN.1 envelope
-    const pkcs1 = new Uint8Array(keyData);
-    // PKCS#8 header for RSA
-    const header = new Uint8Array([
-      0x30, 0x82, 0x00, 0x00, // SEQUENCE (length placeholder)
-      0x02, 0x01, 0x00,       // INTEGER 0 (version)
-      0x30, 0x0d,             // SEQUENCE
-      0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, // OID rsaEncryption
-      0x05, 0x00,             // NULL
-      0x04, 0x82, 0x00, 0x00  // OCTET STRING (length placeholder)
-    ]);
-    
-    const totalLen = header.length - 4 + pkcs1.length;
-    const octetLen = pkcs1.length;
-    
-    const pkcs8 = new Uint8Array(4 + totalLen);
-    pkcs8.set(header);
-    pkcs8.set(pkcs1, header.length);
-    
-    // Fix SEQUENCE length (total - 4 bytes for outer tag+length)
-    const seqLen = totalLen;
-    pkcs8[2] = (seqLen >> 8) & 0xff;
-    pkcs8[3] = seqLen & 0xff;
-    
-    // Fix OCTET STRING length
-    pkcs8[header.length - 2] = (octetLen >> 8) & 0xff;
-    pkcs8[header.length - 1] = octetLen & 0xff;
-    
-    return await crypto.subtle.importKey(
-      "pkcs8",
-      pkcs8.buffer,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
+function normalizePhone(phone?: string | null) {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : "";
+}
+
+function splitName(fullName?: string | null) {
+  const trimmed = (fullName ?? "").trim();
+
+  if (!trimmed) {
+    return { firstName: "Student", lastName: "" };
   }
+
+  const parts = trimmed.split(/\s+/);
+  return {
+    firstName: parts[0].slice(0, 50),
+    lastName: parts.slice(1).join(" ").slice(0, 50),
+  };
 }
 
-async function signJWT(payload: Record<string, unknown>): Promise<string> {
-  const header = { alg: "RS256", typ: "JWT", kid: HDFC_KEY_UUID };
+function generateOrderId() {
+  const timePart = Date.now().toString(36).toUpperCase().slice(-8);
+  const randomPart = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+  return `H${timePart}${randomPart}`.slice(0, 20);
+}
 
-  const toBase64Url = (data: Uint8Array | string) => {
-    const str = typeof data === "string" ? btoa(data) : btoa(String.fromCharCode(...data));
-    return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  };
+function getPaymentUrl(response: Record<string, unknown>) {
+  const data = response as Record<string, any>;
 
-  const headerB64 = toBase64Url(JSON.stringify(header));
-  const payloadB64 = toBase64Url(JSON.stringify(payload));
-  const signingInput = `${headerB64}.${payloadB64}`;
-
-  const key = await importPrivateKey(HDFC_PRIVATE_KEY_RAW);
-  const sigBuffer = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(signingInput)
-  );
-  const sigB64 = toBase64Url(new Uint8Array(sigBuffer));
-
-  return `${headerB64}.${payloadB64}.${sigB64}`;
+  return data?.payment_links?.web
+    ?? data?.payment_links?.mobile
+    ?? data?.payment_links?.url
+    ?? data?.payment_link
+    ?? data?.payment_url
+    ?? data?.url
+    ?? data?.links?.web
+    ?? null;
 }
 
 Deno.serve(async (req) => {
@@ -113,193 +73,201 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
+
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: { user }, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const userId = user.id;
+    const {
+      data: { user },
+      error: userError,
+    } = await userClient.auth.getUser();
 
-    // Parse request body
-    const { invoice_id, amount, return_url } = await req.json();
-    if (!invoice_id || !amount) {
-      return new Response(
-        JSON.stringify({ error: "invoice_id and amount are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (userError || !user) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    // Get admin client for DB operations
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const requestBody = await req.json().catch(() => null);
+    const invoiceId = typeof requestBody?.invoice_id === "string" ? requestBody.invoice_id : "";
+    const requestedAmount = Number(requestBody?.amount);
 
-    // Verify student owns this invoice
-    const { data: student } = await adminClient
+    if (!invoiceId || !Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      return jsonResponse({ error: "invoice_id and a valid amount are required" }, 400);
+    }
+
+    const fallbackReturnUrl = `${req.headers.get("origin") ?? ""}/payment/status`;
+    const rawReturnUrl = typeof requestBody?.return_url === "string" && requestBody.return_url
+      ? requestBody.return_url
+      : fallbackReturnUrl;
+
+    let returnUrl = rawReturnUrl;
+    try {
+      const parsedReturnUrl = new URL(rawReturnUrl);
+      parsedReturnUrl.search = "";
+      parsedReturnUrl.hash = "";
+      returnUrl = parsedReturnUrl.toString();
+    } catch {
+      return jsonResponse({ error: "Invalid return_url" }, 400);
+    }
+
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const { data: student, error: studentError } = await adminClient
       .from("students")
-      .select("id")
-      .eq("user_id", userId)
-      .single();
+      .select("id, roll_number")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (!student) {
-      return new Response(JSON.stringify({ error: "Student not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (studentError || !student) {
+      return jsonResponse({ error: "Student not found" }, 404);
     }
 
-    const { data: invoice } = await adminClient
+    const { data: invoice, error: invoiceError } = await adminClient
       .from("invoices")
-      .select("*")
-      .eq("id", invoice_id)
+      .select("id, invoice_number, total_amount, paid_amount, student_id")
+      .eq("id", invoiceId)
       .eq("student_id", student.id)
-      .single();
+      .maybeSingle();
 
-    if (!invoice) {
-      return new Response(JSON.stringify({ error: "Invoice not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (invoiceError || !invoice) {
+      return jsonResponse({ error: "Invoice not found" }, 404);
     }
 
-    const balance = invoice.total_amount - (invoice.paid_amount || 0);
-    if (amount > balance || amount <= 0) {
-      return new Response(
-        JSON.stringify({ error: `Invalid amount. Balance due: ${balance}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const balance = Number(invoice.total_amount) - Number(invoice.paid_amount || 0);
+    if (requestedAmount > balance || requestedAmount <= 0) {
+      return jsonResponse({ error: `Invalid amount. Balance due: ${balance}` }, 400);
     }
 
-    // Generate unique order_id
-    const orderId = `ORD-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-
-    // Get student profile for customer info
     const { data: profile } = await adminClient
       .from("profiles")
       .select("full_name, email, phone")
-      .eq("id", userId)
-      .single();
+      .eq("id", user.id)
+      .maybeSingle();
 
-    // Build HDFC SmartGateway session payload
-    const sessionPayload = {
+    const metadataFullName = typeof user.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name
+      : "";
+
+    const customerEmail = (profile?.email ?? user.email ?? "").trim();
+    const customerPhone = normalizePhone(profile?.phone ?? user.phone ?? "");
+
+    if (!customerEmail && !customerPhone) {
+      return jsonResponse({ error: "Student email or phone number is required to initiate payment" }, 400);
+    }
+
+    const { firstName, lastName } = splitName(profile?.full_name ?? metadataFullName);
+
+    const { data: property, error: propertyError } = await adminClient
+      .from("properties")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (propertyError || !property?.id) {
+      return jsonResponse({ error: "Property configuration not found" }, 500);
+    }
+
+    const orderId = generateOrderId();
+
+    const sessionPayload: Record<string, string> = {
       order_id: orderId,
-      amount: amount.toFixed(2),
+      amount: requestedAmount.toFixed(2),
       customer_id: student.id,
-      customer_email: profile?.email || "",
-      customer_phone: profile?.phone || "",
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
       payment_page_client_id: HDFC_CLIENT_ID,
       action: "paymentPage",
-      return_url: return_url || `${req.headers.get("origin")}/payment/status`,
+      currency: "INR",
+      return_url: returnUrl,
+      description: `Fee payment for invoice ${invoice.invoice_number}`,
+      first_name: firstName,
     };
 
-    // Sign the payload as JWT
-    const token = await signJWT(sessionPayload);
+    if (lastName) {
+      sessionPayload.last_name = lastName;
+    }
 
-    // Call HDFC SmartGateway session API
     const hdfcResponse = await fetch(`${HDFC_API_BASE}/session`, {
       method: "POST",
       headers: {
+        Authorization: buildBasicAuth(HDFC_API_KEY),
         "Content-Type": "application/json",
         "x-merchantid": HDFC_MERCHANT_ID,
         "x-customerid": student.id,
-        "x-api-key": HDFC_API_KEY,
-        version: "2025-02-12",
+        "x-resellerid": HDFC_RESELLER_ID,
       },
-      body: JSON.stringify({
-        order_id: orderId,
-        amount: amount.toFixed(2),
-        customer_id: student.id,
-        customer_email: profile?.email || "",
-        customer_phone: profile?.phone || "",
-        payment_page_client_id: HDFC_CLIENT_ID,
-        action: "paymentPage",
-        return_url: return_url || `${req.headers.get("origin")}/payment/status`,
-        request_id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-      }),
+      body: JSON.stringify(sessionPayload),
     });
 
-    let hdfcData: Record<string, unknown>;
+    const rawGatewayResponse = await hdfcResponse.text();
+    let hdfcData: Record<string, unknown> = {};
+
     try {
-      hdfcData = await hdfcResponse.json();
+      hdfcData = rawGatewayResponse ? JSON.parse(rawGatewayResponse) : {};
     } catch {
-      const text = await hdfcResponse.text();
-      console.error("HDFC non-JSON response:", text);
-      return new Response(
-        JSON.stringify({ error: "Gateway returned invalid response" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      hdfcData = { raw_response: rawGatewayResponse };
     }
 
     if (!hdfcResponse.ok) {
-      console.error("HDFC error:", JSON.stringify(hdfcData));
-      return new Response(
-        JSON.stringify({ error: "Payment gateway error", details: hdfcData }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error("HDFC error:", rawGatewayResponse);
+      return jsonResponse({ error: "Payment gateway error", details: hdfcData }, 502);
     }
 
-    // Insert pending payment record
-    await adminClient.from("payments").insert({
+    const paymentUrl = getPaymentUrl(hdfcData);
+    if (!paymentUrl) {
+      console.error("HDFC missing payment URL:", rawGatewayResponse);
+      return jsonResponse({
+        error: "Payment gateway error",
+        details: {
+          message: "Missing payment URL in gateway response",
+          gateway_response: hdfcData,
+        },
+      }, 502);
+    }
+
+    const { error: paymentInsertError } = await adminClient.from("payments").insert({
       invoice_id: invoice.id,
       student_id: student.id,
-      property_id: (invoice as any).property_id || "",
-      amount,
+      property_id: property.id,
+      amount: requestedAmount,
       payment_method: "online",
       status: "pending",
       transaction_id: orderId,
+      transaction_reference: null,
       gateway_response: hdfcData,
       payment_label: `HDFC-${orderId}`,
-      recorded_by: userId,
+      recorded_by: user.id,
     });
 
-    return new Response(
-      JSON.stringify({
-        order_id: orderId,
-        payment_links: hdfcData,
-        sdk_payload: {
-          requestId: crypto.randomUUID(),
-          service: "in.juspay.hyperpay",
-          payload: {
-            clientId: HDFC_CLIENT_ID,
-            amount: amount.toFixed(2),
-            merchantId: HDFC_MERCHANT_ID,
-            orderId,
-            customerId: student.id,
-            customerEmail: profile?.email || "",
-            customerPhone: profile?.phone || "",
-            orderDetails: JSON.stringify(sessionPayload),
-            signature: token,
-            "merchant_key_id": HDFC_KEY_UUID,
-            environment: "production",
-          },
+    if (paymentInsertError) {
+      console.error("Failed to create payment record:", paymentInsertError);
+      return jsonResponse({ error: "Failed to create pending payment" }, 500);
+    }
+
+    const nestedPaymentLinks = typeof (hdfcData as Record<string, any>).payment_links === "object"
+      && (hdfcData as Record<string, any>).payment_links !== null
+      ? (hdfcData as Record<string, any>).payment_links
+      : {};
+
+    return jsonResponse({
+      order_id: orderId,
+      payment_links: {
+        ...hdfcData,
+        url: paymentUrl,
+        payment_links: {
+          ...nestedPaymentLinks,
+          web: nestedPaymentLinks.web ?? paymentUrl,
         },
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err) {
-    console.error("hdfc-create-order error:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      },
+    });
+  } catch (error) {
+    console.error("hdfc-create-order error:", error);
+    return jsonResponse({ error: "Internal server error" }, 500);
   }
 });
