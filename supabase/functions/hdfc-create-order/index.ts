@@ -1,4 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { Buffer } from "node:buffer";
+import {
+  constants,
+  createCipheriv,
+  createDecipheriv,
+  createPrivateKey,
+  createPublicKey,
+  createSign,
+  createVerify,
+  privateDecrypt,
+  publicEncrypt,
+} from "node:crypto";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,23 +22,28 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const HDFC_MERCHANT_ID = Deno.env.get("HDFC_MERCHANT_ID")!;
-const HDFC_API_KEY = Deno.env.get("HDFC_API_KEY")!;
 const HDFC_CLIENT_ID = Deno.env.get("HDFC_CLIENT_ID")!;
+const HDFC_KEY_UUID = Deno.env.get("HDFC_KEY_UUID")!;
+const HDFC_PRIVATE_KEY = Deno.env.get("HDFC_PRIVATE_KEY")!;
+const HDFC_PUBLIC_KEY = Deno.env.get("HDFC_PUBLIC_KEY")!;
 
 const HDFC_RESELLER_ID = "hdfc_reseller";
 const HDFC_API_BASE = HDFC_CLIENT_ID === "hdfcmaster"
   ? "https://smartgateway.hdfcuat.bank.in"
   : "https://smartgateway.hdfc.bank.in";
 
+const merchantPrivateKey = createPrivateKey(normalizePem(HDFC_PRIVATE_KEY));
+const bankPublicKey = createPublicKey(normalizePem(HDFC_PUBLIC_KEY));
+
+function normalizePem(raw: string) {
+  return raw.replace(/\\n/g, "\n").trim();
+}
+
 function jsonResponse(payload: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-function buildBasicAuth(apiKey: string) {
-  return `Basic ${btoa(`${apiKey}:`)}`;
 }
 
 function normalizePhone(phone?: string | null) {
@@ -67,6 +84,147 @@ function getPaymentUrl(response: Record<string, unknown>) {
     ?? null;
 }
 
+function base64UrlEncode(input: string | Uint8Array | Buffer) {
+  const buffer = typeof input === "string" ? Buffer.from(input, "utf8") : Buffer.from(input);
+  return buffer.toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlDecode(input: string) {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+  return Buffer.from(`${normalized}${padding}`, "base64");
+}
+
+function isJwePayload(value: unknown): value is {
+  header: string;
+  encryptedKey: string;
+  iv: string;
+  encryptedPayload: string;
+  tag: string;
+} {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return ["header", "encryptedKey", "iv", "encryptedPayload", "tag"].every(
+    (key) => typeof payload[key] === "string",
+  );
+}
+
+function isJwsPayload(value: unknown): value is {
+  header: string;
+  payload: string;
+  signature: string;
+} {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return ["header", "payload", "signature"].every(
+    (key) => typeof payload[key] === "string",
+  );
+}
+
+function signPayload(payload: Record<string, string>) {
+  const encodedHeader = base64UrlEncode(JSON.stringify({ alg: "RS256", kid: HDFC_KEY_UUID }));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+  const signer = createSign("RSA-SHA256");
+  signer.update(signingInput);
+  signer.end();
+
+  return {
+    header: encodedHeader,
+    payload: encodedPayload,
+    signature: base64UrlEncode(signer.sign(merchantPrivateKey)),
+  };
+}
+
+function encryptSignedPayload(signedPayload: { header: string; payload: string; signature: string }) {
+  const protectedHeader = base64UrlEncode(JSON.stringify({
+    alg: "RSA-OAEP-256",
+    enc: "A256GCM",
+    cty: "JWT",
+    kid: HDFC_KEY_UUID,
+  }));
+
+  const cek = crypto.getRandomValues(new Uint8Array(32));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = createCipheriv("aes-256-gcm", cek, iv);
+  cipher.setAAD(Buffer.from(protectedHeader, "utf8"));
+
+  const encryptedPayload = Buffer.concat([
+    cipher.update(Buffer.from(JSON.stringify(signedPayload), "utf8")),
+    cipher.final(),
+  ]);
+
+  const encryptedKey = publicEncrypt(
+    {
+      key: bankPublicKey,
+      padding: constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    Buffer.from(cek),
+  );
+
+  return {
+    header: protectedHeader,
+    encryptedKey: base64UrlEncode(encryptedKey),
+    iv: base64UrlEncode(iv),
+    encryptedPayload: base64UrlEncode(encryptedPayload),
+    tag: base64UrlEncode(cipher.getAuthTag()),
+  };
+}
+
+function verifyAndDecodeJws(payload: unknown) {
+  if (!isJwsPayload(payload)) {
+    throw new Error("Invalid gateway response payload");
+  }
+
+  const verifier = createVerify("RSA-SHA256");
+  verifier.update(`${payload.header}.${payload.payload}`);
+  verifier.end();
+
+  const isValid = verifier.verify(bankPublicKey, base64UrlDecode(payload.signature));
+  if (!isValid) {
+    throw new Error("Unable to verify gateway response signature");
+  }
+
+  return JSON.parse(base64UrlDecode(payload.payload).toString("utf8")) as Record<string, unknown>;
+}
+
+function decodeGatewayResponse(payload: unknown) {
+  if (!isJwePayload(payload)) {
+    return payload as Record<string, unknown>;
+  }
+
+  const cek = privateDecrypt(
+    {
+      key: merchantPrivateKey,
+      padding: constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    base64UrlDecode(payload.encryptedKey),
+  );
+
+  const decipher = createDecipheriv("aes-256-gcm", cek, base64UrlDecode(payload.iv));
+  decipher.setAAD(Buffer.from(payload.header, "utf8"));
+  decipher.setAuthTag(base64UrlDecode(payload.tag));
+
+  const decryptedPayload = Buffer.concat([
+    decipher.update(base64UrlDecode(payload.encryptedPayload)),
+    decipher.final(),
+  ]).toString("utf8");
+
+  return verifyAndDecodeJws(JSON.parse(decryptedPayload));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -92,7 +250,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const requestBody = await req.json().catch(() => null);
+    const requestBody = await req.json().catch(() => null) as Record<string, unknown> | null;
     const invoiceId = typeof requestBody?.invoice_id === "string" ? requestBody.invoice_id : "";
     const requestedAmount = Number(requestBody?.amount);
 
@@ -174,7 +332,6 @@ Deno.serve(async (req) => {
     }
 
     const orderId = generateOrderId();
-
     const sessionPayload: Record<string, string> = {
       order_id: orderId,
       amount: requestedAmount.toFixed(2),
@@ -193,25 +350,39 @@ Deno.serve(async (req) => {
       sessionPayload.last_name = lastName;
     }
 
-    const hdfcResponse = await fetch(`${HDFC_API_BASE}/session`, {
+    const signedPayload = signPayload(sessionPayload);
+    const encryptedPayload = encryptSignedPayload(signedPayload);
+
+    const hdfcResponse = await fetch(`${HDFC_API_BASE}/v4/session`, {
       method: "POST",
       headers: {
-        Authorization: buildBasicAuth(HDFC_API_KEY),
         "Content-Type": "application/json",
         "x-merchantid": HDFC_MERCHANT_ID,
         "x-customerid": student.id,
         "x-resellerid": HDFC_RESELLER_ID,
       },
-      body: JSON.stringify(sessionPayload),
+      body: JSON.stringify(encryptedPayload),
     });
 
     const rawGatewayResponse = await hdfcResponse.text();
-    let hdfcData: Record<string, unknown> = {};
+    let parsedGatewayResponse: unknown = {};
 
     try {
-      hdfcData = rawGatewayResponse ? JSON.parse(rawGatewayResponse) : {};
+      parsedGatewayResponse = rawGatewayResponse ? JSON.parse(rawGatewayResponse) : {};
     } catch {
-      hdfcData = { raw_response: rawGatewayResponse };
+      parsedGatewayResponse = { raw_response: rawGatewayResponse };
+    }
+
+    let hdfcData: Record<string, unknown>;
+    try {
+      hdfcData = decodeGatewayResponse(parsedGatewayResponse);
+    } catch (decodeError) {
+      if (!hdfcResponse.ok) {
+        hdfcData = parsedGatewayResponse as Record<string, unknown>;
+      } else {
+        console.error("Failed to decode HDFC response:", decodeError);
+        return jsonResponse({ error: "Payment gateway error", details: { message: "Unable to decode gateway response" } }, 502);
+      }
     }
 
     if (!hdfcResponse.ok) {
