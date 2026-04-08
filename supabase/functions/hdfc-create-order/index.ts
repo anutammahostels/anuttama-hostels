@@ -27,8 +27,10 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
     .replace(/-----BEGIN .*?-----/g, "")
     .replace(/-----END .*?-----/g, "")
     .replace(/\s+/g, "");
-  const binary = decodeBase64(b64);
-  return binary.buffer;
+  const binaryStr = atob(b64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  return bytes.buffer;
 }
 
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
