@@ -28,7 +28,7 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
     .replace(/-----BEGIN .*?-----/g, "")
     .replace(/-----END .*?-----/g, "")
     .replace(/\s+/g, "");
-  const binary = base64Decode(b64);
+  const binary = decodeBase64(b64);
   return binary.buffer;
 }
 
