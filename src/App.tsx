@@ -36,6 +36,7 @@ import Admissions from "./pages/Admissions";
 import Receivables from "./pages/Receivables";
 import NotFound from "./pages/NotFound";
 import PaymentStatus from "./pages/PaymentStatus";
+import PaymentCallback from "./pages/PaymentCallback";
 
 // Student pages
 import StudentDashboard from "./pages/student/StudentDashboard";
