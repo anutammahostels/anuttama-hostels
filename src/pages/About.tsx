@@ -220,20 +220,6 @@ const About = () => {
         </div>
       </section>
 
-      {/* Powered By Section */}
-      <section className="py-12 md:py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center p-4 md:p-8 rounded-xl md:rounded-2xl bg-card border border-border max-w-2xl mx-auto">
-            <p className="text-xs md:text-sm text-muted-foreground mb-2">Powered by</p>
-            <h3 className="text-lg md:text-2xl font-bold text-foreground mb-2">
-              Jeevijay Technologies Private Limited
-            </h3>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              A leading tech and marketing firm specializing in AI, Automations, and Digital Solutions
-            </p>
-          </div>
-        </div>
-      </section>
 
       {/* Why Choose Us */}
       <section className="py-12 md:py-20">

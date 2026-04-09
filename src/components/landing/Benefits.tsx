@@ -5,11 +5,8 @@ import {
   ShieldCheck, 
   Smartphone, 
   HeartHandshake,
-  ArrowRight,
   Sparkles
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import studentsImage from "@/assets/students-community.jpg";
 import propertyManagerImage from "@/assets/property-manager.jpg";
 
@@ -163,17 +160,6 @@ export const Benefits = () => {
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="text-center mt-10 lg:mt-16">
-          <Link to="/pricing">
-            <Button size="lg" className="gap-2 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 text-sm lg:text-base px-5 lg:px-8 py-4 lg:py-6">
-              View Pricing <ArrowRight className="h-3 w-3 lg:h-4 lg:w-4" />
-            </Button>
-          </Link>
-          <p className="text-xs lg:text-sm text-muted-foreground mt-3 lg:mt-4">
-            Starting at just ₹2/student/day
-          </p>
-        </div>
       </div>
     </section>
   );

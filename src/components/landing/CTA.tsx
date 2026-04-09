@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Zap, Clock, Shield, IndianRupee, Star } from "lucide-react";
+import { ArrowRight, Zap, Shield, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import campusImage from "@/assets/campus-aerial.jpg";
 
@@ -35,13 +35,6 @@ export const CTA = () => {
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 lg:px-5 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-6 lg:mb-8 animate-fade-in">
-            <IndianRupee className="h-3 w-3 lg:h-4 lg:w-4 text-secondary" />
-            <span className="text-xs lg:text-sm font-medium text-white/80">
-              Starting at just ₹2/student/day
-            </span>
-            <Sparkles className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-400" />
-          </div>
 
           <h2 className="text-2xl lg:text-6xl font-bold text-white mb-4 lg:mb-6 leading-tight">
             Ready to Transform Your
@@ -57,7 +50,6 @@ export const CTA = () => {
           {/* Benefits grid */}
           <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-6 lg:mb-10">
             {[
-              { icon: IndianRupee, label: "₹2/Student/Day", desc: "All features" },
               { icon: Shield, label: "Secure & Reliable", desc: "99.9% uptime" },
               { icon: Zap, label: "15 min Setup", desc: "Start instantly" },
             ].map((benefit) => (
