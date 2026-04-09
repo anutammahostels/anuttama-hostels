@@ -10,6 +10,7 @@ export default function PaymentCallback() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "SUCCESS" | "FAILED" | "UNKNOWN">("loading");
   const [details, setDetails] = useState<Record<string, any>>({});
+  const [countdown, setCountdown] = useState(5);
 
   const orderId = searchParams.get("order_id") || "";
 
@@ -50,6 +51,24 @@ export default function PaymentCallback() {
     check();
   }, [orderId]);
 
+  // Auto-redirect countdown once status is resolved
+  useEffect(() => {
+    if (status === "loading") return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate("/student/invoices");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [status, navigate]);
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -72,6 +91,7 @@ export default function PaymentCallback() {
                 {details.txn_id && <p>Transaction ID: {details.txn_id}</p>}
                 <p>Order ID: {orderId}</p>
               </div>
+              <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back to Invoices
               </Button>
@@ -80,10 +100,11 @@ export default function PaymentCallback() {
 
           {status === "FAILED" && (
             <>
-              <XCircle className="h-16 w-16 text-red-500 mx-auto" />
+              <XCircle className="h-16 w-16 text-destructive mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Payment Failed</h2>
               <p className="text-muted-foreground">Your payment could not be processed. Please try again.</p>
               <p className="text-xs text-muted-foreground">Order ID: {orderId}</p>
+              <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back to Invoices
               </Button>
@@ -97,6 +118,7 @@ export default function PaymentCallback() {
               <p className="text-muted-foreground">
                 We couldn't determine the status. If money was deducted, it will be reflected within 24 hours.
               </p>
+              <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back to Invoices
               </Button>
