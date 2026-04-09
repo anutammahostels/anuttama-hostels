@@ -5,9 +5,9 @@ import {
   ShieldCheck, 
   Smartphone, 
   HeartHandshake,
+  Sparkles
 } from "lucide-react";
 import studentsImage from "@/assets/students-community.jpg";
-import propertyManagerImage from "@/assets/property-manager.jpg";
 import propertyManagerImage from "@/assets/property-manager.jpg";
 
 const benefits = [
