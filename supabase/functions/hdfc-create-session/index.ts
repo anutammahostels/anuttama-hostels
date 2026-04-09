@@ -118,8 +118,7 @@ Deno.serve(async (req) => {
 
     console.log("HDFC session payload:", JSON.stringify(sessionPayload));
 
-    // Basic Auth: base64(API_KEY) — no colon, per HDFC guide
-    const basicAuth = btoa(API_KEY);
+    const basicAuth = btoa(API_KEY + ":");
     const RESELLER_ID = Deno.env.get("HDFC_RESELLER_ID") || "hdfc_reseller";
 
     const hdfcRes = await fetch(`${BASE_URL}/session`, {
