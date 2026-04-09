@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
         ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfc.bank.in"
         : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in";
 
-    const basicAuth = btoa(`${API_KEY}:`);
+    const basicAuth = btoa(API_KEY);
 
     const res = await fetch(`${BASE_URL}/orders/${order_id}`, {
       method: "GET",
