@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+
 
 export async function createPaymentSession(invoiceId: string, amount: number, returnUrl: string) {
   const { data, error } = await supabase.functions.invoke("hdfc-create-session", {

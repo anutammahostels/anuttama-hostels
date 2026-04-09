@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+// hdfc-order-status: GET order status from HDFC gateway
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
