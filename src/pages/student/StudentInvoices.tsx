@@ -51,24 +51,22 @@ export default function StudentInvoices() {
     setPayingInvoiceId(invoice.id);
 
     try {
-      const { data, error } = await supabase.functions.invoke("hdfc-create-order", {
+      const { data, error } = await supabase.functions.invoke("hdfc-create-session", {
         body: {
           invoice_id: invoice.id,
           amount: balance,
-          return_url: `${window.location.origin}/payment/status`,
+          return_url: `${window.location.origin}/payment/callback`,
         },
       });
 
       if (error) throw error;
 
-      if (data?.payment_links?.payment_links?.web) {
-        // Redirect to HDFC hosted checkout
-        window.location.href = data.payment_links.payment_links.web;
-      } else if (data?.payment_links?.url) {
-        window.location.href = data.payment_links.url;
+      if (data?.payment_url) {
+        window.location.href = data.payment_url;
+      } else if (data?.payment_links?.web) {
+        window.location.href = data.payment_links.web;
       } else if (data?.order_id) {
-        // Fallback: navigate to status page with order ID for polling
-        window.location.href = `/payment/status?order_id=${data.order_id}`;
+        window.location.href = `/payment/callback?order_id=${data.order_id}`;
       } else {
         throw new Error("No payment URL received from gateway");
       }

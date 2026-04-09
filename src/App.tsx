@@ -79,6 +79,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/payment/status" element={<PaymentStatus />} />
+            <Route path="/payment/callback" element={<PaymentCallback />} />
 
             {/* Admin / Staff Dashboard - shared layout */}
             <Route element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden', 'accountant']}><DashboardLayoutRoute /></ProtectedRoute>}>

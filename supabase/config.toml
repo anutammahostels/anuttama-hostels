@@ -14,3 +14,15 @@ verify_jwt = false
 
 [functions.hdfc-payment-callback]
 verify_jwt = false
+
+[functions.hdfc-create-session]
+verify_jwt = false
+
+[functions.hdfc-order-status]
+verify_jwt = false
+
+[functions.hdfc-webhook]
+verify_jwt = false
+
+[functions.hdfc-refund]
+verify_jwt = false

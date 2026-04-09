@@ -33,49 +33,46 @@ export default function PaymentStatus() {
     const maxAttempts = 15;
 
     const poll = async () => {
+      try {
+        // First try server-side order status from HDFC
+        const orderResult = await getOrderStatus(orderId);
+        if (orderResult.status === "SUCCESS") {
+          setResult({
+            status: "completed",
+            orderId,
+            amount: orderResult.amount,
+            transactionRef: orderResult.txn_id || "",
+          });
+          return;
+        } else if (orderResult.status === "FAILED") {
+          setResult({ status: "failed", orderId, amount: orderResult.amount });
+          return;
+        }
+      } catch {
+        // Fallback to DB polling
+      }
+
+      // DB polling fallback
       const { data: payment } = await supabase
         .from("payments")
         .select("*, invoices(invoice_number)")
         .eq("transaction_id", orderId)
         .single();
 
-      if (payment) {
-        if (payment.status === "completed" || payment.status === "failed") {
-          setResult({
-            status: payment.status as "completed" | "failed",
-            orderId,
-            amount: payment.amount,
-            invoiceNumber: (payment.invoices as any)?.invoice_number || "",
-            transactionRef: payment.transaction_reference || "",
-          });
-          return;
-        }
+      if (payment && (payment.status === "completed" || payment.status === "failed")) {
+        setResult({
+          status: payment.status as "completed" | "failed",
+          orderId,
+          amount: payment.amount,
+          invoiceNumber: (payment.invoices as any)?.invoice_number || "",
+          transactionRef: payment.transaction_reference || "",
+        });
+        return;
       }
 
       attempts++;
       if (attempts >= maxAttempts) {
-        // Still pending after polling — check one more time
-        const { data: finalPayment } = await supabase
-          .from("payments")
-          .select("*, invoices(invoice_number)")
-          .eq("transaction_id", orderId)
-          .single();
-
-        if (finalPayment && finalPayment.status !== "pending") {
-          setResult({
-            status: finalPayment.status as "completed" | "failed",
-            orderId,
-            amount: finalPayment.amount,
-            invoiceNumber: (finalPayment.invoices as any)?.invoice_number || "",
-            transactionRef: finalPayment.transaction_reference || "",
-          });
-        } else {
-          setResult({
-            status: "not_found",
-            orderId,
-            amount: finalPayment?.amount,
-          });
-        }
+        setResult({ status: "not_found", orderId, amount: payment?.amount });
         return;
       }
 
