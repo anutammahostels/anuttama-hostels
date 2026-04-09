@@ -435,15 +435,23 @@ Deno.serve(async (req) => {
     const encrypted = await encryptSignedPayload(signed, bankEncryptKey, HDFC_KEY_UUID);
 
     // Call HDFC /v4/session
+    // Try both with and without API key - log for debugging
     const apiKeyB64 = btoa(HDFC_API_KEY);
+    console.log("HDFC request headers:", JSON.stringify({
+      "x-merchantid": HDFC_MERCHANT_ID,
+      "x-customerid": student.id,
+      "has_api_key": !!HDFC_API_KEY,
+      "api_base": HDFC_API_BASE,
+      "key_uuid": HDFC_KEY_UUID,
+    }));
+    console.log("Encrypted payload keys:", Object.keys(encrypted));
+
     const hdfcRes = await fetch(`${HDFC_API_BASE}/v4/session`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Basic ${apiKeyB64}`,
         "x-merchantid": HDFC_MERCHANT_ID,
         "x-customerid": student.id,
-        "x-resellerid": "hdfc_reseller",
       },
       body: JSON.stringify(encrypted),
     });
