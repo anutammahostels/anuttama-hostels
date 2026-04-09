@@ -435,7 +435,7 @@ Deno.serve(async (req) => {
     const encrypted = await encryptSignedPayload(signed, bankEncryptKey, HDFC_KEY_UUID);
 
     // Call HDFC /v4/session with Basic Auth + JWE payload
-    const apiKeyB64 = btoa(HDFC_API_KEY);
+    const apiKeyB64 = btoa(`${HDFC_API_KEY}:`);
     console.log("HDFC request:", JSON.stringify({
       "x-merchantid": HDFC_MERCHANT_ID,
       "x-customerid": student.id,
