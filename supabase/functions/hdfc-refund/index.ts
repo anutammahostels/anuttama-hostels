@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
         ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfc.bank.in"
         : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in";
 
-    const basicAuth = btoa(`${API_KEY}:`);
+    const basicAuth = btoa(API_KEY);
     const reqId = unique_request_id || `REF${Date.now()}`.substring(0, 21);
 
     // HDFC refund uses form-urlencoded
