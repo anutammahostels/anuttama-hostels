@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Receipt, Download, IndianRupee, Loader2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { createPaymentSession, openPaymentCheckout } from "@/lib/hdfc";
 
 export default function StudentInvoices() {
   const { user } = useAuth();
@@ -48,29 +49,24 @@ export default function StudentInvoices() {
     const balance = invoice.total_amount - (invoice.paid_amount || 0);
     if (balance <= 0) return;
 
+    const checkoutWindow = window.self !== window.top ? window.open("", "_blank") : null;
+    if (checkoutWindow) {
+      checkoutWindow.document.title = "Redirecting to payment";
+      checkoutWindow.document.body.innerHTML = "<p style='font-family: sans-serif; padding: 24px;'>Redirecting to the secure payment page…</p>";
+    }
+
     setPayingInvoiceId(invoice.id);
 
     try {
-      const { data, error } = await supabase.functions.invoke("hdfc-create-session", {
-        body: {
-          invoice_id: invoice.id,
-          amount: balance,
-          return_url: `${window.location.origin}/payment/callback`,
-        },
-      });
+      const session = await createPaymentSession(
+        invoice.id,
+        balance,
+        `${window.location.origin}/payment/callback`
+      );
 
-      if (error) throw error;
-
-      if (data?.payment_url) {
-        window.location.href = data.payment_url;
-      } else if (data?.payment_links?.web) {
-        window.location.href = data.payment_links.web;
-      } else if (data?.order_id) {
-        window.location.href = `/payment/callback?order_id=${data.order_id}`;
-      } else {
-        throw new Error("No payment URL received from gateway");
-      }
+      openPaymentCheckout(session, checkoutWindow);
     } catch (err: any) {
+      if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
       console.error("Payment initiation failed:", err);
       toast({
         title: "Payment Failed",
