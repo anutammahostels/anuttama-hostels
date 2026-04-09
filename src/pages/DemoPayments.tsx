@@ -183,7 +183,7 @@ const PaymentGateway = ({
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
               <p className="text-[10px] text-center text-muted-foreground">
-                Powered by Hostylia Payments • Secured by Jeevijay Technologies
+                Powered by Hostylia Payments
               </p>
             </motion.div>
           )}
@@ -291,7 +291,7 @@ const PaymentGateway = ({
                 <div className="text-center space-y-1">
                   <p className="text-[10px] text-muted-foreground">Payment via {method.toUpperCase()}</p>
                   <p className="text-[10px] text-muted-foreground">{format(new Date(), "MMMM d, yyyy 'at' h:mm a")}</p>
-                  <p className="text-[10px] text-muted-foreground">Powered by Jeevijay Technologies Pvt. Ltd.</p>
+                  <p className="text-[10px] text-muted-foreground">Powered by Hostylia Payments</p>
                 </div>
               </div>
               <div className="flex gap-2">

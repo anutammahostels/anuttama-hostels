@@ -5,12 +5,9 @@ import {
   ShieldCheck, 
   Smartphone, 
   HeartHandshake,
-  ArrowRight,
-  Sparkles
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import studentsImage from "@/assets/students-community.jpg";
+import propertyManagerImage from "@/assets/property-manager.jpg";
 import propertyManagerImage from "@/assets/property-manager.jpg";
 
 const benefits = [

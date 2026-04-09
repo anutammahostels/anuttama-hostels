@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Zap, Clock, Shield, IndianRupee, Star } from "lucide-react";
+import { ArrowRight, Zap, Shield, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import campusImage from "@/assets/campus-aerial.jpg";
 
