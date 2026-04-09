@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { getOrderStatus } from "@/lib/hdfc";
 import { CheckCircle, XCircle, Loader2, ArrowLeft } from "lucide-react";
 
 type PaymentResult = {
