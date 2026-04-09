@@ -129,6 +129,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
         "x-merchantid": MERCHANT_ID,
         "x-customerid": sessionPayload.customer_id as string,
+        "x-resellerid": RESELLER_ID,
       },
       body: JSON.stringify(sessionPayload),
     });
