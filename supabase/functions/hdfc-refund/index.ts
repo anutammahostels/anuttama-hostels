@@ -27,12 +27,8 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsErr || !claimsData?.claims) return jsonResponse({ error: "Unauthorized" }, 401);
-
-    const { order_id, amount, unique_request_id } = await req.json();
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) return jsonResponse({ error: "Unauthorized" }, 401);
     if (!order_id || !amount) return jsonResponse({ error: "order_id and amount required" }, 400);
 
     const API_KEY = Deno.env.get("HDFC_API_KEY")!;
