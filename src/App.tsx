@@ -108,7 +108,8 @@ const App = () => (
               <Route path="/student/mess" element={<StudentMess />} />
               <Route path="/student/maintenance" element={<StudentMaintenance />} />
               <Route path="/student/notices" element={<StudentNotices />} />
-              <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/payment/status" element={<PaymentStatus />} />
             </Route>
 
             {/* Super Admin Routes - shared layout */}
