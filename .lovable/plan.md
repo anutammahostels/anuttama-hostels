@@ -1,86 +1,51 @@
-## Plan: HDFC SmartGateway Payment Integration
 
-### Overview
 
-Integrate HDFC SmartGateway into the student payment flow so students can pay invoices online. Gateway payments will auto-sync with the billing and accounting modules.
+## Plan: Fix HDFC SmartGateway — PEM Key Handling & End-to-End Test
 
-### Pre-requisites from You
+### Root Cause
 
-You will need to provide 3 credentials from your HDFC SmartGateway merchant dashboard:
+The edge function crashes at boot time (before handling any request) because Deno's `node:crypto` `createPrivateKey()` does not support PKCS#1 format (`BEGIN RSA PRIVATE KEY`). Your private key is PKCS#1, but the function needs PKCS#8 (`BEGIN PRIVATE KEY`).
 
-- **HDFC_MERCHANT_ID** — Your merchant identifier
-- **HDFC_API_KEY** — API key for server-to-server calls
-- **HDFC_SALT_KEY** — Salt/secret used for hash verification
+### What Gets Fixed
 
-I will prompt you to enter these securely before building the integration.
+**1. Update secrets with the freshly uploaded keys**
 
-### What Gets Built
+- Re-set `HDFC_PRIVATE_KEY` with the content of `privateKey-2.pem`
+- Re-set `HDFC_PUBLIC_KEY` with the content of `key_385b0968089c4138983d281b33c0676c-2.pem`
+- Verify `HDFC_MERCHANT_ID` = `SG4845`, `HDFC_KEY_UUID` = `key_385b0968089c4138983d281b33c0676c`, `HDFC_CLIENT_ID` = `hdfcmaster`
 
-**1. Edge Function: `hdfc-create-order**`
+**2. Rewrite `hdfc-create-order/index.ts` — replace `node:crypto` with Web Crypto API**
 
-- Student clicks "Pay Now" → frontend calls this function with invoice ID and amount
-- Validates the student owns the invoice and amount is correct
-- Calls HDFC SmartGateway's Create Order API to generate a payment session
-- Inserts a `payments` record with status `pending`
-- Returns the session ID / redirect URL to the frontend
+Remove all `node:crypto` imports (`createPrivateKey`, `createPublicKey`, `createSign`, `publicEncrypt`, `createCipheriv`, etc.). Replace with Deno-native Web Crypto API:
 
-**2. Edge Function: `hdfc-payment-callback**`
+- **PKCS#1 → PKCS#8 conversion**: Add an in-code wrapper that prepends the PKCS#8 ASN.1 header to the raw PKCS#1 key bytes so `crypto.subtle.importKey("pkcs8", ...)` works
+- **JWS signing**: Use `crypto.subtle.sign("RSASSA-PKCS1-v1_5", ...)` instead of `createSign`
+- **JWE encryption (CEK wrapping)**: Use `crypto.subtle.encrypt("RSA-OAEP", bankPublicKey, cek)` instead of `publicEncrypt`
+- **AES-256-GCM encryption**: Use `crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData }, aesKey, plaintext)` — this returns ciphertext+tag concatenated (last 16 bytes = tag)
+- **JWE decryption** (for gateway response): Use `crypto.subtle.decrypt("RSA-OAEP", merchantKey, encryptedKey)` + `crypto.subtle.decrypt("AES-GCM", ...)`
+- **Lazy key import**: Import keys inside the request handler (not at module top level) so a bad key doesn't crash the entire function at boot
 
-- Public webhook endpoint (no JWT) that HDFC calls after payment completes
-- Verifies the response hash using the salt key to prevent tampering
-- Updates `payments.status` to `completed` or `failed`
-- Updates `invoices.paid_amount` and `invoices.status` accordingly
-- Auto-creates a `transactions` record (income, category: fee_collection) and a `journal_entries` record (debit Bank / credit Fee Income) to keep accounting in sync
-- Sends a notification to the student
+**3. Deploy and test end-to-end**
 
-**3. Payment Status Page (`/payment/status`)**
-
-- Return URL page after HDFC checkout redirect
-- Polls payment status and shows success/failure with invoice details
-- Links back to the invoices list
-
-**4. Updated Student Pay Now Flow**
-
-- Replace the current local payment dialog in `StudentInvoices.tsx` with a "Pay Online" button
-- Calls `hdfc-create-order`, then redirects to HDFC's hosted checkout page
-- On return, lands on the payment status page
-
-**5. Admin Visibility**
-
-- Gateway payments appear in the existing Billing payment history with `payment_method: "online"` and the HDFC `transaction_id`
-- No changes needed to the admin billing UI — it already renders all payment records
+- Deploy `hdfc-create-order` and `hdfc-payment-callback`
+- Call `hdfc-create-order` with a test invoice to verify the HDFC `/v4/session` call succeeds and returns a payment URL
+- Verify the student "Pay Online" flow redirects correctly
 
 ### Files Changed
 
+| File | Action |
+|---|---|
+| `supabase/functions/hdfc-create-order/index.ts` | Rewrite — replace `node:crypto` with Web Crypto API |
 
-| File                                                | Action                                                |
-| --------------------------------------------------- | ----------------------------------------------------- |
-| `supabase/functions/hdfc-create-order/index.ts`     | Create                                                |
-| `supabase/functions/hdfc-payment-callback/index.ts` | Create                                                |
-| `src/pages/PaymentStatus.tsx`                       | Create                                                |
-| `src/pages/student/StudentInvoices.tsx`             | Modify — replace pay dialog with gateway redirect     |
-| `src/App.tsx`                                       | Add `/payment/status` route                           |
-| `supabase/config.toml`                              | Add `hdfc-payment-callback` with `verify_jwt = false` |
+### Technical Detail: PKCS#1 → PKCS#8 Wrapping
 
+```text
+PKCS#8 = SEQUENCE {
+  INTEGER 0,
+  SEQUENCE { OID rsaEncryption, NULL },
+  OCTET STRING { <raw PKCS#1 DER bytes> }
+}
+```
 
-### Execution Order
+This is a well-known 26-byte ASN.1 prefix prepended to the PKCS#1 DER, then re-encoded. No external libraries needed.
 
-1. Prompt you to add the 3 HDFC secrets
-2. Create both edge functions
-3. Create the payment status page and route
-4. Update the student invoices pay flow
-  Here's the required variables  
-  Merchant ID: SG4845  
-  API KEY: 5B0EA8495764280808C5597CA58C0B  
-  client id: hdfcmaster  
-  Prompt: I have read the official docs of the HDFC for implementing this where i got i might need these vars:  
-  {
-    "MERCHANT_ID":"YOUR_MERCHANT_ID",
-    "PRIVATE_KEY_PATH":"privateKey.pem",
-    "PUBLIC_KEY_PATH":"public-key.pem",
-    "KEY_UUID":"YOUR_KEY_ID",
-    "PAYMENT_PAGE_CLIENT_ID": "YOUR_PAYMENY_PAGE_CLIENT_ID"
-  }  
-  for other var's value read this documentation "[https://smartgateway.hdfcbank.com/docs/hypercheckout-mobile-sdk/web/sample-project-setup/backend-setup](https://smartgateway.hdfcbank.com/docs/hypercheckout-mobile-sdk/web/sample-project-setup/backend-setup)"  
-    
-  i have attached 3 files in the input which i got from creating JWT keys
