@@ -1,24 +1,24 @@
 
 
-## Fix HDFC Basic Auth Format
+## Fix Payment Callback 404 After HDFC Redirect
 
 ### Problem
-The "Invalid API Key" error is caused by incorrect Basic Auth encoding. HDFC/Juspay expects Basic Auth in `username:password` format where the API key is the username and password is empty — so it must be `btoa(API_KEY + ":")`.
+After completing payment on the HDFC gateway, the browser redirects back to `https://43447d81-cefd-4f73-a479-52ab24d2f9c2.lovableproject.com/payment/callback`. This returns a 404 because the Lovable dev server sandbox may be idle when the external redirect arrives, and the static fallback doesn't find the path.
 
-- `hdfc-create-order` correctly uses `btoa(\`${API_KEY}:\`)` (with colon)
-- `hdfc-order-status`, `hdfc-create-session`, and `hdfc-refund` all use `btoa(API_KEY)` (missing colon)
+The route `/payment/callback` is correctly defined in `App.tsx` and `PaymentCallback.tsx` exists. This is a preview-environment limitation, not a code bug. On the **published** site (`hostylia.lovable.app`), SPA fallback handles this automatically.
+
+### Fix
+Update `StudentInvoices.tsx` to use the **published URL** as the return URL when running in the Lovable preview, so the callback always hits the published site where SPA routing works reliably. Alternatively, use the preview URL format (`id-preview--*.lovable.app`) which also has SPA fallback.
 
 ### Changes
 
-**1. Fix `supabase/functions/hdfc-order-status/index.ts` (line 31)**
-Change `btoa(API_KEY)` to `btoa(API_KEY + ":")`
+**1. Update `src/pages/student/StudentInvoices.tsx`**
+- Change the `return_url` construction to prefer the published domain when the current origin is the `.lovableproject.com` dev server
+- Logic: if `window.location.origin` contains `lovableproject.com`, use the published URL `https://hostylia.lovable.app/payment/callback` instead
+- For production deployments (custom domain), `window.location.origin` will be correct as-is
 
-**2. Fix `supabase/functions/hdfc-create-session/index.ts` (line 122)**
-Change `btoa(API_KEY)` to `btoa(API_KEY + ":")`
+**2. No backend or database changes needed**
 
-**3. Fix `supabase/functions/hdfc-refund/index.ts` (line 44)**
-Change `btoa(API_KEY)` to `btoa(API_KEY + ":")`
-
-**4. Deploy and test**
-Deploy all three functions, then test `hdfc-order-status` to confirm the API key is accepted.
+### Technical Detail
+The `.lovableproject.com` origin is the live dev-server preview. When the browser navigates away (to HDFC) and comes back, the sandbox may not respond instantly, causing a 404. The `.lovable.app` published URL and `id-preview--*.lovable.app` URLs have built-in SPA fallback at the infrastructure level.
 
