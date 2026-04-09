@@ -78,7 +78,6 @@ const App = () => (
 
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/payment/status" element={<PaymentStatus />} />
             <Route path="/payment/callback" element={<PaymentCallback />} />
 
             {/* Admin / Staff Dashboard - shared layout */}
@@ -108,7 +107,8 @@ const App = () => (
               <Route path="/student/mess" element={<StudentMess />} />
               <Route path="/student/maintenance" element={<StudentMaintenance />} />
               <Route path="/student/notices" element={<StudentNotices />} />
-              <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/payment/status" element={<PaymentStatus />} />
             </Route>
 
             {/* Super Admin Routes - shared layout */}
