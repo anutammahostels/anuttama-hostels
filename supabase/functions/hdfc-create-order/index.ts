@@ -331,6 +331,7 @@ Deno.serve(async (req) => {
     const HDFC_KEY_UUID = Deno.env.get("HDFC_KEY_UUID")!;
     const HDFC_PRIVATE_KEY_PEM = normalizePem(Deno.env.get("HDFC_PRIVATE_KEY")!);
     const HDFC_PUBLIC_KEY_PEM = normalizePem(Deno.env.get("HDFC_PUBLIC_KEY")!);
+    const HDFC_API_KEY = Deno.env.get("HDFC_API_KEY") ?? "";
 
     const HDFC_API_BASE = HDFC_CLIENT_ID === "hdfcmaster"
       ? "https://smartgateway.hdfcuat.bank.in"
