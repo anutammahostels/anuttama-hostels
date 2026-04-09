@@ -134,9 +134,9 @@ export default function PaymentStatus() {
               <p className="text-muted-foreground">
                 We couldn't determine the payment status. If money was deducted, it will be reflected within 24 hours.
               </p>
-              <Button onClick={() => navigate("/student/dashboard")} className="w-full">
+              <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                Back to Invoices
               </Button>
             </>
           )}
