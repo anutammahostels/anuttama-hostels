@@ -114,15 +114,15 @@ export default function PaymentStatus() {
 
           {result.status === "failed" && (
             <>
-              <XCircle className="h-16 w-16 text-red-500 mx-auto" />
+              <XCircle className="h-16 w-16 text-destructive mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Payment Failed</h2>
               <p className="text-muted-foreground">
                 Your payment could not be processed. Please try again.
               </p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <Button onClick={() => navigate("/student/invoices")} className="w-full">
+              <Button onClick={() => navigate("/student/dashboard")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Invoices
+                Back to Dashboard
               </Button>
             </>
           )}
@@ -134,9 +134,9 @@ export default function PaymentStatus() {
               <p className="text-muted-foreground">
                 We couldn't determine the payment status. If money was deducted, it will be reflected within 24 hours.
               </p>
-              <Button onClick={() => navigate("/student/invoices")} className="w-full">
+              <Button onClick={() => navigate("/student/dashboard")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Invoices
+                Back to Dashboard
               </Button>
             </>
           )}

@@ -61,7 +61,7 @@ export default function StudentInvoices() {
       const session = await createPaymentSession(
         invoice.id,
         balance,
-        `${window.location.origin.includes('lovableproject.com') ? 'https://hostylia.lovable.app' : window.location.origin}/payment/callback`
+        `${window.location.origin.includes('lovableproject.com') ? 'https://hostylia.lovable.app' : window.location.origin}/payment/status`
       );
 
       openPaymentCheckout(session, checkoutWindow);
