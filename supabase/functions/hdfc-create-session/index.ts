@@ -76,16 +76,49 @@ Deno.serve(async (req) => {
     const PAYMENT_PAGE_CLIENT_ID =
       Deno.env.get("HDFC_PAYMENT_PAGE_CLIENT_ID") || Deno.env.get("HDFC_CLIENT_ID") || "hdfcmaster";
 
+    // --- Resolve property_id ---
+    // Try beds -> rooms -> floors -> blocks -> property chain first
+    let propertyId: string | null = null;
+    const { data: bedData } = await adminClient
+      .from("beds")
+      .select("room_id, rooms(floor_id, floors(block_id, blocks(property_id)))")
+      .eq("student_id", student.id)
+      .limit(1)
+      .single();
+    if (bedData) {
+      const room = (bedData as any).rooms;
+      const floor = room?.floors;
+      const block = floor?.blocks;
+      propertyId = block?.property_id || null;
+    }
+    // Fallback: get property from existing payments for this student
+    if (!propertyId) {
+      const { data: existingPayment } = await adminClient
+        .from("payments")
+        .select("property_id")
+        .eq("student_id", student.id)
+        .limit(1)
+        .single();
+      propertyId = existingPayment?.property_id || null;
+    }
+    // Fallback: use the first property in the system
+    if (!propertyId) {
+      const { data: firstProp } = await adminClient
+        .from("properties")
+        .select("id")
+        .limit(1)
+        .single();
+      propertyId = firstProp?.id || null;
+    }
+    if (!propertyId) return jsonResponse({ error: "No property found" }, 400);
+
     // --- Create pending payment record ---
     const { data: payment, error: paymentErr } = await adminClient
       .from("payments")
       .insert({
         invoice_id: invoice.id,
         student_id: student.id,
-        property_id:
-          (invoice as any).property_id ||
-          // fallback: lookup from student's invoices
-          invoice_id,
+        property_id: propertyId,
         amount: Number(amount),
         payment_method: "online",
         status: "pending",
