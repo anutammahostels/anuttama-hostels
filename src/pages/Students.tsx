@@ -351,10 +351,22 @@ const Students = () => {
     emergency_contact: "",
     father_name: "",
     gender: "",
+    final_fee: "",
+    alloted_room_no: "",
+    remarks: "",
+    account_number: "",
+    payment_date: "",
+    amount_1: "",
+    payment_mode_1: "",
+    transaction_details_1: "",
+    amount_2: "",
+    payment_mode_2: "",
+    transaction_details_2: "",
+    balance_payment: "",
   });
 
   const resetForm = () => {
-    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "", father_name: "", gender: "" });
+    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "", father_name: "", gender: "", final_fee: "", alloted_room_no: "", remarks: "", account_number: "", payment_date: "", amount_1: "", payment_mode_1: "", transaction_details_1: "", amount_2: "", payment_mode_2: "", transaction_details_2: "", balance_payment: "" });
     setCreatedCredentials(null);
   };
 
@@ -1247,6 +1259,95 @@ const Students = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <Separator />
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <IndianRupee className="h-4 w-4" /> Financial & Housing Details
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Final Fee</Label>
+                    <Input type="number" placeholder="e.g. 180000" value={form.final_fee} onChange={(e) => setForm(f => ({ ...f, final_fee: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Allotted Room No</Label>
+                    <Input placeholder="e.g. A-101" value={form.alloted_room_no} onChange={(e) => setForm(f => ({ ...f, alloted_room_no: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Account Number</Label>
+                    <Input placeholder="Bank account number" value={form.account_number} onChange={(e) => setForm(f => ({ ...f, account_number: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Payment Date</Label>
+                    <Input type="date" value={form.payment_date} onChange={(e) => setForm(f => ({ ...f, payment_date: e.target.value }))} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs font-semibold">Remarks</Label>
+                    <Input placeholder="Any remarks" value={form.remarks} onChange={(e) => setForm(f => ({ ...f, remarks: e.target.value }))} />
+                  </div>
+                </div>
+
+                <h5 className="text-xs font-semibold text-muted-foreground mt-2">Payment 1</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Amount 1</Label>
+                    <Input type="number" placeholder="e.g. 100000" value={form.amount_1} onChange={(e) => setForm(f => ({ ...f, amount_1: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Payment Mode 1</Label>
+                    <Select value={form.payment_mode_1} onValueChange={(v) => setForm(f => ({ ...f, payment_mode_1: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="UPI">UPI</SelectItem>
+                        <SelectItem value="RTGS">RTGS</SelectItem>
+                        <SelectItem value="NEFT">NEFT</SelectItem>
+                        <SelectItem value="Cheque">Cheque</SelectItem>
+                        <SelectItem value="DD">DD</SelectItem>
+                        <SelectItem value="Online">Online</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Transaction Details 1</Label>
+                    <Input placeholder="UTR / Ref No." value={form.transaction_details_1} onChange={(e) => setForm(f => ({ ...f, transaction_details_1: e.target.value }))} />
+                  </div>
+                </div>
+
+                <h5 className="text-xs font-semibold text-muted-foreground mt-2">Payment 2</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Amount 2</Label>
+                    <Input type="number" placeholder="e.g. 80000" value={form.amount_2} onChange={(e) => setForm(f => ({ ...f, amount_2: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Payment Mode 2</Label>
+                    <Select value={form.payment_mode_2} onValueChange={(v) => setForm(f => ({ ...f, payment_mode_2: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="UPI">UPI</SelectItem>
+                        <SelectItem value="RTGS">RTGS</SelectItem>
+                        <SelectItem value="NEFT">NEFT</SelectItem>
+                        <SelectItem value="Cheque">Cheque</SelectItem>
+                        <SelectItem value="DD">DD</SelectItem>
+                        <SelectItem value="Online">Online</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Transaction Details 2</Label>
+                    <Input placeholder="UTR / Ref No." value={form.transaction_details_2} onChange={(e) => setForm(f => ({ ...f, transaction_details_2: e.target.value }))} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Balance Payment</Label>
+                    <Input placeholder="Balance amount / date" value={form.balance_payment} onChange={(e) => setForm(f => ({ ...f, balance_payment: e.target.value }))} />
                   </div>
                 </div>
               </div>
