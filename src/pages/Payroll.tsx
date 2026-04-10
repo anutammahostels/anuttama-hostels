@@ -601,7 +601,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
 
       {/* Tabs */}
       <Tabs defaultValue="employees" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto flex-wrap h-auto">
           <TabsTrigger value="employees"><Users className="h-4 w-4 mr-1" /> Employees</TabsTrigger>
           <TabsTrigger value="payroll"><FileText className="h-4 w-4 mr-1" /> Payroll Records</TabsTrigger>
         </TabsList>
@@ -726,7 +726,31 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
 
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              {/* Mobile card view */}
+              <div className="sm:hidden divide-y divide-border">
+                {loadingEmployees ? (
+                  <div className="p-8 text-center text-muted-foreground">Loading...</div>
+                ) : employees.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">No employees added yet</div>
+                ) : employees.map(emp => (
+                  <div key={emp.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{emp.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{emp.designation} {emp.employee_number ? `• ${emp.employee_number}` : ''}</p>
+                      </div>
+                      <Badge variant={emp.status === "active" ? "default" : "secondary"}>{emp.status}</Badge>
+                    </div>
+                    <p className="font-semibold">₹{Number(emp.salary_amount).toLocaleString("en-IN")}</p>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => openEditEmployee(emp)}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteEmployeeMutation.mutate(emp.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table view */}
+              <div className="hidden sm:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -761,18 +785,12 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                         <TableCell className="text-xs">{emp.bank_ifsc || "-"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{emp.uan_number || "-"}</TableCell>
                         <TableCell>
-                          <Badge variant={emp.status === "active" ? "default" : "secondary"}>
-                            {emp.status}
-                          </Badge>
+                          <Badge variant={emp.status === "active" ? "default" : "secondary"}>{emp.status}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditEmployee(emp)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteEmployeeMutation.mutate(emp.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => openEditEmployee(emp)}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteEmployeeMutation.mutate(emp.id)}><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1043,7 +1061,31 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
 
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              {/* Mobile card view */}
+              <div className="sm:hidden divide-y divide-border">
+                {loadingPayroll ? (
+                  <div className="p-8 text-center text-muted-foreground">Loading...</div>
+                ) : payrollRecords.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">No payroll records yet</div>
+                ) : payrollRecords.map(record => (
+                  <div key={record.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</p>
+                        <p className="text-xs text-muted-foreground">{record.month} {record.is_locked && "🔒"}</p>
+                      </div>
+                      <Badge variant={record.is_locked ? "secondary" : "outline"}>{record.is_locked ? "Locked" : record.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Gross:</span> ₹{Number(record.gross_salary || 0).toLocaleString("en-IN")}</div>
+                      <div><span className="text-muted-foreground">Net:</span> <span className="font-bold">₹{Number(record.net_salary).toLocaleString("en-IN")}</span></div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => generatePayslipPDF(record)}><Download className="h-4 w-4 mr-1" /> Payslip</Button>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table view */}
+              <div className="hidden sm:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1078,9 +1120,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                         <TableCell className="text-destructive">-₹{Number(record.deductions || 0).toLocaleString("en-IN")}</TableCell>
                         <TableCell className="font-bold">₹{Number(record.net_salary).toLocaleString("en-IN")}</TableCell>
                         <TableCell>
-                          <Badge variant={record.is_locked ? "secondary" : "outline"}>
-                            {record.is_locked ? "Locked" : record.status}
-                          </Badge>
+                          <Badge variant={record.is_locked ? "secondary" : "outline"}>{record.is_locked ? "Locked" : record.status}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => generatePayslipPDF(record)} title="Download Payslip">
