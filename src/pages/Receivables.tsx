@@ -107,17 +107,51 @@ const Receivables = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid sm:grid-cols-5 gap-4">
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Gross Receivable</p><p className="text-2xl font-bold">{formatCurrency(totals.gross)}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Discounts Given</p><p className="text-2xl font-bold text-yellow-600">{formatCurrency(totals.discounts)}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Amount Received</p><p className="text-2xl font-bold text-green-600">{formatCurrency(totals.received)}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Refunds</p><p className="text-2xl font-bold text-orange-600">{formatCurrency(totals.refunds)}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Net Receivable</p><p className="text-2xl font-bold text-red-600">{formatCurrency(totals.net)}</p></CardContent></Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Gross Receivable</p><p className="text-xl sm:text-2xl font-bold">{formatCurrency(totals.gross)}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Discounts Given</p><p className="text-xl sm:text-2xl font-bold text-yellow-600">{formatCurrency(totals.discounts)}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Amount Received</p><p className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(totals.received)}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Refunds</p><p className="text-xl sm:text-2xl font-bold text-orange-600">{formatCurrency(totals.refunds)}</p></CardContent></Card>
+        <Card className="col-span-2 sm:col-span-1"><CardContent className="p-4"><p className="text-sm text-muted-foreground">Net Receivable</p><p className="text-xl sm:text-2xl font-bold text-red-600">{formatCurrency(totals.net)}</p></CardContent></Card>
       </div>
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Mobile card view */}
+          <div className="sm:hidden divide-y divide-border">
+            {rows.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">No receivables data</div>
+            ) : (
+              <>
+                {rows.map(r => (
+                  <div key={r.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{r.name}</p>
+                        <p className="text-xs text-muted-foreground">{r.rollNo}</p>
+                      </div>
+                      <p className="font-bold text-red-600">{formatCurrency(r.net)}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Gross:</span> {formatCurrency(r.gross)}</div>
+                      <div><span className="text-muted-foreground">Discount:</span> <span className="text-yellow-600">{formatCurrency(r.discounts)}</span></div>
+                      <div><span className="text-muted-foreground">Received:</span> <span className="text-green-600">{formatCurrency(r.received)}</span></div>
+                      <div><span className="text-muted-foreground">Refunds:</span> <span className="text-orange-600">{formatCurrency(r.refunds)}</span></div>
+                    </div>
+                    {r.paymentModes !== '-' && <Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge>}
+                  </div>
+                ))}
+                <div className="p-4 bg-muted/50 font-bold">
+                  <div className="flex justify-between">
+                    <span>TOTAL</span>
+                    <span className="text-red-600">{formatCurrency(totals.net)}</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          {/* Desktop table view */}
+          <div className="hidden sm:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
