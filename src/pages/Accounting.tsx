@@ -418,7 +418,7 @@ export default function Accounting() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <TabsList>
+          <TabsList className="w-full sm:w-auto overflow-x-auto flex-wrap h-auto">
             <TabsTrigger value="transactions" className="gap-1"><TrendingUp className="h-3.5 w-3.5" />Transactions</TabsTrigger>
             <TabsTrigger value="ledger" className="gap-1"><BookOpen className="h-3.5 w-3.5" />Ledger</TabsTrigger>
             <TabsTrigger value="accounts" className="gap-1"><ClipboardList className="h-3.5 w-3.5" />Accounts</TabsTrigger>
@@ -557,6 +557,26 @@ export default function Accounting() {
         <TabsContent value="transactions">
           <Card>
             <CardContent className="p-0">
+              {/* Mobile card view */}
+              <div className="sm:hidden divide-y divide-border">
+                {transactions.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">No transactions recorded yet</div>
+                ) : transactions.map(t => (
+                  <div key={t.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant={t.transaction_type === "income" ? "default" : "destructive"} className="text-xs">{t.transaction_type}</Badge>
+                      <span className={`font-semibold ${t.transaction_type === "income" ? "text-green-600" : "text-red-600"}`}>₹{Number(t.amount).toLocaleString("en-IN")}</span>
+                    </div>
+                    <p className="text-sm">{t.description || getAccountName(t.account_id)}</p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{format(new Date(t.date), "dd MMM yyyy")}</span>
+                      <Badge variant="outline" className="text-xs">{t.payment_mode}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table view */}
+              <div className="hidden sm:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -580,6 +600,7 @@ export default function Accounting() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

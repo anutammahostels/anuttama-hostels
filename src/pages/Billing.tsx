@@ -422,7 +422,7 @@ const Billing = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="invoices">
-          <TabsList>
+          <TabsList className="w-full sm:w-auto overflow-x-auto flex-wrap h-auto">
             <TabsTrigger value="invoices">All Invoices</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="overdue">Overdue</TabsTrigger>
@@ -463,7 +463,41 @@ const Billing = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <>
+                    {/* Mobile card view */}
+                    <div className="sm:hidden divide-y divide-border">
+                      {filteredInvoices.map((invoice) => {
+                        const balance = invoice.total_amount - (invoice.paid_amount || 0);
+                        return (
+                          <div key={invoice.id} className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</p>
+                                <p className="text-xs text-muted-foreground">{invoice.student?.roll_number || "-"} • {invoice.invoice_number}</p>
+                              </div>
+                              {getStatusBadge(invoice.status)}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-lg">{formatCurrency(invoice.total_amount)}</span>
+                              <span className="text-sm text-muted-foreground">Due: {format(new Date(invoice.due_date), "MMM d, yyyy")}</span>
+                            </div>
+                            {balance > 0 && <p className="text-sm text-red-500">Paid: {formatCurrency(invoice.paid_amount || 0)} • Balance: {formatCurrency(balance)}</p>}
+                            <div className="flex gap-2 flex-wrap">
+                              <Button size="sm" variant="outline" className="h-7" onClick={() => handleDownloadPdf(invoice)}>
+                                <FileText className="h-3 w-3 mr-1" /> PDF
+                              </Button>
+                              {invoice.status !== 'paid' && (
+                                <Button size="sm" className="h-7 gradient-primary text-white" onClick={() => setPaymentDialog({ open: true, invoice })}>
+                                  <IndianRupee className="h-3 w-3 mr-1" /> Pay
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Desktop table view */}
+                    <div className="hidden sm:block overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -566,7 +600,8 @@ const Billing = () => {
                         })}
                       </TableBody>
                     </Table>
-                  </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

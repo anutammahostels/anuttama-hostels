@@ -72,7 +72,7 @@ export const DashboardStats = () => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="rounded-xl md:rounded-2xl border border-border/50 bg-card p-3 md:p-5">
             <div className="flex items-center justify-between mb-2 md:mb-4">
@@ -88,7 +88,7 @@ export const DashboardStats = () => {
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
       {statsData.map((stat, index) => (
         <div
           key={stat.label}

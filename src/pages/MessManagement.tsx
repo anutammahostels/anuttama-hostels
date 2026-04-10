@@ -167,7 +167,29 @@ const MessManagement = () => {
             <CardDescription>View and manage the mess menu for the entire week</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile card view */}
+            <div className="sm:hidden space-y-3">
+              {weeklyMenu.map((menu) => (
+                <div key={menu.day} className={`p-4 rounded-lg border ${menu.day === today ? "bg-primary/5 border-primary/20" : "border-border/50"}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{menu.day}</span>
+                      {menu.day === today && <Badge className="bg-primary/20 text-primary">Today</Badge>}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDay(menu.day)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="font-medium text-orange-600">🌅 Breakfast:</span> {menu.breakfast.items}</div>
+                    <div><span className="font-medium text-yellow-600">☀️ Lunch:</span> {menu.lunch.items}</div>
+                    <div><span className="font-medium text-purple-600">🌙 Dinner:</span> {menu.dinner.items}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table view */}
+            <div className="hidden sm:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -184,9 +206,7 @@ const MessManagement = () => {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {menu.day}
-                          {menu.day === today && (
-                            <Badge className="bg-primary/20 text-primary">Today</Badge>
-                          )}
+                          {menu.day === today && <Badge className="bg-primary/20 text-primary">Today</Badge>}
                         </div>
                       </TableCell>
                       <TableCell>

@@ -158,7 +158,7 @@ const GatePasses = () => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-            <TabsList>
+            <TabsList className="w-full sm:w-auto overflow-x-auto flex-wrap h-auto">
               <TabsTrigger value="all">All Passes</TabsTrigger>
               <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
               <TabsTrigger value="active">Currently Out ({stats.active})</TabsTrigger>
@@ -192,135 +192,181 @@ const GatePasses = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Pass ID</TableHead>
-                          <TableHead>Student</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Duration</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Check In/Out</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredPasses.map((pass) => (
-                          <TableRow key={pass.id}>
-                            <TableCell className="font-medium font-mono text-xs">
-                              {pass.qr_code?.slice(0, 12) || pass.id.slice(0, 8)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                    {pass.student?.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="font-medium text-sm">{pass.student?.profile?.full_name || "Unknown"}</p>
-                                  <p className="text-xs text-muted-foreground">{pass.student?.roll_number || "-"}</p>
-                                </div>
+                  <>
+                    {/* Mobile card view */}
+                    <div className="sm:hidden divide-y divide-border">
+                      {filteredPasses.map((pass) => (
+                        <div key={pass.id} className="p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                  {pass.student?.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-sm">{pass.student?.profile?.full_name || "Unknown"}</p>
+                                <p className="text-xs text-muted-foreground">{pass.student?.roll_number || "-"}</p>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{pass.pass_type}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                <p>{format(new Date(pass.out_date), "MMM d, yyyy")}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Return: {format(new Date(pass.expected_return), "MMM d, HH:mm")}
-                                </p>
+                            </div>
+                            {getStatusBadge(pass.status)}
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <Badge variant="outline">{pass.pass_type}</Badge>
+                            <span className="text-xs text-muted-foreground font-mono">{pass.qr_code?.slice(0, 12) || pass.id.slice(0, 8)}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <p>Out: {format(new Date(pass.out_date), "MMM d, yyyy")}</p>
+                            <p>Return: {format(new Date(pass.expected_return), "MMM d, HH:mm")}</p>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            {pass.checked_out_at && (
+                              <div className="flex items-center gap-1 text-orange-500">
+                                <ArrowRightFromLine className="h-3 w-3" />
+                                Out: {format(new Date(pass.checked_out_at), "HH:mm")}
                               </div>
-                            </TableCell>
-                            <TableCell>{getStatusBadge(pass.status)}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2 text-sm">
-                                {pass.checked_out_at && (
-                                  <div className="flex items-center gap-1 text-orange-500">
-                                    <ArrowRightFromLine className="h-3 w-3" />
-                                    {format(new Date(pass.checked_out_at), "HH:mm")}
-                                  </div>
-                                )}
-                                {pass.checked_in_at && (
-                                  <div className="flex items-center gap-1 text-green-500">
-                                    <ArrowLeftFromLine className="h-3 w-3" />
-                                    {format(new Date(pass.checked_in_at), "HH:mm")}
-                                  </div>
-                                )}
-                                {!pass.checked_out_at && !pass.checked_in_at && (
-                                  <span className="text-muted-foreground">—</span>
-                                )}
+                            )}
+                            {pass.checked_in_at && (
+                              <div className="flex items-center gap-1 text-green-500">
+                                <ArrowLeftFromLine className="h-3 w-3" />
+                                In: {format(new Date(pass.checked_in_at), "HH:mm")}
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                {pass.status === "pending" && (
-                                  <>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost" 
-                                      className="h-7 text-green-600"
-                                      onClick={() => handleApprove(pass.id)}
-                                      disabled={approveGatePass.isPending}
-                                    >
-                                      <CheckCircle className="h-4 w-4" />
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost" 
-                                      className="h-7 text-red-600"
-                                      onClick={() => setRejectDialog({ open: true, passId: pass.id })}
-                                    >
-                                      <XCircle className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                )}
-                                {pass.status === "approved" && !pass.checked_out_at && (
-                                  <>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline" 
-                                      className="h-7"
-                                      onClick={() => setQrDialog({ open: true, pass })}
-                                    >
-                                      <QrCode className="h-4 w-4 mr-1" />
-                                      QR
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      className="h-7 bg-orange-500 hover:bg-orange-600 text-white"
-                                      onClick={() => handleCheckOut(pass.id)}
-                                      disabled={checkOut.isPending}
-                                    >
-                                      Check Out
-                                    </Button>
-                                  </>
-                                )}
-                                {pass.checked_out_at && !pass.checked_in_at && (
-                                  <Button 
-                                    size="sm" 
-                                    className="h-7 bg-green-500 hover:bg-green-600 text-white"
-                                    onClick={() => handleCheckIn(pass.id)}
-                                    disabled={checkIn.isPending}
-                                  >
-                                    Check In
-                                  </Button>
-                                )}
-                                {pass.status === "completed" && (
-                                  <Button size="sm" variant="ghost" className="h-7">
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {pass.status === "pending" && (
+                              <>
+                                <Button size="sm" variant="outline" className="h-7 text-green-600" onClick={() => handleApprove(pass.id)} disabled={approveGatePass.isPending}>
+                                  <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-7 text-red-600" onClick={() => setRejectDialog({ open: true, passId: pass.id })}>
+                                  <XCircle className="h-4 w-4 mr-1" /> Reject
+                                </Button>
+                              </>
+                            )}
+                            {pass.status === "approved" && !pass.checked_out_at && (
+                              <>
+                                <Button size="sm" variant="outline" className="h-7" onClick={() => setQrDialog({ open: true, pass })}>
+                                  <QrCode className="h-4 w-4 mr-1" /> QR
+                                </Button>
+                                <Button size="sm" className="h-7 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => handleCheckOut(pass.id)} disabled={checkOut.isPending}>
+                                  Check Out
+                                </Button>
+                              </>
+                            )}
+                            {pass.checked_out_at && !pass.checked_in_at && (
+                              <Button size="sm" className="h-7 bg-green-500 hover:bg-green-600 text-white" onClick={() => handleCheckIn(pass.id)} disabled={checkIn.isPending}>
+                                Check In
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desktop table view */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Pass ID</TableHead>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Duration</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Check In/Out</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredPasses.map((pass) => (
+                            <TableRow key={pass.id}>
+                              <TableCell className="font-medium font-mono text-xs">
+                                {pass.qr_code?.slice(0, 12) || pass.id.slice(0, 8)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                      {pass.student?.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium text-sm">{pass.student?.profile?.full_name || "Unknown"}</p>
+                                    <p className="text-xs text-muted-foreground">{pass.student?.roll_number || "-"}</p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{pass.pass_type}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <p>{format(new Date(pass.out_date), "MMM d, yyyy")}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Return: {format(new Date(pass.expected_return), "MMM d, HH:mm")}
+                                  </p>
+                                </div>
+                              </TableCell>
+                              <TableCell>{getStatusBadge(pass.status)}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2 text-sm">
+                                  {pass.checked_out_at && (
+                                    <div className="flex items-center gap-1 text-orange-500">
+                                      <ArrowRightFromLine className="h-3 w-3" />
+                                      {format(new Date(pass.checked_out_at), "HH:mm")}
+                                    </div>
+                                  )}
+                                  {pass.checked_in_at && (
+                                    <div className="flex items-center gap-1 text-green-500">
+                                      <ArrowLeftFromLine className="h-3 w-3" />
+                                      {format(new Date(pass.checked_in_at), "HH:mm")}
+                                    </div>
+                                  )}
+                                  {!pass.checked_out_at && !pass.checked_in_at && (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {pass.status === "pending" && (
+                                    <>
+                                      <Button size="sm" variant="ghost" className="h-7 text-green-600" onClick={() => handleApprove(pass.id)} disabled={approveGatePass.isPending}>
+                                        <CheckCircle className="h-4 w-4" />
+                                      </Button>
+                                      <Button size="sm" variant="ghost" className="h-7 text-red-600" onClick={() => setRejectDialog({ open: true, passId: pass.id })}>
+                                        <XCircle className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                  {pass.status === "approved" && !pass.checked_out_at && (
+                                    <>
+                                      <Button size="sm" variant="outline" className="h-7" onClick={() => setQrDialog({ open: true, pass })}>
+                                        <QrCode className="h-4 w-4 mr-1" /> QR
+                                      </Button>
+                                      <Button size="sm" className="h-7 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => handleCheckOut(pass.id)} disabled={checkOut.isPending}>
+                                        Check Out
+                                      </Button>
+                                    </>
+                                  )}
+                                  {pass.checked_out_at && !pass.checked_in_at && (
+                                    <Button size="sm" className="h-7 bg-green-500 hover:bg-green-600 text-white" onClick={() => handleCheckIn(pass.id)} disabled={checkIn.isPending}>
+                                      Check In
+                                    </Button>
+                                  )}
+                                  {pass.status === "completed" && (
+                                    <Button size="sm" variant="ghost" className="h-7">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
