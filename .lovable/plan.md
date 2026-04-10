@@ -1,37 +1,31 @@
 
 
-## Fix "Payment Status Unknown" After Successful Payment
+## Add Financial & Extended Fields to Manual Student Creation
 
-### Root Cause Analysis
+### Problem
+The "Add Student" dialog only collects basic info (name, enrollment, contact, academic details). The bulk upload sends additional fields like **Final Fee, Allotted Room, Remarks, Account Number, Payment Date, Amount 1/2, Payment Mode 1/2, Transaction Details, and Balance Payment** — all of which the `create-student` backend function already supports. The manual form needs these fields so it can also auto-generate invoices and payment records.
 
-I found **three cascading issues** causing the problem:
+### Changes
 
-1. **`hdfc-order-status` edge function is never called** — zero logs exist for this function. It's either not deployed or the invocation is silently failing. The `catch {}` block in `PaymentStatus.tsx` (line 51) swallows all errors with no logging.
+**File: `src/pages/Students.tsx`**
 
-2. **DB polling finds no updated record** — Since the order-status function never runs, the payment in the database stays at `status: pending` forever. All 5 recent payment records in the database are stuck at `pending`.
+1. **Expand the `form` state** — Add missing fields: `final_fee`, `alloted_room_no`, `remarks`, `account_number`, `payment_date`, `amount_1`, `payment_mode_1`, `transaction_details_1`, `amount_2`, `payment_mode_2`, `transaction_details_2`, `balance_payment`. Update `resetForm` accordingly.
 
-3. **Payment route is behind auth** — The `/student/payment/status` route requires the `student` role via `ProtectedRoute`. When HDFC redirects from the sandbox gateway to `hostylia.com`, if the user's session expired or they're not logged in on that domain, they'd be redirected to login and lose the `order_id` query parameter entirely.
+2. **Add form fields to the dialog** — After the existing fields (Blood Group), add a new "Financial & Housing Details" section with:
+   - Final Fee (number input)
+   - Allotted Room No (text)
+   - Account Number (text)
+   - Payment Date (date)
+   - Remarks (text)
+   - Amount 1, Payment Mode 1, Transaction Details 1
+   - Amount 2, Payment Mode 2, Transaction Details 2
+   - Balance Payment (text)
 
-### Plan
-
-#### 1. Move PaymentStatus outside ProtectedRoute
-**File:** `src/App.tsx`
-- Move the `/student/payment/status` route outside the protected student layout so the page can always load after HDFC redirect, even if the session is stale. The page only calls the edge function with the order_id — no user-specific data is needed.
-
-#### 2. Deploy `hdfc-order-status` edge function
-- Use the deploy tool to ensure the function is actually deployed and callable.
-
-#### 3. Add error visibility to PaymentStatus polling
-**File:** `src/pages/PaymentStatus.tsx`
-- Replace the silent `catch {}` with `catch (err) { console.error("order status check failed:", err); }` so failures are visible.
-- Add the `order_id` to the return URL in the create-session flow as a fallback.
-
-#### 4. Make the polling more resilient
-**File:** `src/pages/PaymentStatus.tsx`
-- If `getOrderStatus` throws, still continue polling (current behavior) but log the error.
-- On the DB polling fallback, also check for `status = 'pending'` and keep polling instead of treating it as "not found" only after max attempts.
+3. **No backend changes needed** — The `create-student` edge function already accepts and processes all these fields, auto-generating invoices and payment records when `final_fee > 0`.
 
 ### Technical Details
-
-The key fix is deploying the edge function and removing the auth barrier. The edge function itself doesn't require user auth (it queries HDFC directly with the merchant API key), so the page doesn't need to be behind a protected route.
+- The form state grows from 12 fields to ~24 fields
+- All new fields are optional — only Student Name and Enrollment Number remain required
+- The financial section will be visually separated with a heading/separator
+- When Final Fee is entered, the backend will auto-create an invoice and up to 2 payment records, exactly like bulk upload
 
