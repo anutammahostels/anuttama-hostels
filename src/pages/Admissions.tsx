@@ -282,7 +282,6 @@ export default function Admissions() {
         ))}
       </div>
 
-      {/* Applications Table */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex justify-between items-center">
@@ -291,6 +290,40 @@ export default function Admissions() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {/* Mobile card view */}
+          <div className="sm:hidden divide-y divide-border">
+            {filteredAdmissions.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">No applications found</div>
+            ) : filteredAdmissions.map(a => (
+              <div key={a.id} className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{a.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{a.course ? `${a.course}${a.year ? ` - Year ${a.year}` : ""}` : "—"}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[a.status || "pending"]}`}>{a.status || "pending"}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p>{a.phone || "—"} • Parent: {a.parent_name || "—"}</p>
+                  <p className="text-xs">{format(new Date(a.created_at), "dd MMM yyyy")}</p>
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  <Button size="sm" variant="ghost" className="h-7" onClick={() => { setViewAdmission(a); setShowViewDialog(true); }}><Eye className="h-3.5 w-3.5 mr-1" /> View</Button>
+                  {a.status === "pending" && (
+                    <>
+                      <Button size="sm" variant="outline" className="h-7 text-green-600" onClick={() => updateStatus.mutate({ id: a.id, status: "approved" })}><CheckCircle className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="outline" className="h-7 text-red-600" onClick={() => updateStatus.mutate({ id: a.id, status: "rejected" })}><XCircle className="h-3.5 w-3.5" /></Button>
+                    </>
+                  )}
+                  {a.status === "approved" && (
+                    <Button size="sm" className="h-7" onClick={() => enrollStudent.mutate(a)}><UserPlus className="h-3.5 w-3.5 mr-1" /> Enroll</Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table view */}
+          <div className="hidden sm:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -314,13 +347,13 @@ export default function Admissions() {
                       <Button size="sm" variant="ghost" onClick={() => { setViewAdmission(a); setShowViewDialog(true); }}><Eye className="h-3.5 w-3.5" /></Button>
                       {a.status === "pending" && (
                         <>
-                          <Button size="sm" variant="ghost" className="text-green-600 hover:text-green-700" onClick={() => updateStatus.mutate({ id: a.id, status: "approved" })}><CheckCircle className="h-3.5 w-3.5" /></Button>
-                          <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700" onClick={() => updateStatus.mutate({ id: a.id, status: "rejected" })}><XCircle className="h-3.5 w-3.5" /></Button>
+                          <Button size="sm" variant="ghost" className="text-green-600" onClick={() => updateStatus.mutate({ id: a.id, status: "approved" })}><CheckCircle className="h-3.5 w-3.5" /></Button>
+                          <Button size="sm" variant="ghost" className="text-red-600" onClick={() => updateStatus.mutate({ id: a.id, status: "rejected" })}><XCircle className="h-3.5 w-3.5" /></Button>
                         </>
                       )}
                       {a.status === "approved" && (
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => enrollStudent.mutate(a)} disabled={enrollStudent.isPending}>
-                          {enrollStudent.isPending ? "Enrolling..." : "Enroll"}
+                        <Button size="sm" className="h-7" onClick={() => enrollStudent.mutate(a)}>
+                          <UserPlus className="h-3.5 w-3.5 mr-1" /> Enroll
                         </Button>
                       )}
                     </div>
@@ -329,6 +362,7 @@ export default function Admissions() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
