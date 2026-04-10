@@ -60,9 +60,9 @@ export default function PaymentStatus() {
         .eq("transaction_id", orderId)
         .single();
 
-      if (payment && (payment.status === "completed" || payment.status === "failed")) {
+      if (payment && payment.status === "completed") {
         setResult({
-          status: payment.status as "completed" | "failed",
+          status: "completed",
           orderId,
           amount: payment.amount,
           invoiceNumber: (payment.invoices as any)?.invoice_number || "",
@@ -70,6 +70,11 @@ export default function PaymentStatus() {
         });
         return;
       }
+      if (payment && payment.status === "failed") {
+        setResult({ status: "failed", orderId, amount: payment.amount });
+        return;
+      }
+      // If payment exists but is still pending, keep polling
 
       attempts++;
       if (attempts >= maxAttempts) {
