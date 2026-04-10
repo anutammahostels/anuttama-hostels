@@ -3,8 +3,26 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { getOrderStatus } from "@/lib/hdfc";
 import { CheckCircle, XCircle, Loader2, ArrowLeft } from "lucide-react";
+
+async function fetchOrderStatus(orderId: string) {
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/hdfc-order-status`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ order_id: orderId }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error || `Function failed: ${res.status}`);
+  }
+  return res.json();
+}
 
 type PaymentResult = {
   status: "loading" | "completed" | "failed" | "not_found";
@@ -34,8 +52,7 @@ export default function PaymentStatus() {
 
     const poll = async () => {
       try {
-        // First try server-side order status from HDFC
-        const orderResult = await getOrderStatus(orderId);
+        const orderResult = await fetchOrderStatus(orderId);
         if (orderResult.status === "SUCCESS") {
           setResult({
             status: "completed",
