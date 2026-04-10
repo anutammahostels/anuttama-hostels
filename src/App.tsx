@@ -108,8 +108,10 @@ const App = () => (
               <Route path="/student/maintenance" element={<StudentMaintenance />} />
               <Route path="/student/notices" element={<StudentNotices />} />
             <Route path="/student/profile" element={<StudentProfile />} />
-            <Route path="/student/payment/status" element={<PaymentStatus />} />
             </Route>
+
+            {/* Payment status - outside ProtectedRoute so HDFC redirect always works */}
+            <Route path="/student/payment/status" element={<PaymentStatus />} />
 
             {/* Super Admin Routes - shared layout */}
             <Route element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdminLayoutRoute /></ProtectedRoute>}>
