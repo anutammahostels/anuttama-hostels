@@ -48,8 +48,9 @@ export default function PaymentStatus() {
           setResult({ status: "failed", orderId, amount: orderResult.amount });
           return;
         }
-      } catch {
-        // Fallback to DB polling
+      } catch (err) {
+        console.error("hdfc-order-status check failed:", err);
+        // Fallback to DB polling below
       }
 
       // DB polling fallback
