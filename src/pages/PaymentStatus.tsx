@@ -52,8 +52,7 @@ export default function PaymentStatus() {
 
     const poll = async () => {
       try {
-        // First try server-side order status from HDFC
-        const orderResult = await getOrderStatus(orderId);
+        const orderResult = await fetchOrderStatus(orderId);
         if (orderResult.status === "SUCCESS") {
           setResult({
             status: "completed",
