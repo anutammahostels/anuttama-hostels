@@ -22,7 +22,7 @@ import {
   UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, PlayCircle, CalendarIcon, Calculator,
   AlertTriangle,
 } from "lucide-react";
-import { format, getDaysInMonth, parse } from "date-fns";
+import { format, getDaysInMonth } from "date-fns";
 import { exportToExcel } from "@/lib/exportExcel";
 
 interface Employee {
