@@ -904,7 +904,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                               <CalendarIcon className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 mt-2" align="end" sideOffset={8}>
+                          <PopoverContent className="w-auto p-0" align="end" side="bottom" sideOffset={12} avoidCollisions={true}>
                             <Calendar
                               mode="single"
                               selected={empForm.date_of_joining || undefined}
