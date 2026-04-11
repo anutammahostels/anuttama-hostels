@@ -15,10 +15,14 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import {
-  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, PlayCircle,
+  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, PlayCircle, CalendarIcon, Calculator,
+  AlertTriangle,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, getDaysInMonth, parse } from "date-fns";
 import { exportToExcel } from "@/lib/exportExcel";
 
 interface Employee {
@@ -88,6 +92,62 @@ interface PayrollRecord {
   employees?: Employee;
 }
 
+// ── Validation helpers ──
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+const validatePAN = (v: string) => !v || PAN_REGEX.test(v.toUpperCase());
+const validateIFSC = (v: string) => !v || IFSC_REGEX.test(v.toUpperCase());
+
+// ── Auto PT (Karnataka slabs) ──
+const calculatePT = (gross: number, month: string): number => {
+  if (gross < 25000) return 0;
+  // February → ₹300, else ₹200
+  const monthNum = parseInt(month.split("-")[1]);
+  return monthNum === 2 ? 300 : 200;
+};
+
+// ── TDS Calculator (New Tax Regime FY 2025-26) ──
+const calculateMonthlyTDS = (monthlyGross: number): { annualTax: number; monthlyTds: number; taxableIncome: number } => {
+  const annualGross = monthlyGross * 12;
+  const standardDeduction = 75000;
+  const taxableIncome = Math.max(annualGross - standardDeduction, 0);
+
+  // Section 87A rebate
+  if (taxableIncome <= 700000) return { annualTax: 0, monthlyTds: 0, taxableIncome };
+
+  // Slab rates
+  let tax = 0;
+  const slabs = [
+    { limit: 400000, rate: 0 },
+    { limit: 400000, rate: 0.05 },
+    { limit: 400000, rate: 0.10 },
+    { limit: 400000, rate: 0.15 },
+    { limit: 400000, rate: 0.20 },
+    { limit: 400000, rate: 0.25 },
+    { limit: Infinity, rate: 0.30 },
+  ];
+  let remaining = taxableIncome;
+  for (const slab of slabs) {
+    if (remaining <= 0) break;
+    const taxable = Math.min(remaining, slab.limit);
+    tax += taxable * slab.rate;
+    remaining -= taxable;
+  }
+
+  // 4% Health & Education Cess
+  const cess = Math.round(tax * 0.04);
+  const annualTax = Math.round(tax + cess);
+  const monthlyTds = Math.round(annualTax / 12);
+  return { annualTax, monthlyTds, taxableIncome };
+};
+
+// ── LOP deduction (Gross / Calendar Days × LOP Days) ──
+const calculateLOPDeduction = (gross: number, calendarDays: number, lopDays: number): number => {
+  if (lopDays <= 0 || calendarDays <= 0) return 0;
+  return Math.round((gross / calendarDays) * lopDays);
+};
+
 // Number to words for Indian currency
 const numberToWords = (num: number): string => {
   if (num === 0) return "Zero";
@@ -120,6 +180,7 @@ const numberToWords = (num: number): string => {
 };
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const maskAccount = (acc: string | null) => acc && acc.length > 4 ? "XXXX" + acc.slice(-4) : acc || "N/A";
 
 const Payroll = () => {
   const { toast } = useToast();
@@ -136,11 +197,15 @@ const Payroll = () => {
     uan_number: "", esi_number: "",
     employee_number: "", gender: "", work_location: "",
     hra: "0", special_allowance: "0", other_additions: "0", employer_pf_contribution: "0",
+    date_of_joining: null as Date | null,
   });
+  const [empFormErrors, setEmpFormErrors] = useState<{ pan?: string; ifsc?: string }>({});
 
   // Payroll generation dialog
   const [payrollDialogOpen, setPayrollDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [netPayWarningOpen, setNetPayWarningOpen] = useState(false);
+  const [tdsCalcOpen, setTdsCalcOpen] = useState(false);
   const defaultPayrollForm = {
     employee_id: "", month: format(new Date(), "yyyy-MM"),
     hra: "0", special_allowance: "0", professional_fees: "0", contract_fees: "0",
@@ -204,7 +269,36 @@ const Payroll = () => {
     }
   }, [selectedEmployee?.id]);
 
-  // Auto-calculations with PF cap at ₹1,800
+  // Auto-set total days and PT when month changes
+  useEffect(() => {
+    if (payrollForm.month) {
+      try {
+        const [y, m] = payrollForm.month.split("-").map(Number);
+        const calDays = getDaysInMonth(new Date(y, m - 1));
+        setPayrollForm(p => ({ ...p, total_days: String(calDays) }));
+      } catch { /* ignore */ }
+    }
+  }, [payrollForm.month]);
+
+  // Auto-calculate PT when gross changes
+  useEffect(() => {
+    if (selectedEmployee && payrollForm.month) {
+      const basic = selectedEmployee.salary_amount || 0;
+      const hra = parseFloat(payrollForm.hra) || 0;
+      const sa = parseFloat(payrollForm.special_allowance) || 0;
+      const pf = parseFloat(payrollForm.professional_fees) || 0;
+      const cf = parseFloat(payrollForm.contract_fees) || 0;
+      const oa = parseFloat(payrollForm.other_additions) || 0;
+      const ot = parseFloat(payrollForm.ot) || 0;
+      const inc = parseFloat(payrollForm.incentives) || 0;
+      const bon = parseFloat(payrollForm.bonus) || 0;
+      const gross = basic + hra + sa + pf + cf + oa + ot + inc + bon;
+      const autoPT = calculatePT(gross, payrollForm.month);
+      setPayrollForm(p => ({ ...p, professional_tax: String(autoPT) }));
+    }
+  }, [selectedEmployee?.id, payrollForm.hra, payrollForm.special_allowance, payrollForm.professional_fees, payrollForm.contract_fees, payrollForm.other_additions, payrollForm.ot, payrollForm.incentives, payrollForm.bonus, payrollForm.month]);
+
+  // Auto-calculations with PF cap at ₹1,800 and proper LOP
   const payrollCalc = useMemo(() => {
     const basic = selectedEmployee?.salary_amount || 0;
     const hra = parseFloat(payrollForm.hra) || 0;
@@ -230,22 +324,46 @@ const Payroll = () => {
     const tds194j = parseFloat(payrollForm.tds_194j) || 0;
     const otherDed = parseFloat(payrollForm.other_deduction) || 0;
 
-    const totalDeductions = pfEmployee + esiEmployee + lwf + salaryAdvance + pt + tds + tds194c + tds194j + otherDed;
     const totalDays = parseInt(payrollForm.total_days) || 30;
     const lop = parseInt(payrollForm.lop) || 0;
     const daysWorked = totalDays - lop;
-    const net = Math.round((gross - totalDeductions) * (daysWorked / totalDays));
+
+    // LOP deduction = (Gross / Calendar Days) × LOP Days
+    const lopDeduction = calculateLOPDeduction(gross, totalDays, lop);
+
+    const totalDeductions = pfEmployee + esiEmployee + lwf + salaryAdvance + pt + tds + tds194c + tds194j + otherDed;
+    const net = Math.round(gross - totalDeductions - lopDeduction);
 
     return {
       basic, hra, specialAllowance, professionalFees, contractFees, otherAdditions, ot, incentives, bonus, gross,
       pfEmployee, pfEmployer, esiEmployee, esiEmployer, lwf, salaryAdvance, pt, tds, tds194c, tds194j, otherDed,
-      totalDeductions, totalDays, lop, daysWorked, net,
+      totalDeductions, totalDays, lop, daysWorked, lopDeduction, net,
     };
   }, [selectedEmployee, payrollForm]);
+
+  // TDS calculation result
+  const tdsCalcResult = useMemo(() => {
+    if (!selectedEmployee) return null;
+    return calculateMonthlyTDS(payrollCalc.gross);
+  }, [payrollCalc.gross, selectedEmployee]);
 
   // Create/Update employee
   const employeeMutation = useMutation({
     mutationFn: async (formData: typeof empForm & { id?: string }) => {
+      // Validate PAN & IFSC
+      const errors: { pan?: string; ifsc?: string } = {};
+      if (formData.pan_number && !validatePAN(formData.pan_number)) {
+        errors.pan = "Invalid PAN format (e.g. ABCDE1234F)";
+      }
+      if (formData.bank_ifsc && !validateIFSC(formData.bank_ifsc)) {
+        errors.ifsc = "Invalid IFSC format (e.g. SBIN0001234)";
+      }
+      if (Object.keys(errors).length > 0) {
+        setEmpFormErrors(errors);
+        throw new Error("Please fix validation errors");
+      }
+      setEmpFormErrors({});
+
       const payload: any = {
         property_id: selectedPropertyId,
         full_name: formData.full_name,
@@ -253,11 +371,12 @@ const Payroll = () => {
         phone: formData.phone || null,
         designation: formData.designation,
         department: formData.department || null,
+        date_of_joining: formData.date_of_joining ? format(formData.date_of_joining, "yyyy-MM-dd") : null,
         salary_amount: parseFloat(formData.salary_amount) || 0,
         bank_account: formData.bank_account || null,
         bank_name: formData.bank_name || null,
-        bank_ifsc: formData.bank_ifsc || null,
-        pan_number: formData.pan_number || null,
+        bank_ifsc: formData.bank_ifsc ? formData.bank_ifsc.toUpperCase() : null,
+        pan_number: formData.pan_number ? formData.pan_number.toUpperCase() : null,
         uan_number: formData.uan_number || null,
         esi_number: formData.esi_number || null,
         employee_number: formData.employee_number || null,
@@ -299,48 +418,56 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Generate payroll for single employee
+  // Generate payroll for single employee — with net pay warning
+  const doGeneratePayroll = async () => {
+    if (!selectedEmployee) throw new Error("Employee not found");
+    const existingLocked = payrollRecords.find(r => r.month === payrollForm.month && r.is_locked);
+    if (existingLocked) throw new Error("This month is locked. Cannot generate new payroll.");
+    const c = payrollCalc;
+    const { error } = await supabase.from("payroll_records").insert({
+      employee_id: payrollForm.employee_id,
+      property_id: selectedPropertyId,
+      month: payrollForm.month,
+      basic_salary: c.basic,
+      hra: c.hra,
+      special_allowance: c.specialAllowance,
+      professional_fees: c.professionalFees,
+      contract_fees: c.contractFees,
+      other_additions: c.otherAdditions,
+      ot: c.ot,
+      incentives: c.incentives,
+      bonus: c.bonus,
+      gross_salary: c.gross,
+      pf_employee: c.pfEmployee,
+      pf_employer: c.pfEmployer,
+      esi_employee: c.esiEmployee,
+      esi_employer: c.esiEmployer,
+      lwf: c.lwf,
+      salary_advance: c.salaryAdvance,
+      professional_tax: c.pt,
+      tds: c.tds,
+      tds_194c: c.tds194c,
+      tds_194j: c.tds194j,
+      other_deduction: c.otherDed,
+      total_days: c.totalDays,
+      lop: c.lop,
+      days_worked: c.daysWorked,
+      allowances: c.hra + c.specialAllowance + c.professionalFees + c.contractFees + c.otherAdditions + c.ot + c.incentives + c.bonus,
+      deductions: c.totalDeductions + c.lopDeduction,
+      net_salary: c.net,
+      notes: payrollForm.notes || null,
+    });
+    if (error) throw error;
+  };
+
   const payrollMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedEmployee) throw new Error("Employee not found");
-      // Check if month is locked
-      const existingLocked = payrollRecords.find(r => r.month === payrollForm.month && r.is_locked);
-      if (existingLocked) throw new Error("This month is locked. Cannot generate new payroll.");
-      const c = payrollCalc;
-      const { error } = await supabase.from("payroll_records").insert({
-        employee_id: payrollForm.employee_id,
-        property_id: selectedPropertyId,
-        month: payrollForm.month,
-        basic_salary: c.basic,
-        hra: c.hra,
-        special_allowance: c.specialAllowance,
-        professional_fees: c.professionalFees,
-        contract_fees: c.contractFees,
-        other_additions: c.otherAdditions,
-        ot: c.ot,
-        incentives: c.incentives,
-        bonus: c.bonus,
-        gross_salary: c.gross,
-        pf_employee: c.pfEmployee,
-        pf_employer: c.pfEmployer,
-        esi_employee: c.esiEmployee,
-        esi_employer: c.esiEmployer,
-        lwf: c.lwf,
-        salary_advance: c.salaryAdvance,
-        professional_tax: c.pt,
-        tds: c.tds,
-        tds_194c: c.tds194c,
-        tds_194j: c.tds194j,
-        other_deduction: c.otherDed,
-        total_days: c.totalDays,
-        lop: c.lop,
-        days_worked: c.daysWorked,
-        allowances: c.hra + c.specialAllowance + c.professionalFees + c.contractFees + c.otherAdditions + c.ot + c.incentives + c.bonus,
-        deductions: c.totalDeductions,
-        net_salary: c.net,
-        notes: payrollForm.notes || null,
-      });
-      if (error) throw error;
+      // Check for negative net pay
+      if (payrollCalc.net < 0) {
+        setNetPayWarningOpen(true);
+        throw new Error("__NET_PAY_WARNING__");
+      }
+      await doGeneratePayroll();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
@@ -348,14 +475,31 @@ const Payroll = () => {
       setPayrollForm(defaultPayrollForm);
       toast({ title: "Payroll generated successfully" });
     },
+    onError: (err: any) => {
+      if (err.message === "__NET_PAY_WARNING__") return; // handled by dialog
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const confirmNegativePayroll = useMutation({
+    mutationFn: doGeneratePayroll,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
+      setPayrollDialogOpen(false);
+      setNetPayWarningOpen(false);
+      setPayrollForm(defaultPayrollForm);
+      toast({ title: "Payroll generated (negative net pay)" });
+    },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Bulk payroll run
+  // Bulk payroll run — with auto PT and proper LOP
   const bulkPayrollMutation = useMutation({
     mutationFn: async () => {
       const lockedExists = payrollRecords.find(r => r.month === bulkMonth && r.is_locked);
       if (lockedExists) throw new Error("This month is locked.");
+      const [y, m] = bulkMonth.split("-").map(Number);
+      const calDays = getDaysInMonth(new Date(y, m - 1));
       const records = activeEmployees.map(emp => {
         const basic = emp.salary_amount || 0;
         const hra = emp.hra || 0;
@@ -366,7 +510,7 @@ const Payroll = () => {
         const pfEr = Math.min(Math.round(basic * 0.12), 1800);
         const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
         const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
-        const pt = 200;
+        const pt = calculatePT(gross, bulkMonth);
         const totalDed = pfEmp + esiEmp + pt;
         const net = Math.round(gross - totalDed);
         return {
@@ -376,7 +520,7 @@ const Payroll = () => {
           gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
           esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
           professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
-          total_days: 30, lop: 0, days_worked: 30,
+          total_days: calDays, lop: 0, days_worked: calDays,
           allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
         };
       });
@@ -406,12 +550,16 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const resetEmpForm = () => setEmpForm({
-    full_name: "", email: "", phone: "", designation: "", department: "",
-    salary_amount: "", bank_account: "", bank_name: "", bank_ifsc: "", pan_number: "",
-    uan_number: "", esi_number: "", employee_number: "", gender: "", work_location: "",
-    hra: "0", special_allowance: "0", other_additions: "0", employer_pf_contribution: "0",
-  });
+  const resetEmpForm = () => {
+    setEmpForm({
+      full_name: "", email: "", phone: "", designation: "", department: "",
+      salary_amount: "", bank_account: "", bank_name: "", bank_ifsc: "", pan_number: "",
+      uan_number: "", esi_number: "", employee_number: "", gender: "", work_location: "",
+      hra: "0", special_allowance: "0", other_additions: "0", employer_pf_contribution: "0",
+      date_of_joining: null,
+    });
+    setEmpFormErrors({});
+  };
 
   const openEditEmployee = (emp: Employee) => {
     setEditingEmployee(emp);
@@ -424,15 +572,101 @@ const Payroll = () => {
       employee_number: emp.employee_number || "", gender: emp.gender || "", work_location: emp.work_location || "",
       hra: String(emp.hra || 0), special_allowance: String(emp.special_allowance || 0),
       other_additions: String(emp.other_additions || 0), employer_pf_contribution: String(emp.employer_pf_contribution || 0),
+      date_of_joining: emp.date_of_joining ? new Date(emp.date_of_joining) : null,
     });
+    setEmpFormErrors({});
     setEmpDialogOpen(true);
   };
 
-  // PDF Payslip generation — matches uploaded template
+  // ── Phase 3: Export functions ──
+  const exportPFStatement = () => {
+    const data = payrollRecords.map(r => {
+      const emp = r.employees;
+      return {
+        "UAN": emp?.uan_number || "",
+        "Employee Name": emp?.full_name || "",
+        "Gross Wages": r.gross_salary,
+        "EPF Wages (Basic)": r.basic_salary,
+        "EPF Contribution (EE)": r.pf_employee,
+        "EPF Contribution (ER)": r.pf_employer,
+        "EPS Contribution": Math.min(Math.round((r.basic_salary || 0) * 0.0833), 1250),
+        "EDLI Contribution": Math.min(Math.round((r.basic_salary || 0) * 0.005), 75),
+        "Month": r.month,
+      };
+    });
+    exportToExcel(data, `PF-ECR-${format(new Date(), "yyyy-MM-dd")}`, "PF ECR");
+  };
+
+  const exportESIStatement = () => {
+    const data = payrollRecords
+      .filter(r => Number(r.esi_employee) > 0)
+      .map(r => ({
+        "ESI Number": r.employees?.esi_number || "",
+        "Employee Name": r.employees?.full_name || "",
+        "Gross Salary": r.gross_salary,
+        "Employee ESI (0.75%)": r.esi_employee,
+        "Employer ESI (3.25%)": r.esi_employer,
+        "Month": r.month,
+      }));
+    exportToExcel(data, `ESI-Statement-${format(new Date(), "yyyy-MM-dd")}`, "ESI");
+  };
+
+  const exportPTStatement = () => {
+    const data = payrollRecords.map(r => ({
+      "Employee Name": r.employees?.full_name || "",
+      "Emp No.": r.employees?.employee_number || "",
+      "Gross Salary": r.gross_salary,
+      "PT Deducted": r.professional_tax,
+      "Month": r.month,
+    }));
+    exportToExcel(data, `PT-Statement-${format(new Date(), "yyyy-MM-dd")}`, "PT Statement");
+  };
+
+  const exportTDSWorkings = () => {
+    // Group by employee, compute annual
+    const empMap = new Map<string, { emp: Employee; records: PayrollRecord[] }>();
+    payrollRecords.forEach(r => {
+      if (!r.employees) return;
+      const key = r.employee_id;
+      if (!empMap.has(key)) empMap.set(key, { emp: r.employees, records: [] });
+      empMap.get(key)!.records.push(r);
+    });
+    const data = Array.from(empMap.values()).map(({ emp, records }) => {
+      const avgGross = records.reduce((s, r) => s + Number(r.gross_salary), 0) / records.length;
+      const calc = calculateMonthlyTDS(avgGross);
+      return {
+        "Employee Name": emp.full_name,
+        "PAN": emp.pan_number || "",
+        "Avg Monthly Gross": Math.round(avgGross),
+        "Annual Gross (Projected)": Math.round(avgGross * 12),
+        "Standard Deduction": 75000,
+        "Taxable Income": calc.taxableIncome,
+        "Annual Tax (incl. Cess)": calc.annualTax,
+        "Monthly TDS": calc.monthlyTds,
+        "Section 87A Rebate": calc.taxableIncome <= 700000 ? "Applied" : "N/A",
+      };
+    });
+    exportToExcel(data, `TDS-Workings-${format(new Date(), "yyyy-MM-dd")}`, "TDS Workings");
+  };
+
+  const exportBankTransfer = () => {
+    const data = payrollRecords.map(r => ({
+      "Employee Name": r.employees?.full_name || "",
+      "Net Pay": r.net_salary,
+      "Bank Name": r.employees?.bank_name || "",
+      "Account Number": r.employees?.bank_account || "",
+      "IFSC Code": r.employees?.bank_ifsc || "",
+      "Month": r.month,
+    }));
+    exportToExcel(data, `Bank-Transfer-${format(new Date(), "yyyy-MM-dd")}`, "Bank Transfer");
+  };
+
+  // PDF Payslip generation — updated with Department, payment date, masked bank acct
   const generatePayslipPDF = (record: PayrollRecord) => {
     const emp = record.employees;
     const empName = emp?.full_name || "Unknown";
     const totalDeductions = Number(record.pf_employee || 0) + Number(record.esi_employee || 0) + Number(record.lwf || 0) + Number(record.salary_advance || 0) + Number(record.professional_tax || 0) + Number(record.tds || 0) + Number(record.tds_194c || 0) + Number(record.tds_194j || 0) + Number(record.other_deduction || 0);
+    const lopDed = Number(record.gross_salary || 0) - Number(record.net_salary || 0) - totalDeductions;
     const propName = properties?.[0]?.name || "Hostylia";
     const propAddr = [properties?.[0]?.address, properties?.[0]?.city, properties?.[0]?.state].filter(Boolean).join(", ");
 
@@ -477,16 +711,18 @@ td:last-child{text-align:right;font-weight:600}
     <div class="p-item"><span class="lbl">Emp No.</span><span class="val">${emp?.employee_number || 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">Name</span><span class="val">${empName}</span></div>
     <div class="p-item"><span class="lbl">Designation</span><span class="val">${emp?.designation || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Department</span><span class="val">${emp?.department || 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">DOJ</span><span class="val">${emp?.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : 'N/A'}</span></div>
-    <div class="p-item"><span class="lbl">Pay Period</span><span class="val">${record.month}</span></div>
     <div class="p-item"><span class="lbl">Gender</span><span class="val">${emp?.gender || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Pay Period</span><span class="val">${record.month}</span></div>
+    <div class="p-item"><span class="lbl">Date of Payment</span><span class="val">${record.generated_at ? format(new Date(record.generated_at), "dd MMM yyyy") : format(new Date(), "dd MMM yyyy")}</span></div>
     <div class="p-item"><span class="lbl">Paid Days</span><span class="val">${record.days_worked || 30}</span></div>
     <div class="p-item"><span class="lbl">LOP Days</span><span class="val">${record.lop || 0}</span></div>
     <div class="p-item"><span class="lbl">Total Days</span><span class="val">${record.total_days || 30}</span></div>
     <div class="p-item"><span class="lbl">UAN No.</span><span class="val">${emp?.uan_number || 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">ESIC No.</span><span class="val">${emp?.esi_number || 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">PAN</span><span class="val">${emp?.pan_number || 'N/A'}</span></div>
-    <div class="p-item"><span class="lbl">Bank Acct</span><span class="val">${emp?.bank_account || 'N/A'}</span></div>
+    <div class="p-item"><span class="lbl">Bank Acct</span><span class="val">${maskAccount(emp?.bank_account || null)}</span></div>
     <div class="p-item"><span class="lbl">Bank</span><span class="val">${emp?.bank_name || 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">IFSC</span><span class="val">${emp?.bank_ifsc || 'N/A'}</span></div>
   </div>
@@ -519,7 +755,8 @@ td:last-child{text-align:right;font-weight:600}
       <tr><td>TDS 194C</td><td>₹${fmt(record.tds_194c)}</td></tr>
       <tr><td>TDS 194J</td><td>₹${fmt(record.tds_194j)}</td></tr>
       <tr><td>Other Deductions</td><td>₹${fmt(record.other_deduction)}</td></tr>
-      <tr class="total-row"><td>Total Deductions</td><td>₹${fmt(totalDeductions)}</td></tr>
+      ${lopDed > 0 ? `<tr><td>LOP Deduction</td><td>₹${fmt(lopDed)}</td></tr>` : ''}
+      <tr class="total-row"><td>Total Deductions</td><td>₹${fmt(totalDeductions + (lopDed > 0 ? lopDed : 0))}</td></tr>
     </table>
   </div>
 </div>
@@ -621,8 +858,8 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={(e) => { e.preventDefault(); employeeMutation.mutate({ ...empForm, id: editingEmployee?.id }); }} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2 col-span-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2 sm:col-span-2">
                       <Label>Full Name *</Label>
                       <Input required value={empForm.full_name} onChange={e => setEmpForm(p => ({ ...p, full_name: e.target.value }))} />
                     </div>
@@ -640,6 +877,20 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                           <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Date of Joining</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !empForm.date_of_joining && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {empForm.date_of_joining ? format(empForm.date_of_joining, "dd MMM yyyy") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={empForm.date_of_joining || undefined} onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))} initialFocus className="p-3 pointer-events-auto" />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
                       <Label>Email</Label>
@@ -665,7 +916,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
 
                   <Separator />
                   <h4 className="text-sm font-semibold text-foreground">Salary Structure</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Basic Salary (₹) *</Label>
                       <Input required type="number" min="0" value={empForm.salary_amount} onChange={e => setEmpForm(p => ({ ...p, salary_amount: e.target.value }))} />
@@ -690,7 +941,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
 
                   <Separator />
                   <h4 className="text-sm font-semibold text-foreground">Bank & Statutory</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Bank Name</Label>
                       <Input value={empForm.bank_name} onChange={e => setEmpForm(p => ({ ...p, bank_name: e.target.value }))} />
@@ -701,11 +952,13 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     </div>
                     <div className="space-y-2">
                       <Label>Bank IFSC</Label>
-                      <Input value={empForm.bank_ifsc} onChange={e => setEmpForm(p => ({ ...p, bank_ifsc: e.target.value }))} placeholder="e.g. SBIN0001234" />
+                      <Input value={empForm.bank_ifsc} onChange={e => setEmpForm(p => ({ ...p, bank_ifsc: e.target.value }))} placeholder="e.g. SBIN0001234" className={empFormErrors.ifsc ? "border-destructive" : ""} />
+                      {empFormErrors.ifsc && <p className="text-xs text-destructive">{empFormErrors.ifsc}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>PAN Number</Label>
-                      <Input value={empForm.pan_number} onChange={e => setEmpForm(p => ({ ...p, pan_number: e.target.value }))} placeholder="e.g. ABCDE1234F" />
+                      <Input value={empForm.pan_number} onChange={e => setEmpForm(p => ({ ...p, pan_number: e.target.value }))} placeholder="e.g. ABCDE1234F" className={empFormErrors.pan ? "border-destructive" : ""} />
+                      {empFormErrors.pan && <p className="text-xs text-destructive">{empFormErrors.pan}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>UAN Number (PF)</Label>
@@ -737,14 +990,18 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{emp.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{emp.designation} {emp.employee_number ? `• ${emp.employee_number}` : ''}</p>
+                        <p className="text-xs text-muted-foreground">{emp.designation} {emp.department ? `· ${emp.department}` : ""}</p>
                       </div>
                       <Badge variant={emp.status === "active" ? "default" : "secondary"}>{emp.status}</Badge>
                     </div>
-                    <p className="font-semibold">₹{Number(emp.salary_amount).toLocaleString("en-IN")}</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Basic:</span> ₹{Number(emp.salary_amount).toLocaleString("en-IN")}</div>
+                      <div><span className="text-muted-foreground">Emp #:</span> {emp.employee_number || "N/A"}</div>
+                      {emp.date_of_joining && <div><span className="text-muted-foreground">DOJ:</span> {format(new Date(emp.date_of_joining), "dd MMM yyyy")}</div>}
+                    </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => openEditEmployee(emp)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteEmployeeMutation.mutate(emp.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEditEmployee(emp)}><Edit className="h-4 w-4 mr-1" /> Edit</Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (confirm("Delete this employee?")) deleteEmployeeMutation.mutate(emp.id); }}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
                     </div>
                   </div>
                 ))}
@@ -754,44 +1011,35 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Employee</TableHead>
                       <TableHead>Emp No.</TableHead>
-                      <TableHead>Name</TableHead>
+                      <TableHead>DOJ</TableHead>
                       <TableHead>Designation</TableHead>
-                      <TableHead>Basic</TableHead>
-                      <TableHead>Bank Acct</TableHead>
-                      <TableHead>IFSC</TableHead>
-                      <TableHead>UAN</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Basic Salary</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingEmployees ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : employees.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No employees added yet</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No employees added yet</TableCell></TableRow>
                     ) : employees.map(emp => (
                       <TableRow key={emp.id}>
-                        <TableCell className="text-xs text-muted-foreground">{emp.employee_number || "-"}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{emp.full_name}</p>
-                            {emp.email && <p className="text-xs text-muted-foreground">{emp.email}</p>}
-                          </div>
-                        </TableCell>
+                        <TableCell className="font-medium">{emp.full_name}</TableCell>
+                        <TableCell>{emp.employee_number || "-"}</TableCell>
+                        <TableCell>{emp.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : "-"}</TableCell>
                         <TableCell>{emp.designation}</TableCell>
-                        <TableCell className="font-semibold">₹{Number(emp.salary_amount).toLocaleString("en-IN")}</TableCell>
-                        <TableCell className="text-xs">{emp.bank_account || "-"}</TableCell>
-                        <TableCell className="text-xs">{emp.bank_ifsc || "-"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{emp.uan_number || "-"}</TableCell>
+                        <TableCell>{emp.department || "-"}</TableCell>
+                        <TableCell>₹{Number(emp.salary_amount).toLocaleString("en-IN")}</TableCell>
                         <TableCell>
                           <Badge variant={emp.status === "active" ? "default" : "secondary"}>{emp.status}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditEmployee(emp)}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteEmployeeMutation.mutate(emp.id)}><Trash2 className="h-4 w-4" /></Button>
-                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => openEditEmployee(emp)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { if (confirm("Delete this employee?")) deleteEmployeeMutation.mutate(emp.id); }}><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -853,26 +1101,43 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
               </DialogContent>
             </Dialog>
 
-            <Button variant="outline" onClick={() => {
-              if (payrollRecords.length === 0) return;
-              exportToExcel(payrollRecords.map(r => ({
-                "Employee": (r.employees as any)?.full_name || "",
-                "Emp No.": (r.employees as any)?.employee_number || "",
-                "Month": r.month,
-                "Basic": r.basic_salary, "HRA": r.hra, "Special Allowance": r.special_allowance,
-                "Professional Fees": r.professional_fees, "Contract Fees": r.contract_fees,
-                "Other Additions": r.other_additions, "OT": r.ot, "Incentives": r.incentives, "Bonus": r.bonus,
-                "Gross": r.gross_salary, "PF (Emp)": r.pf_employee, "ESI (Emp)": r.esi_employee,
-                "LWF": r.lwf, "Salary Advance": r.salary_advance, "PT": r.professional_tax,
-                "TDS": r.tds, "TDS 194C": r.tds_194c, "TDS 194J": r.tds_194j,
-                "Total Deductions": r.deductions, "Total Days": r.total_days, "LOP": r.lop,
-                "Days Worked": r.days_worked, "Net Salary": r.net_salary, "Status": r.status,
-                "Bank Account": (r.employees as any)?.bank_account || "",
-                "Bank Name": (r.employees as any)?.bank_name || "",
-                "Bank IFSC": (r.employees as any)?.bank_ifsc || "",
-                "PAN": (r.employees as any)?.pan_number || "",
-              })), `payroll-${format(new Date(), "yyyy-MM-dd")}`, "Payroll");
-            }}><Download className="h-4 w-4 mr-2" />Export Excel</Button>
+            {/* Export dropdown */}
+            <Select onValueChange={(v) => {
+              if (payrollRecords.length === 0) { toast({ title: "No records to export" }); return; }
+              switch (v) {
+                case "salary": exportToExcel(payrollRecords.map(r => ({
+                  "Employee": (r.employees as any)?.full_name || "",
+                  "Emp No.": (r.employees as any)?.employee_number || "",
+                  "Month": r.month,
+                  "Basic": r.basic_salary, "HRA": r.hra, "Special Allowance": r.special_allowance,
+                  "Professional Fees": r.professional_fees, "Contract Fees": r.contract_fees,
+                  "Other Additions": r.other_additions, "OT": r.ot, "Incentives": r.incentives, "Bonus": r.bonus,
+                  "Gross": r.gross_salary, "PF (Emp)": r.pf_employee, "ESI (Emp)": r.esi_employee,
+                  "LWF": r.lwf, "Salary Advance": r.salary_advance, "PT": r.professional_tax,
+                  "TDS": r.tds, "TDS 194C": r.tds_194c, "TDS 194J": r.tds_194j,
+                  "Total Deductions": r.deductions, "Total Days": r.total_days, "LOP": r.lop,
+                  "Days Worked": r.days_worked, "Net Salary": r.net_salary, "Status": r.status,
+                })), `payroll-${format(new Date(), "yyyy-MM-dd")}`, "Payroll"); break;
+                case "pf": exportPFStatement(); break;
+                case "esi": exportESIStatement(); break;
+                case "pt": exportPTStatement(); break;
+                case "tds": exportTDSWorkings(); break;
+                case "bank": exportBankTransfer(); break;
+              }
+            }}>
+              <SelectTrigger className="w-[180px]">
+                <Download className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Export Reports" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="salary">Salary Register</SelectItem>
+                <SelectItem value="pf">PF Statement (ECR)</SelectItem>
+                <SelectItem value="esi">ESI Statement</SelectItem>
+                <SelectItem value="pt">PT Statement</SelectItem>
+                <SelectItem value="tds">TDS Workings</SelectItem>
+                <SelectItem value="bank">Bank Transfer File</SelectItem>
+              </SelectContent>
+            </Select>
 
             <Dialog open={payrollDialogOpen} onOpenChange={setPayrollDialogOpen}>
               <DialogTrigger asChild>
@@ -883,7 +1148,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <DialogTitle>Generate Payroll</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={(e) => { e.preventDefault(); payrollMutation.mutate(); }} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Employee *</Label>
                       <Select value={payrollForm.employee_id} onValueChange={v => setPayrollForm(p => ({ ...p, employee_id: v }))}>
@@ -1000,7 +1265,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                             </div>
                             <span className="font-semibold text-sm">₹{payrollCalc.esiEmployee.toLocaleString("en-IN")}</span>
                           </div>
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div className="space-y-1">
                               <Label className="text-xs">LWF (₹)</Label>
                               <Input type="number" min="0" value={payrollForm.lwf} onChange={e => setPayrollForm(p => ({ ...p, lwf: e.target.value }))} />
@@ -1012,10 +1277,16 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                             <div className="space-y-1">
                               <Label className="text-xs">Professional Tax (₹)</Label>
                               <Input type="number" min="0" value={payrollForm.professional_tax} onChange={e => setPayrollForm(p => ({ ...p, professional_tax: e.target.value }))} />
+                              <p className="text-[10px] text-muted-foreground">Auto: Karnataka slabs</p>
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Income Tax / TDS (₹)</Label>
-                              <Input type="number" min="0" value={payrollForm.tds} onChange={e => setPayrollForm(p => ({ ...p, tds: e.target.value }))} />
+                              <div className="flex gap-1">
+                                <Input type="number" min="0" value={payrollForm.tds} onChange={e => setPayrollForm(p => ({ ...p, tds: e.target.value }))} />
+                                <Button type="button" variant="outline" size="icon" className="shrink-0" title="Calculate TDS" onClick={() => setTdsCalcOpen(true)}>
+                                  <Calculator className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">TDS 194C (₹)</Label>
@@ -1038,10 +1309,18 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                       {/* Summary */}
                       <div className="bg-muted/30 rounded-lg p-4 space-y-2">
                         <div className="flex justify-between text-sm"><span>Gross Salary</span><span className="font-semibold">₹{payrollCalc.gross.toLocaleString("en-IN")}</span></div>
-                        <div className="flex justify-between text-sm text-destructive"><span>Total Deductions</span><span className="font-semibold">- ₹{payrollCalc.totalDeductions.toLocaleString("en-IN")}</span></div>
+                        <div className="flex justify-between text-sm text-destructive"><span>Statutory Deductions</span><span className="font-semibold">- ₹{payrollCalc.totalDeductions.toLocaleString("en-IN")}</span></div>
+                        {payrollCalc.lopDeduction > 0 && (
+                          <div className="flex justify-between text-sm text-destructive"><span>LOP Deduction ({payrollCalc.lop} days)</span><span className="font-semibold">- ₹{payrollCalc.lopDeduction.toLocaleString("en-IN")}</span></div>
+                        )}
                         <div className="flex justify-between text-xs text-muted-foreground"><span>Days Worked / Total Days</span><span>{payrollCalc.daysWorked} / {payrollCalc.totalDays}</span></div>
                         <Separator />
-                        <div className="flex justify-between text-base font-bold text-primary"><span>Net Salary (Prorated)</span><span>₹{payrollCalc.net.toLocaleString("en-IN")}</span></div>
+                        <div className={cn("flex justify-between text-base font-bold", payrollCalc.net < 0 ? "text-destructive" : "text-primary")}>
+                          <span>Net Salary</span><span>₹{payrollCalc.net.toLocaleString("en-IN")}</span>
+                        </div>
+                        {payrollCalc.net < 0 && (
+                          <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Net pay is negative. You will be asked to confirm.</p>
+                        )}
                         <p className="text-xs text-muted-foreground">Employer PF: ₹{payrollCalc.pfEmployer.toLocaleString("en-IN")} | Employer ESI: ₹{payrollCalc.esiEmployer.toLocaleString("en-IN")}</p>
                       </div>
                     </>
@@ -1136,6 +1415,65 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Net Pay Warning Dialog */}
+      <Dialog open={netPayWarningOpen} onOpenChange={setNetPayWarningOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> Negative Net Pay Warning
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The net pay for this employee is <strong className="text-destructive">₹{payrollCalc.net.toLocaleString("en-IN")}</strong> (negative).
+              Total deductions (₹{(payrollCalc.totalDeductions + payrollCalc.lopDeduction).toLocaleString("en-IN")}) exceed total earnings (₹{payrollCalc.gross.toLocaleString("en-IN")}).
+            </p>
+            <p className="text-sm">Are you sure you want to proceed?</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setNetPayWarningOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => confirmNegativePayroll.mutate()} disabled={confirmNegativePayroll.isPending}>
+                {confirmNegativePayroll.isPending ? "Processing..." : "Confirm & Generate"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* TDS Calculator Dialog */}
+      <Dialog open={tdsCalcOpen} onOpenChange={setTdsCalcOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" /> TDS Calculator (New Regime FY 2025-26)
+            </DialogTitle>
+          </DialogHeader>
+          {tdsCalcResult && (
+            <div className="space-y-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Monthly Gross</span><span>₹{payrollCalc.gross.toLocaleString("en-IN")}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Annual Gross (×12)</span><span>₹{(payrollCalc.gross * 12).toLocaleString("en-IN")}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Standard Deduction</span><span>- ₹75,000</span></div>
+                <Separator />
+                <div className="flex justify-between font-medium"><span>Taxable Income</span><span>₹{tdsCalcResult.taxableIncome.toLocaleString("en-IN")}</span></div>
+                {tdsCalcResult.taxableIncome <= 700000 && (
+                  <p className="text-xs text-green-600 font-medium">✓ Section 87A Rebate applied — No tax payable</p>
+                )}
+                <div className="flex justify-between"><span className="text-muted-foreground">Annual Tax (incl. 4% Cess)</span><span>₹{tdsCalcResult.annualTax.toLocaleString("en-IN")}</span></div>
+                <Separator />
+                <div className="flex justify-between text-base font-bold text-primary"><span>Monthly TDS</span><span>₹{tdsCalcResult.monthlyTds.toLocaleString("en-IN")}</span></div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setTdsCalcOpen(false)}>Cancel</Button>
+                <Button onClick={() => {
+                  setPayrollForm(p => ({ ...p, tds: String(tdsCalcResult.monthlyTds) }));
+                  setTdsCalcOpen(false);
+                }}>Apply ₹{tdsCalcResult.monthlyTds.toLocaleString("en-IN")}</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
