@@ -910,7 +910,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                               selected={empForm.date_of_joining || undefined}
                               onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
                               initialFocus
-                              className="p-3 pointer-events-auto"
+                              className="p-2 pointer-events-auto text-xs scale-90 origin-top-right"
                               captionLayout="dropdown-buttons"
                               fromYear={1970}
                               toYear={new Date().getFullYear()}
