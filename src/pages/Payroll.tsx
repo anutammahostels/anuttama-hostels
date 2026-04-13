@@ -19,10 +19,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import {
-  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, PlayCircle, CalendarIcon, Calculator,
+  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, Unlock, PlayCircle, CalendarIcon, Calculator,
   AlertTriangle,
 } from "lucide-react";
-import { format, getDaysInMonth } from "date-fns";
+import { format, getDaysInMonth, eachMonthOfInterval, startOfMonth, endOfMonth } from "date-fns";
 import { exportToExcel } from "@/lib/exportExcel";
 
 interface Employee {
