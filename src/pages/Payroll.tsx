@@ -220,6 +220,11 @@ const Payroll = () => {
   const [bulkStartMonth, setBulkStartMonth] = useState(format(new Date(), "yyyy-MM"));
   const [bulkEndMonth, setBulkEndMonth] = useState(format(new Date(), "yyyy-MM"));
 
+  // Multi-employee selection for Generate Payroll dialog
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [payrollStartMonth, setPayrollStartMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [payrollEndMonth, setPayrollEndMonth] = useState(format(new Date(), "yyyy-MM"));
+
   // Fetch employees
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
     queryKey: ["employees", selectedPropertyId],
