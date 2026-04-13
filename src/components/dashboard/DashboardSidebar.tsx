@@ -111,7 +111,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
             <Home className="h-4 w-4 text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-sm text-white tracking-tight">Hostylia</span>
+            <span className="font-bold text-sm text-white tracking-tight">Anuttama Hostels</span>
             <span className="text-[9px] text-hostylia-slate -mt-0.5">Management Suite</span>
           </div>
         </Link>
