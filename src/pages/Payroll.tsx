@@ -1123,21 +1123,31 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
         {/* Payroll Records Tab */}
         <TabsContent value="payroll" className="space-y-4">
           <div className="flex flex-wrap justify-end gap-2">
-            {/* Lock Month */}
+            {/* Lock/Unlock Month */}
             {uniqueMonths.length > 0 && (
               <Select onValueChange={(month) => {
-                if (!isMonthLocked(month) && confirm(`Lock payroll for ${month}? This cannot be undone.`)) {
-                  lockMonthMutation.mutate(month);
+                const locked = isMonthLocked(month);
+                if (locked) {
+                  if (confirm(`Unlock payroll for ${month}? This will allow edits to payroll records.`)) {
+                    unlockMonthMutation.mutate(month);
+                  }
+                } else {
+                  if (confirm(`Lock payroll for ${month}? Payroll records will be read-only.`)) {
+                    lockMonthMutation.mutate(month);
+                  }
                 }
               }}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[200px]">
                   <Lock className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Lock Month" />
+                  <SelectValue placeholder="Lock / Unlock Month" />
                 </SelectTrigger>
                 <SelectContent>
                   {uniqueMonths.map(m => (
-                    <SelectItem key={m} value={m} disabled={isMonthLocked(m)}>
-                      {m} {isMonthLocked(m) ? "🔒" : ""}
+                    <SelectItem key={m} value={m}>
+                      <span className="flex items-center gap-2">
+                        {isMonthLocked(m) ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                        {m} — {isMonthLocked(m) ? "Locked (click to unlock)" : "Unlocked (click to lock)"}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1155,16 +1165,22 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                 </DialogHeader>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults.
+                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults. Select a date range to generate across multiple months.
                   </p>
-                  <div className="space-y-2">
-                    <Label>Month *</Label>
-                    <Input type="month" value={bulkMonth} onChange={e => setBulkMonth(e.target.value)} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Start Month *</Label>
+                      <Input type="month" value={bulkStartMonth} onChange={e => setBulkStartMonth(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>End Month *</Label>
+                      <Input type="month" value={bulkEndMonth} onChange={e => setBulkEndMonth(e.target.value)} />
+                    </div>
                   </div>
-                  {isMonthLocked(bulkMonth) && (
-                    <p className="text-sm text-destructive font-medium">⚠️ This month is locked. Cannot generate payroll.</p>
+                  {bulkStartMonth > bulkEndMonth && (
+                    <p className="text-sm text-destructive font-medium">⚠️ Start month must be before or equal to end month.</p>
                   )}
-                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || isMonthLocked(bulkMonth) || activeEmployees.length === 0}>
+                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || bulkStartMonth > bulkEndMonth || activeEmployees.length === 0}>
                     {bulkPayrollMutation.isPending ? "Processing..." : `Generate for ${activeEmployees.length} Employees`}
                   </Button>
                 </div>
