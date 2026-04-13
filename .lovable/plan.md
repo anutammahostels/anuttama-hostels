@@ -1,35 +1,36 @@
 
 
-## Payroll: Unlock Month & Date-Range Payroll Generation
+## Generate Payroll: Multi-Employee Selection + Date Range
 
-### Changes Required
+### What Changes
 
-#### 1. Make Lock/Unlock toggle for months
 **File:** `src/pages/Payroll.tsx`
 
-- Add an `unlockMonthMutation` that sets `is_locked = false` for all records in a given month (mirrors `lockMonthMutation` but sets `false`)
-- Replace the current Lock Month `<Select>` with a dropdown that shows both locked and unlocked months:
-  - Unlocked months show a "Lock" action
-  - Locked months show an "Unlock" action
-- Remove the "This cannot be undone" language from the confirm dialog
-- When unlocking, show a confirmation: "Unlock payroll for {month}? This will allow edits to payroll records."
-- When a month is unlocked, the existing edit/regenerate restrictions are lifted automatically (since `isMonthLocked()` will return false)
+#### 1. Replace single-employee Select with multi-select checkboxes
+- In the "Generate Payroll" dialog, replace the single `<Select>` for employee with a scrollable checkbox list of all active employees
+- Add a "Select All" / "Deselect All" toggle at the top
+- Store selected employee IDs in an array state (e.g., `selectedEmployeeIds`)
 
-#### 2. Add date-range based payroll generation
-**File:** `src/pages/Payroll.tsx`
+#### 2. Add date range to the individual Generate Payroll dialog
+- Replace the single `<Input type="month">` with **Start Month** and **End Month** inputs (same as the bulk dialog)
+- Add validation: start month must be ≤ end month
 
-- In the "Run Payroll for All" (bulk) dialog, replace the single `<Input type="month">` with two date pickers: **Start Date** and **End Date**
-- The bulk mutation will:
-  - Calculate the number of months spanned (e.g., Jan 2025 to Mar 2025 = 3 months)
-  - For each month in the range, generate payroll records for all active employees
-  - Use each month's calendar days for LOP/PT calculations
-  - Skip months that are already locked (with a toast notification)
-- In the single-employee "Generate Payroll" dialog, similarly replace the month input with start/end date pickers, generating one record per month in the range
-- The `month` field stored in DB remains `yyyy-MM` format for each individual month's record
+#### 3. Update generation logic
+- When the form is submitted, iterate over each selected employee × each month in the range
+- For each combination: compute salary using employee's saved defaults (basic, HRA, etc.), auto-calculate PT/TDS/LOP per month's calendar days
+- Skip locked months (with toast notification)
+- The detailed earnings/deductions override fields (currently shown for single employee) will be hidden when multiple employees are selected — bulk uses saved defaults
+- When exactly 1 employee is selected, show the detailed form fields as they work today
+
+#### 4. Consolidate with Bulk dialog
+- The "Run Payroll for All" button remains as a quick shortcut (pre-selects all employees)
+- The "Generate Payroll" dialog becomes the unified entry point supporting 1-to-many employees with date range
 
 ### Technical Details
 - 1 file modified: `src/pages/Payroll.tsx`
-- No database changes — `is_locked` column already exists as a boolean
-- The unlock mutation is a simple `.update({ is_locked: false })` query
-- Date range uses `eachMonthOfInterval` from `date-fns` to iterate months
+- New state: `selectedEmployeeIds: string[]` replaces `payrollForm.employee_id`
+- New state: `payrollStartMonth` / `payrollEndMonth` replace `payrollForm.month`
+- Uses `getMonthsInRange()` helper already present in the file
+- Multi-employee generation loops using same insert logic as `doGeneratePayroll` but with employee defaults
+- No database changes needed
 
