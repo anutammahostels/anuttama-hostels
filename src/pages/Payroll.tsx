@@ -468,32 +468,100 @@ const Payroll = () => {
 
   const payrollMutation = useMutation({
     mutationFn: async () => {
-      // Check for negative net pay
-      if (payrollCalc.net < 0) {
-        setNetPayWarningOpen(true);
-        throw new Error("__NET_PAY_WARNING__");
+      const isSingle = selectedEmployeeIds.length === 1;
+      
+      if (isSingle) {
+        // Single employee with detailed form — use existing logic
+        if (payrollCalc.net < 0) {
+          setNetPayWarningOpen(true);
+          throw new Error("__NET_PAY_WARNING__");
+        }
+        // Set employee_id from selectedEmployeeIds for doGeneratePayroll
+        payrollForm.employee_id = selectedEmployeeIds[0];
+        payrollForm.month = payrollStartMonth; // single month for detailed
+        await doGeneratePayroll();
+      } else {
+        // Multi-employee: iterate employees × months using defaults
+        const months = getMonthsInRange(payrollStartMonth, payrollEndMonth);
+        if (months.length === 0) throw new Error("Invalid date range");
+        if (selectedEmployeeIds.length === 0) throw new Error("No employees selected");
+        
+        let totalGenerated = 0;
+        const skippedMonths: string[] = [];
+        
+        for (const month of months) {
+          if (isMonthLocked(month)) {
+            skippedMonths.push(month);
+            continue;
+          }
+          const [y, m] = month.split("-").map(Number);
+          const calDays = getDaysInMonth(new Date(y, m - 1));
+          
+          const selectedEmps = activeEmployees.filter(e => selectedEmployeeIds.includes(e.id));
+          const records = selectedEmps.map(emp => {
+            const basic = emp.salary_amount || 0;
+            const hra = emp.hra || 0;
+            const sa = emp.special_allowance || 0;
+            const oa = emp.other_additions || 0;
+            const gross = basic + hra + sa + oa;
+            const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
+            const pfEr = Math.min(Math.round(basic * 0.12), 1800);
+            const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
+            const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
+            const pt = calculatePT(gross, month);
+            const totalDed = pfEmp + esiEmp + pt;
+            const net = Math.round(gross - totalDed);
+            return {
+              employee_id: emp.id, property_id: selectedPropertyId, month,
+              basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
+              professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
+              gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
+              esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
+              professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
+              total_days: calDays, lop: 0, days_worked: calDays,
+              allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
+            };
+          });
+          if (records.length > 0) {
+            const { error } = await supabase.from("payroll_records").insert(records);
+            if (error) throw error;
+            totalGenerated += records.length;
+          }
+        }
+        if (skippedMonths.length > 0) {
+          toast({ title: `Skipped locked months: ${skippedMonths.join(", ")}` });
+        }
+        return totalGenerated;
       }
-      await doGeneratePayroll();
     },
-    onSuccess: () => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
       setPayrollDialogOpen(false);
       setPayrollForm(defaultPayrollForm);
-      toast({ title: "Payroll generated successfully" });
+      setSelectedEmployeeIds([]);
+      const msg = selectedEmployeeIds.length === 1 
+        ? "Payroll generated successfully" 
+        : `Payroll generated: ${count} records`;
+      toast({ title: msg });
     },
     onError: (err: any) => {
-      if (err.message === "__NET_PAY_WARNING__") return; // handled by dialog
+      if (err.message === "__NET_PAY_WARNING__") return;
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 
   const confirmNegativePayroll = useMutation({
-    mutationFn: doGeneratePayroll,
+    mutationFn: () => {
+      payrollForm.employee_id = selectedEmployeeIds[0];
+      payrollForm.month = payrollStartMonth;
+      return doGeneratePayroll();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
       setPayrollDialogOpen(false);
       setNetPayWarningOpen(false);
       setPayrollForm(defaultPayrollForm);
+      setSelectedEmployeeIds([]);
       toast({ title: "Payroll generated (negative net pay)" });
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
