@@ -172,11 +172,11 @@ const Billing = () => {
       @media print{body{padding:20px}@page{margin:1cm}}
     </style></head><body>
     <div class="header">
-      <div><div class="logo">🏨 Hostylia</div><p style="color:#666;font-size:13px">Hostel Management System</p></div>
+      <div><div class="logo">🏨 Anuttama Hostels</div><p style="color:#666;font-size:13px">Smart Residential Management</p></div>
       <div><div class="invoice-title">INVOICE</div><div style="color:#666;font-size:14px">${invoice.invoice_number}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px">
-      <div><h3 style="font-size:12px;text-transform:uppercase;color:#999">Bill To</h3><p><strong>${studentName}</strong></p>${rollNumber ? `<p>Roll No: ${rollNumber}</p>` : ''}</div>
+      <div><h3 style="font-size:12px;text-transform:uppercase;color:#999">Bill To</h3><p><strong>${studentName}</strong></p><div><h3 style="font-size:12px;text-transform:uppercase;color:#999">Bill To</h3><p><strong>${studentName}</strong></p>${rollNumber ? `<p>Form Number: ${rollNumber}</p>` : ''}</div></div>
       <div style="text-align:right"><h3 style="font-size:12px;text-transform:uppercase;color:#999">Details</h3><p>Billing: ${format(new Date(invoice.billing_month), "MMMM yyyy")}</p><p>Due: ${format(new Date(invoice.due_date), "dd MMM yyyy")}</p></div>
     </div>
     <table>
@@ -325,7 +325,7 @@ const Billing = () => {
               exportToExcel(invoices.map(inv => ({
                 "Invoice #": inv.invoice_number,
                 "Student": inv.student?.profile?.full_name || "",
-                "Roll No": inv.student?.roll_number || "",
+                "Form Number": inv.student?.roll_number || "",
                 "Billing Month": inv.billing_month,
                 "Room Rent": inv.room_rent || 0,
                 "Mess": inv.mess_charges || 0,
@@ -346,7 +346,7 @@ const Billing = () => {
             </Button>
             <Button variant="outline" onClick={() => {
               if (invoices.length === 0) return;
-              const headers = ["Invoice #", "Student", "Roll No", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Discount", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
+              const headers = ["Invoice #", "Student", "Form Number", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Discount", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
               const rows = invoices.map(inv => [
                 inv.invoice_number,
                 inv.student?.profile?.full_name || "",
