@@ -217,13 +217,8 @@ const Payroll = () => {
     notes: "",
   };
   const [payrollForm, setPayrollForm] = useState(defaultPayrollForm);
-  const [bulkMonth, setBulkMonth] = useState(format(new Date(), "yyyy-MM"));
   const [bulkStartMonth, setBulkStartMonth] = useState(format(new Date(), "yyyy-MM"));
   const [bulkEndMonth, setBulkEndMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [singleStartMonth, setSingleStartMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [singleEndMonth, setSingleEndMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [lockActionMonth, setLockActionMonth] = useState<string | null>(null);
-  const [lockActionType, setLockActionType] = useState<"lock" | "unlock">("lock");
 
   // Fetch employees
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
