@@ -503,7 +503,7 @@ const Billing = () => {
                         <TableRow>
                           <TableHead>Invoice</TableHead>
                           <TableHead>Student</TableHead>
-                          <TableHead>Breakdown</TableHead>
+                          
                           <TableHead>Total</TableHead>
                           <TableHead>Paid</TableHead>
                           <TableHead>Due Date</TableHead>
@@ -521,34 +521,6 @@ const Billing = () => {
                                 <div>
                                   <p className="font-medium">{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</p>
                                   <p className="text-sm text-muted-foreground">{invoice.student?.roll_number || "-"}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm space-y-1">
-                                  {invoice.room_rent && (
-                                    <div className="flex justify-between w-32">
-                                      <span className="text-muted-foreground">Rent:</span>
-                                      <span>{formatCurrency(invoice.room_rent)}</span>
-                                    </div>
-                                  )}
-                                  {invoice.electricity_charges && (
-                                    <div className="flex justify-between w-32">
-                                      <span className="text-muted-foreground">Electricity:</span>
-                                      <span>{formatCurrency(invoice.electricity_charges)}</span>
-                                    </div>
-                                  )}
-                                  {invoice.mess_charges && (
-                                    <div className="flex justify-between w-32">
-                                      <span className="text-muted-foreground">Mess:</span>
-                                      <span>{formatCurrency(invoice.mess_charges)}</span>
-                                    </div>
-                                  )}
-                                  {invoice.other_charges && invoice.other_charges > 0 && (
-                                    <div className="flex justify-between w-32">
-                                      <span className="text-muted-foreground">Other:</span>
-                                      <span>{formatCurrency(invoice.other_charges)}</span>
-                                    </div>
-                                  )}
                                 </div>
                               </TableCell>
                               <TableCell>
