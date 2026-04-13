@@ -275,16 +275,17 @@ const Payroll = () => {
     }
   }, [selectedEmployee?.id]);
 
-  // Auto-set total days and PT when month changes
+  // Auto-set total days and PT when month changes (use payrollStartMonth for single employee)
   useEffect(() => {
-    if (payrollForm.month) {
+    const month = selectedEmployeeIds.length === 1 ? payrollStartMonth : payrollForm.month;
+    if (month) {
       try {
-        const [y, m] = payrollForm.month.split("-").map(Number);
+        const [y, m] = month.split("-").map(Number);
         const calDays = getDaysInMonth(new Date(y, m - 1));
         setPayrollForm(p => ({ ...p, total_days: String(calDays) }));
       } catch { /* ignore */ }
     }
-  }, [payrollForm.month]);
+  }, [payrollStartMonth, payrollForm.month, selectedEmployeeIds.length]);
 
   // Auto-calculate PT when gross changes
   useEffect(() => {
