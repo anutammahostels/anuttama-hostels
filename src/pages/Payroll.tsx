@@ -541,6 +541,21 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  // Lock month
+  const lockMonthMutation = useMutation({
+    mutationFn: async (month: string) => {
+      const ids = payrollRecords.filter(r => r.month === month).map(r => r.id);
+      if (ids.length === 0) throw new Error("No records for this month");
+      const { error } = await supabase.from("payroll_records").update({ is_locked: true } as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
+      toast({ title: "Month locked successfully" });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   // Unlock month
   const unlockMonthMutation = useMutation({
     mutationFn: async (month: string) => {
