@@ -19,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import {
-  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, PlayCircle, CalendarIcon, Calculator,
+  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, Unlock, PlayCircle, CalendarIcon, Calculator,
   AlertTriangle,
 } from "lucide-react";
 import { format, getDaysInMonth } from "date-fns";
@@ -217,7 +217,8 @@ const Payroll = () => {
     notes: "",
   };
   const [payrollForm, setPayrollForm] = useState(defaultPayrollForm);
-  const [bulkMonth, setBulkMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [bulkStartMonth, setBulkStartMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [bulkEndMonth, setBulkEndMonth] = useState(format(new Date(), "yyyy-MM"));
 
   // Fetch employees
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
@@ -493,44 +494,71 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Bulk payroll run — with auto PT and proper LOP
+  // Helper to generate months array from start to end (yyyy-MM format)
+  const getMonthsInRange = (start: string, end: string): string[] => {
+    const [sy, sm] = start.split("-").map(Number);
+    const [ey, em] = end.split("-").map(Number);
+    const months: string[] = [];
+    let cy = sy, cm = sm;
+    while (cy < ey || (cy === ey && cm <= em)) {
+      months.push(`${cy}-${String(cm).padStart(2, "0")}`);
+      cm++;
+      if (cm > 12) { cm = 1; cy++; }
+    }
+    return months;
+  };
+
+  // Bulk payroll run — with date range support
   const bulkPayrollMutation = useMutation({
     mutationFn: async () => {
-      const lockedExists = payrollRecords.find(r => r.month === bulkMonth && r.is_locked);
-      if (lockedExists) throw new Error("This month is locked.");
-      const [y, m] = bulkMonth.split("-").map(Number);
-      const calDays = getDaysInMonth(new Date(y, m - 1));
-      const records = activeEmployees.map(emp => {
-        const basic = emp.salary_amount || 0;
-        const hra = emp.hra || 0;
-        const sa = emp.special_allowance || 0;
-        const oa = emp.other_additions || 0;
-        const gross = basic + hra + sa + oa;
-        const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
-        const pfEr = Math.min(Math.round(basic * 0.12), 1800);
-        const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
-        const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
-        const pt = calculatePT(gross, bulkMonth);
-        const totalDed = pfEmp + esiEmp + pt;
-        const net = Math.round(gross - totalDed);
-        return {
-          employee_id: emp.id, property_id: selectedPropertyId, month: bulkMonth,
-          basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
-          professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
-          gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
-          esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
-          professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
-          total_days: calDays, lop: 0, days_worked: calDays,
-          allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
-        };
-      });
-      const { error } = await supabase.from("payroll_records").insert(records);
-      if (error) throw error;
+      const months = getMonthsInRange(bulkStartMonth, bulkEndMonth);
+      if (months.length === 0) throw new Error("Invalid date range");
+      let totalGenerated = 0;
+      let skippedMonths: string[] = [];
+      for (const month of months) {
+        if (isMonthLocked(month)) {
+          skippedMonths.push(month);
+          continue;
+        }
+        const [y, m] = month.split("-").map(Number);
+        const calDays = getDaysInMonth(new Date(y, m - 1));
+        const records = activeEmployees.map(emp => {
+          const basic = emp.salary_amount || 0;
+          const hra = emp.hra || 0;
+          const sa = emp.special_allowance || 0;
+          const oa = emp.other_additions || 0;
+          const gross = basic + hra + sa + oa;
+          const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
+          const pfEr = Math.min(Math.round(basic * 0.12), 1800);
+          const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
+          const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
+          const pt = calculatePT(gross, month);
+          const totalDed = pfEmp + esiEmp + pt;
+          const net = Math.round(gross - totalDed);
+          return {
+            employee_id: emp.id, property_id: selectedPropertyId, month,
+            basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
+            professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
+            gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
+            esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
+            professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
+            total_days: calDays, lop: 0, days_worked: calDays,
+            allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
+          };
+        });
+        const { error } = await supabase.from("payroll_records").insert(records);
+        if (error) throw error;
+        totalGenerated += records.length;
+      }
+      if (skippedMonths.length > 0) {
+        toast({ title: `Skipped locked months: ${skippedMonths.join(", ")}` });
+      }
+      return totalGenerated;
     },
-    onSuccess: () => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
       setBulkDialogOpen(false);
-      toast({ title: `Payroll generated for ${activeEmployees.length} employees` });
+      toast({ title: `Payroll generated: ${count} records across selected months` });
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -546,6 +574,21 @@ const Payroll = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
       toast({ title: "Month locked successfully" });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  // Unlock month
+  const unlockMonthMutation = useMutation({
+    mutationFn: async (month: string) => {
+      const ids = payrollRecords.filter(r => r.month === month).map(r => r.id);
+      if (ids.length === 0) throw new Error("No records for this month");
+      const { error } = await supabase.from("payroll_records").update({ is_locked: false } as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
+      toast({ title: "Month unlocked — payroll records can now be edited" });
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -1080,21 +1123,31 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
         {/* Payroll Records Tab */}
         <TabsContent value="payroll" className="space-y-4">
           <div className="flex flex-wrap justify-end gap-2">
-            {/* Lock Month */}
+            {/* Lock/Unlock Month */}
             {uniqueMonths.length > 0 && (
               <Select onValueChange={(month) => {
-                if (!isMonthLocked(month) && confirm(`Lock payroll for ${month}? This cannot be undone.`)) {
-                  lockMonthMutation.mutate(month);
+                const locked = isMonthLocked(month);
+                if (locked) {
+                  if (confirm(`Unlock payroll for ${month}? This will allow edits to payroll records.`)) {
+                    unlockMonthMutation.mutate(month);
+                  }
+                } else {
+                  if (confirm(`Lock payroll for ${month}? Payroll records will be read-only.`)) {
+                    lockMonthMutation.mutate(month);
+                  }
                 }
               }}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[200px]">
                   <Lock className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Lock Month" />
+                  <SelectValue placeholder="Lock / Unlock Month" />
                 </SelectTrigger>
                 <SelectContent>
                   {uniqueMonths.map(m => (
-                    <SelectItem key={m} value={m} disabled={isMonthLocked(m)}>
-                      {m} {isMonthLocked(m) ? "🔒" : ""}
+                    <SelectItem key={m} value={m}>
+                      <span className="flex items-center gap-2">
+                        {isMonthLocked(m) ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                        {m} — {isMonthLocked(m) ? "Locked (click to unlock)" : "Unlocked (click to lock)"}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1112,16 +1165,22 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                 </DialogHeader>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults.
+                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults. Select a date range to generate across multiple months.
                   </p>
-                  <div className="space-y-2">
-                    <Label>Month *</Label>
-                    <Input type="month" value={bulkMonth} onChange={e => setBulkMonth(e.target.value)} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Start Month *</Label>
+                      <Input type="month" value={bulkStartMonth} onChange={e => setBulkStartMonth(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>End Month *</Label>
+                      <Input type="month" value={bulkEndMonth} onChange={e => setBulkEndMonth(e.target.value)} />
+                    </div>
                   </div>
-                  {isMonthLocked(bulkMonth) && (
-                    <p className="text-sm text-destructive font-medium">⚠️ This month is locked. Cannot generate payroll.</p>
+                  {bulkStartMonth > bulkEndMonth && (
+                    <p className="text-sm text-destructive font-medium">⚠️ Start month must be before or equal to end month.</p>
                   )}
-                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || isMonthLocked(bulkMonth) || activeEmployees.length === 0}>
+                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || bulkStartMonth > bulkEndMonth || activeEmployees.length === 0}>
                     {bulkPayrollMutation.isPending ? "Processing..." : `Generate for ${activeEmployees.length} Employees`}
                   </Button>
                 </div>
