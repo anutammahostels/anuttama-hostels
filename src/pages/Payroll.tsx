@@ -257,11 +257,11 @@ const Payroll = () => {
     enabled: !!selectedPropertyId,
   });
 
-  // Selected employee for payroll calc
-  const selectedEmployee = useMemo(() =>
-    employees.find(e => e.id === payrollForm.employee_id),
-    [employees, payrollForm.employee_id]
-  );
+  // Selected employee for payroll calc (when exactly 1 selected)
+  const selectedEmployee = useMemo(() => {
+    const id = selectedEmployeeIds.length === 1 ? selectedEmployeeIds[0] : payrollForm.employee_id;
+    return employees.find(e => e.id === id);
+  }, [employees, selectedEmployeeIds, payrollForm.employee_id]);
 
   // Auto-populate from employee master when employee selected
   useEffect(() => {
