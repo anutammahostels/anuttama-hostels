@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, XCircle, Loader2, ArrowLeft } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, ArrowLeft, Clock } from "lucide-react";
 
 async function fetchOrderStatus(orderId: string) {
   const res = await fetch(
@@ -25,7 +25,7 @@ async function fetchOrderStatus(orderId: string) {
 }
 
 type PaymentResult = {
-  status: "loading" | "completed" | "failed" | "not_found";
+  status: "loading" | "completed" | "failed" | "not_found" | "processing";
   orderId: string;
   amount?: number;
   invoiceNumber?: string;
@@ -54,7 +54,10 @@ export default function PaymentStatus() {
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     const pollOrderStatus = async () => {
-      const maxAttempts = 10;
+      // Phase 1: Wait 5s initial delay, then poll HDFC 15 times at 3s intervals (~50s)
+      await sleep(5000);
+
+      const maxAttempts = 15;
       let lastOrderResult: any = null;
 
       for (let i = 0; i < maxAttempts; i++) {
@@ -77,35 +80,50 @@ export default function PaymentStatus() {
         } catch (err) {
           console.error("hdfc-order-status check failed:", err);
         }
-        if (i < maxAttempts - 1) await sleep(2000);
+        if (i < maxAttempts - 1) await sleep(3000);
       }
 
-      // Phase 2: Fallback — check DB once
-      try {
-        const { data: payment } = await supabase
-          .from("payments")
-          .select("*, invoices(invoice_number)")
-          .eq("transaction_id", orderId)
-          .single();
+      // Phase 2: Poll DB 5 times at 5s intervals (~25s more)
+      const dbMaxAttempts = 5;
+      for (let i = 0; i < dbMaxAttempts; i++) {
+        try {
+          const { data: payment } = await supabase
+            .from("payments")
+            .select("*, invoices(invoice_number)")
+            .eq("transaction_id", orderId)
+            .single();
 
-        if (payment && payment.status === "completed") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setResult({
-            status: "completed",
-            orderId,
-            amount: payment.amount,
-            invoiceNumber: (payment.invoices as any)?.invoice_number || "",
-            transactionRef: payment.transaction_reference || "",
-          });
-          return;
+          if (payment && payment.status === "completed") {
+            sessionStorage.removeItem("hdfc_pending_order_id");
+            setResult({
+              status: "completed",
+              orderId,
+              amount: payment.amount,
+              invoiceNumber: (payment.invoices as any)?.invoice_number || "",
+              transactionRef: payment.transaction_reference || "",
+            });
+            return;
+          }
+          if (payment && payment.status === "failed") {
+            sessionStorage.removeItem("hdfc_pending_order_id");
+            setResult({ status: "failed", orderId, amount: payment.amount });
+            return;
+          }
+
+          // Payment exists but still pending — keep polling
+          if (payment && payment.status === "pending") {
+            if (i < dbMaxAttempts - 1) {
+              await sleep(5000);
+              continue;
+            }
+            // Last attempt, still pending — show processing state
+            setResult({ status: "processing", orderId, amount: payment.amount });
+            return;
+          }
+        } catch {
+          // DB lookup failed, continue polling
         }
-        if (payment && payment.status === "failed") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setResult({ status: "failed", orderId, amount: payment.amount });
-          return;
-        }
-      } catch {
-        // DB lookup failed, fall through
+        if (i < dbMaxAttempts - 1) await sleep(5000);
       }
 
       setResult({ status: "not_found", orderId, amount: lastOrderResult?.amount });
@@ -140,7 +158,7 @@ export default function PaymentStatus() {
             <>
               <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Processing Payment</h2>
-              <p className="text-muted-foreground">Verifying your payment… (this may take a few seconds)</p>
+              <p className="text-muted-foreground">Verifying your payment… this may take up to a minute</p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
             </>
           )}
@@ -169,6 +187,22 @@ export default function PaymentStatus() {
               <h2 className="text-xl font-semibold text-foreground">Payment Failed</h2>
               <p className="text-muted-foreground">
                 Your payment could not be processed. Please try again.
+              </p>
+              <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
+              <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
+              <Button onClick={() => navigate("/student/invoices")} className="w-full">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Invoices
+              </Button>
+            </>
+          )}
+
+          {result.status === "processing" && (
+            <>
+              <Clock className="h-16 w-16 text-amber-500 mx-auto" />
+              <h2 className="text-xl font-semibold text-foreground">Payment is Being Processed</h2>
+              <p className="text-muted-foreground">
+                Your payment has been received and is being processed by the bank. It will be reflected in your invoices shortly.
               </p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
               <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
