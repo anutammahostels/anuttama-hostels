@@ -21,36 +21,38 @@ export default function PaymentCallback() {
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 10;
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    const check = async () => {
-      try {
-        const result = await getOrderStatus(orderId);
-        if (result.status === "SUCCESS" || result.status === "FAILED") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setStatus(result.status);
-          setDetails(result);
-          return;
+    const pollOrderStatus = async () => {
+      const maxAttempts = 6;
+      let lastResult: any = null;
+      let lastError: any = null;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        try {
+          lastResult = await getOrderStatus(orderId);
+          if (lastResult.status === "SUCCESS" || lastResult.status === "FAILED") {
+            sessionStorage.removeItem("hdfc_pending_order_id");
+            setStatus(lastResult.status);
+            setDetails(lastResult);
+            return;
+          }
+        } catch (err) {
+          lastError = err;
         }
-        attempts++;
-        if (attempts >= maxAttempts) {
-          setStatus(result.status === "PENDING" ? "UNKNOWN" : result.status);
-          setDetails(result);
-          return;
-        }
-        setTimeout(check, 3000);
-      } catch {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          setStatus("UNKNOWN");
-          return;
-        }
-        setTimeout(check, 3000);
+        if (i < maxAttempts - 1) await sleep(2000);
+      }
+
+      // All attempts exhausted
+      if (lastResult) {
+        setStatus(lastResult.status === "PENDING" ? "UNKNOWN" : lastResult.status);
+        setDetails(lastResult);
+      } else {
+        setStatus("UNKNOWN");
       }
     };
 
-    check();
+    pollOrderStatus();
   }, [orderId]);
 
   // Auto-redirect countdown once status is resolved
@@ -79,7 +81,7 @@ export default function PaymentCallback() {
             <>
               <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Verifying Payment</h2>
-              <p className="text-muted-foreground">Please wait while we confirm your payment with the bank...</p>
+              <p className="text-muted-foreground">Verifying your payment… (this may take a few seconds)</p>
               <p className="text-xs text-muted-foreground">Order ID: {orderId}</p>
             </>
           )}
