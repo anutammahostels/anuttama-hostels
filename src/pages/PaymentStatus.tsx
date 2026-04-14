@@ -51,64 +51,68 @@ export default function PaymentStatus() {
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 15;
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    const poll = async () => {
+    const pollOrderStatus = async () => {
+      const maxAttempts = 6;
+      let lastOrderResult: any = null;
+      let _lastError: unknown = null;
+
+      // Phase 1: Poll HDFC Order Status API with retries
+      for (let i = 0; i < maxAttempts; i++) {
+        try {
+          lastOrderResult = await fetchOrderStatus(orderId);
+          if (lastOrderResult.status === "SUCCESS") {
+            sessionStorage.removeItem("hdfc_pending_order_id");
+            setResult({
+              status: "completed",
+              orderId,
+              amount: lastOrderResult.amount,
+              transactionRef: lastOrderResult.txn_id || "",
+            });
+            return;
+          } else if (lastOrderResult.status === "FAILED") {
+            sessionStorage.removeItem("hdfc_pending_order_id");
+            setResult({ status: "failed", orderId, amount: lastOrderResult.amount });
+            return;
+          }
+        } catch (err) {
+          console.error("hdfc-order-status check failed:", err);
+          _lastError = err;
+        }
+        if (i < maxAttempts - 1) await sleep(2000);
+      }
+
+      // Phase 2: Fallback — check DB once
       try {
-        const orderResult = await fetchOrderStatus(orderId);
-        if (orderResult.status === "SUCCESS") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
+        const { data: payment } = await supabase
+          .from("payments")
+          .select("*, invoices(invoice_number)")
+          .eq("transaction_id", orderId)
+          .single();
+
+        if (payment && payment.status === "completed") {
           setResult({
             status: "completed",
             orderId,
-            amount: orderResult.amount,
-            transactionRef: orderResult.txn_id || "",
+            amount: payment.amount,
+            invoiceNumber: (payment.invoices as any)?.invoice_number || "",
+            transactionRef: payment.transaction_reference || "",
           });
           return;
-        } else if (orderResult.status === "FAILED") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setResult({ status: "failed", orderId, amount: orderResult.amount });
+        }
+        if (payment && payment.status === "failed") {
+          setResult({ status: "failed", orderId, amount: payment.amount });
           return;
         }
-      } catch (err) {
-        console.error("hdfc-order-status check failed:", err);
-        // Fallback to DB polling below
+      } catch {
+        // DB lookup failed, fall through
       }
 
-      // DB polling fallback
-      const { data: payment } = await supabase
-        .from("payments")
-        .select("*, invoices(invoice_number)")
-        .eq("transaction_id", orderId)
-        .single();
-
-      if (payment && payment.status === "completed") {
-        setResult({
-          status: "completed",
-          orderId,
-          amount: payment.amount,
-          invoiceNumber: (payment.invoices as any)?.invoice_number || "",
-          transactionRef: payment.transaction_reference || "",
-        });
-        return;
-      }
-      if (payment && payment.status === "failed") {
-        setResult({ status: "failed", orderId, amount: payment.amount });
-        return;
-      }
-      // If payment exists but is still pending, keep polling
-
-      attempts++;
-      if (attempts >= maxAttempts) {
-        setResult({ status: "not_found", orderId, amount: payment?.amount });
-        return;
-      }
-
-      setTimeout(poll, 2000);
+      setResult({ status: "not_found", orderId, amount: lastOrderResult?.amount });
     };
 
-    poll();
+    pollOrderStatus();
   }, [resolvedOrderId]);
 
   return (
@@ -119,7 +123,7 @@ export default function PaymentStatus() {
             <>
               <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Processing Payment</h2>
-              <p className="text-muted-foreground">Please wait while we verify your payment...</p>
+              <p className="text-muted-foreground">Verifying your payment… (this may take a few seconds)</p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
             </>
           )}
