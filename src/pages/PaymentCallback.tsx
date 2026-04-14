@@ -12,7 +12,6 @@ export default function PaymentCallback() {
   const [details, setDetails] = useState<Record<string, any>>({});
   const [countdown, setCountdown] = useState(5);
 
-  // Read order_id from URL params first, fall back to sessionStorage
   const orderId = searchParams.get("order_id") || sessionStorage.getItem("hdfc_pending_order_id") || "";
 
   useEffect(() => {
@@ -24,7 +23,10 @@ export default function PaymentCallback() {
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     const pollOrderStatus = async () => {
-      const maxAttempts = 10;
+      // Wait 5s initial delay for HDFC to process
+      await sleep(5000);
+
+      const maxAttempts = 15;
       let lastResult: any = null;
       let _lastError: unknown = null;
 
@@ -40,7 +42,7 @@ export default function PaymentCallback() {
         } catch (err) {
           _lastError = err;
         }
-        if (i < maxAttempts - 1) await sleep(2000);
+        if (i < maxAttempts - 1) await sleep(3000);
       }
 
       // All attempts exhausted
@@ -81,7 +83,7 @@ export default function PaymentCallback() {
             <>
               <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Verifying Payment</h2>
-              <p className="text-muted-foreground">Verifying your payment… (this may take a few seconds)</p>
+              <p className="text-muted-foreground">Verifying your payment… this may take up to a minute</p>
               <p className="text-xs text-muted-foreground">Order ID: {orderId}</p>
             </>
           )}
