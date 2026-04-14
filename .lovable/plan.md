@@ -1,36 +1,34 @@
 
 
-## Generate Payroll: Multi-Employee Selection + Date Range
+## HDFC Payment Status Fix — Stop UNKNOWN After Payment
 
-### What Changes
+### Problem
+After a student pays on HDFC, the redirect back to the app has no `order_id` in the URL, so the callback/status page can't verify the payment and shows "UNKNOWN".
 
-**File:** `src/pages/Payroll.tsx`
+### Root Cause
+The `return_url` sent to HDFC doesn't include `order_id` as a query parameter. HDFC redirects back to a bare URL with no way to identify which order to check.
 
-#### 1. Replace single-employee Select with multi-select checkboxes
-- In the "Generate Payroll" dialog, replace the single `<Select>` for employee with a scrollable checkbox list of all active employees
-- Add a "Select All" / "Deselect All" toggle at the top
-- Store selected employee IDs in an array state (e.g., `selectedEmployeeIds`)
+### Fix — 3 files changed
 
-#### 2. Add date range to the individual Generate Payroll dialog
-- Replace the single `<Input type="month">` with **Start Month** and **End Month** inputs (same as the bulk dialog)
-- Add validation: start month must be ≤ end month
+#### 1. Edge Function: `supabase/functions/hdfc-create-session/index.ts`
+- Append `order_id` and `customer_id` as query params to the `return_url` before sending to HDFC
+- Change line 148 from `return_url: callbackUrl` to `return_url: callbackUrl + (callbackUrl.includes('?') ? '&' : '?') + 'order_id=' + orderId + '&customer_id=' + customerId`
 
-#### 3. Update generation logic
-- When the form is submitted, iterate over each selected employee × each month in the range
-- For each combination: compute salary using employee's saved defaults (basic, HRA, etc.), auto-calculate PT/TDS/LOP per month's calendar days
-- Skip locked months (with toast notification)
-- The detailed earnings/deductions override fields (currently shown for single employee) will be hidden when multiple employees are selected — bulk uses saved defaults
-- When exactly 1 employee is selected, show the detailed form fields as they work today
+#### 2. Frontend payment redirect: `src/pages/student/StudentInvoices.tsx`
+- Before redirecting via `openPaymentCheckout`, save `order_id` and `customer_id` to `sessionStorage` as fallback
+- `sessionStorage.setItem("hdfc_pending_order_id", session.order_id)`
 
-#### 4. Consolidate with Bulk dialog
-- The "Run Payroll for All" button remains as a quick shortcut (pre-selects all employees)
-- The "Generate Payroll" dialog becomes the unified entry point supporting 1-to-many employees with date range
+#### 3. Payment Status page: `src/pages/PaymentStatus.tsx`
+- Read `order_id` from URL params first, then fall back to `sessionStorage.getItem("hdfc_pending_order_id")`
+- Clear sessionStorage keys after successful status check
+- This is the page actually used (routed at `/student/payment/status`)
+
+#### 4. Payment Callback page: `src/pages/PaymentCallback.tsx`
+- Same sessionStorage fallback for `order_id` (routed at `/payment/callback`)
+- Clear sessionStorage after status resolves
 
 ### Technical Details
-- 1 file modified: `src/pages/Payroll.tsx`
-- New state: `selectedEmployeeIds: string[]` replaces `payrollForm.employee_id`
-- New state: `payrollStartMonth` / `payrollEndMonth` replace `payrollForm.month`
-- Uses `getMonthsInRange()` helper already present in the file
-- Multi-employee generation loops using same insert logic as `doGeneratePayroll` but with employee defaults
-- No database changes needed
+- 4 files modified, no database changes
+- The `PaymentStatus.tsx` page at `/student/payment/status` is the primary return target; `PaymentCallback.tsx` at `/payment/callback` is secondary
+- sessionStorage survives same-tab redirects, making it a reliable fallback if HDFC strips query params
 
