@@ -35,13 +35,17 @@ type PaymentResult = {
 export default function PaymentStatus() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Read order_id from URL params first, fall back to sessionStorage
+  const resolvedOrderId = searchParams.get("order_id") || sessionStorage.getItem("hdfc_pending_order_id") || "";
+
   const [result, setResult] = useState<PaymentResult>({
     status: "loading",
-    orderId: searchParams.get("order_id") || "",
+    orderId: resolvedOrderId,
   });
 
   useEffect(() => {
-    const orderId = searchParams.get("order_id");
+    const orderId = resolvedOrderId;
     if (!orderId) {
       setResult({ status: "not_found", orderId: "" });
       return;
@@ -54,6 +58,7 @@ export default function PaymentStatus() {
       try {
         const orderResult = await fetchOrderStatus(orderId);
         if (orderResult.status === "SUCCESS") {
+          sessionStorage.removeItem("hdfc_pending_order_id");
           setResult({
             status: "completed",
             orderId,
@@ -62,6 +67,7 @@ export default function PaymentStatus() {
           });
           return;
         } else if (orderResult.status === "FAILED") {
+          sessionStorage.removeItem("hdfc_pending_order_id");
           setResult({ status: "failed", orderId, amount: orderResult.amount });
           return;
         }
@@ -103,7 +109,7 @@ export default function PaymentStatus() {
     };
 
     poll();
-  }, [searchParams]);
+  }, [resolvedOrderId]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
