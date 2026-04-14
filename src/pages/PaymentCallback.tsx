@@ -12,7 +12,8 @@ export default function PaymentCallback() {
   const [details, setDetails] = useState<Record<string, any>>({});
   const [countdown, setCountdown] = useState(5);
 
-  const orderId = searchParams.get("order_id") || "";
+  // Read order_id from URL params first, fall back to sessionStorage
+  const orderId = searchParams.get("order_id") || sessionStorage.getItem("hdfc_pending_order_id") || "";
 
   useEffect(() => {
     if (!orderId) {
@@ -27,6 +28,7 @@ export default function PaymentCallback() {
       try {
         const result = await getOrderStatus(orderId);
         if (result.status === "SUCCESS" || result.status === "FAILED") {
+          sessionStorage.removeItem("hdfc_pending_order_id");
           setStatus(result.status);
           setDetails(result);
           return;

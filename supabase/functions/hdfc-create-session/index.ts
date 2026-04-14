@@ -137,15 +137,21 @@ Deno.serve(async (req) => {
     const callbackUrl =
       return_url || `${Deno.env.get("SUPABASE_URL")}/functions/v1/hdfc-payment-callback`;
 
+    const customerId = student.id.replace(/-/g, "").substring(0, 30);
+
+    // Append order_id and customer_id to return_url so the status page can identify the payment
+    const separator = callbackUrl.includes("?") ? "&" : "?";
+    const enrichedReturnUrl = `${callbackUrl}${separator}order_id=${encodeURIComponent(orderId)}&customer_id=${encodeURIComponent(customerId)}`;
+
     const sessionPayload: Record<string, unknown> = {
       order_id: orderId,
       amount: String(Number(amount).toFixed(2)),
-      customer_id: student.id.replace(/-/g, "").substring(0, 30),
+      customer_id: customerId,
       customer_email: profile?.email || `student_${student.id}@hostylia.com`,
       customer_phone: profile?.phone || "9999999999",
       payment_page_client_id: PAYMENT_PAGE_CLIENT_ID,
       action: "paymentPage",
-      return_url: callbackUrl,
+      return_url: enrichedReturnUrl,
       currency: "INR",
     };
 

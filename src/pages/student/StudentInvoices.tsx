@@ -64,6 +64,11 @@ export default function StudentInvoices() {
         `${(window.location.origin.includes('lovableproject.com') || window.location.origin.includes('lovable.app')) ? 'https://hostylia.com' : window.location.origin}/student/payment/status`
       );
 
+      // Save order_id to sessionStorage as fallback in case HDFC strips query params
+      if (session.order_id) {
+        sessionStorage.setItem("hdfc_pending_order_id", session.order_id);
+      }
+
       openPaymentCheckout(session, checkoutWindow);
     } catch (err: any) {
       if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
