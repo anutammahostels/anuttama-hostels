@@ -1,34 +1,26 @@
 
 
-## HDFC Payment Status Fix — Stop UNKNOWN After Payment
+## Fix: Payment Status Auto-Redirect + Proper Status Pages
 
 ### Problem
-After a student pays on HDFC, the redirect back to the app has no `order_id` in the URL, so the callback/status page can't verify the payment and shows "UNKNOWN".
+After successful HDFC payments, the PaymentStatus page shows the result but doesn't auto-redirect. It also may resolve as "not_found" if polling completes before HDFC processes the payment.
 
-### Root Cause
-The `return_url` sent to HDFC doesn't include `order_id` as a query parameter. HDFC redirects back to a bare URL with no way to identify which order to check.
+### Changes
 
-### Fix — 3 files changed
+#### 1. `src/pages/PaymentStatus.tsx` — Add auto-redirect + increase polling resilience
+- Add a 5-second countdown auto-redirect (matching PaymentCallback behavior):
+  - **SUCCESS** → redirect to `/student/invoices`
+  - **FAILED** → redirect to `/student/invoices`
+  - **not_found** → redirect to `/student/invoices`
+- Increase polling from 6 attempts to 10 attempts (20 seconds total) to give HDFC more time
+- Add countdown state and timer effect identical to PaymentCallback
 
-#### 1. Edge Function: `supabase/functions/hdfc-create-session/index.ts`
-- Append `order_id` and `customer_id` as query params to the `return_url` before sending to HDFC
-- Change line 148 from `return_url: callbackUrl` to `return_url: callbackUrl + (callbackUrl.includes('?') ? '&' : '?') + 'order_id=' + orderId + '&customer_id=' + customerId`
-
-#### 2. Frontend payment redirect: `src/pages/student/StudentInvoices.tsx`
-- Before redirecting via `openPaymentCheckout`, save `order_id` and `customer_id` to `sessionStorage` as fallback
-- `sessionStorage.setItem("hdfc_pending_order_id", session.order_id)`
-
-#### 3. Payment Status page: `src/pages/PaymentStatus.tsx`
-- Read `order_id` from URL params first, then fall back to `sessionStorage.getItem("hdfc_pending_order_id")`
-- Clear sessionStorage keys after successful status check
-- This is the page actually used (routed at `/student/payment/status`)
-
-#### 4. Payment Callback page: `src/pages/PaymentCallback.tsx`
-- Same sessionStorage fallback for `order_id` (routed at `/payment/callback`)
-- Clear sessionStorage after status resolves
+#### 2. `src/pages/PaymentCallback.tsx` — Increase polling attempts
+- Increase from 6 to 10 attempts for consistency
+- Already has auto-redirect, so only the polling window needs extending
 
 ### Technical Details
-- 4 files modified, no database changes
-- The `PaymentStatus.tsx` page at `/student/payment/status` is the primary return target; `PaymentCallback.tsx` at `/payment/callback` is secondary
-- sessionStorage survives same-tab redirects, making it a reliable fallback if HDFC strips query params
+- 2 files modified, no database or edge function changes
+- The auto-redirect countdown starts only after status resolves (not during loading)
+- Both pages will behave consistently: show status → countdown 5s → redirect to invoices
 
