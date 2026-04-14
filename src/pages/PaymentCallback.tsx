@@ -26,7 +26,7 @@ export default function PaymentCallback() {
     const pollOrderStatus = async () => {
       const maxAttempts = 6;
       let lastResult: any = null;
-      let lastError: any = null;
+      let _lastError: unknown = null;
 
       for (let i = 0; i < maxAttempts; i++) {
         try {
@@ -38,7 +38,7 @@ export default function PaymentCallback() {
             return;
           }
         } catch (err) {
-          lastError = err;
+          _lastError = err;
         }
         if (i < maxAttempts - 1) await sleep(2000);
       }

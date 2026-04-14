@@ -56,7 +56,7 @@ export default function PaymentStatus() {
     const pollOrderStatus = async () => {
       const maxAttempts = 6;
       let lastOrderResult: any = null;
-      let lastError: any = null;
+      let _lastError: unknown = null;
 
       // Phase 1: Poll HDFC Order Status API with retries
       for (let i = 0; i < maxAttempts; i++) {
@@ -78,7 +78,7 @@ export default function PaymentStatus() {
           }
         } catch (err) {
           console.error("hdfc-order-status check failed:", err);
-          lastError = err;
+          _lastError = err;
         }
         if (i < maxAttempts - 1) await sleep(2000);
       }
@@ -123,7 +123,7 @@ export default function PaymentStatus() {
             <>
               <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Processing Payment</h2>
-              <p className="text-muted-foreground">Please wait while we verify your payment...</p>
+              <p className="text-muted-foreground">Verifying your payment… (this may take a few seconds)</p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
             </>
           )}
