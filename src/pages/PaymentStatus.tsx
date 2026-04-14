@@ -35,8 +35,8 @@ type PaymentResult = {
 export default function PaymentStatus() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [countdown, setCountdown] = useState(5);
 
-  // Read order_id from URL params first, fall back to sessionStorage
   const resolvedOrderId = searchParams.get("order_id") || sessionStorage.getItem("hdfc_pending_order_id") || "";
 
   const [result, setResult] = useState<PaymentResult>({
@@ -54,11 +54,9 @@ export default function PaymentStatus() {
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     const pollOrderStatus = async () => {
-      const maxAttempts = 6;
+      const maxAttempts = 10;
       let lastOrderResult: any = null;
-      let _lastError: unknown = null;
 
-      // Phase 1: Poll HDFC Order Status API with retries
       for (let i = 0; i < maxAttempts; i++) {
         try {
           lastOrderResult = await fetchOrderStatus(orderId);
@@ -78,7 +76,6 @@ export default function PaymentStatus() {
           }
         } catch (err) {
           console.error("hdfc-order-status check failed:", err);
-          _lastError = err;
         }
         if (i < maxAttempts - 1) await sleep(2000);
       }
@@ -92,6 +89,7 @@ export default function PaymentStatus() {
           .single();
 
         if (payment && payment.status === "completed") {
+          sessionStorage.removeItem("hdfc_pending_order_id");
           setResult({
             status: "completed",
             orderId,
@@ -102,6 +100,7 @@ export default function PaymentStatus() {
           return;
         }
         if (payment && payment.status === "failed") {
+          sessionStorage.removeItem("hdfc_pending_order_id");
           setResult({ status: "failed", orderId, amount: payment.amount });
           return;
         }
@@ -114,6 +113,24 @@ export default function PaymentStatus() {
 
     pollOrderStatus();
   }, [resolvedOrderId]);
+
+  // Auto-redirect countdown once status is resolved
+  useEffect(() => {
+    if (result.status === "loading") return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate("/student/invoices");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [result.status, navigate]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -138,6 +155,7 @@ export default function PaymentStatus() {
                 {result.transactionRef && <p>Transaction Ref: {result.transactionRef}</p>}
                 <p>Order ID: {result.orderId}</p>
               </div>
+              <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
@@ -153,9 +171,10 @@ export default function PaymentStatus() {
                 Your payment could not be processed. Please try again.
               </p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <Button onClick={() => navigate("/student/dashboard")} className="w-full">
+              <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
+              <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                Back to Invoices
               </Button>
             </>
           )}
@@ -167,6 +186,7 @@ export default function PaymentStatus() {
               <p className="text-muted-foreground">
                 We couldn't determine the payment status. If money was deducted, it will be reflected within 24 hours.
               </p>
+              <p className="text-xs text-muted-foreground">Redirecting to invoices in {countdown}s...</p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices

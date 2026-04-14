@@ -24,7 +24,7 @@ export default function PaymentCallback() {
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     const pollOrderStatus = async () => {
-      const maxAttempts = 6;
+      const maxAttempts = 10;
       let lastResult: any = null;
       let _lastError: unknown = null;
 
