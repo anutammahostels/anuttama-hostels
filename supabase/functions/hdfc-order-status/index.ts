@@ -13,6 +13,25 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+async function logPayment(
+  client: any,
+  orderId: string,
+  logType: string,
+  request: unknown,
+  response: unknown,
+) {
+  try {
+    await client.from("payment_logs").insert({
+      order_id: orderId,
+      log_type: logType,
+      request_payload: request as any,
+      response_payload: response as any,
+    });
+  } catch (e) {
+    console.error("payment_logs insert failed:", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -25,8 +44,50 @@ Deno.serve(async (req) => {
     const ENVIRONMENT = Deno.env.get("HDFC_ENVIRONMENT") || "sandbox";
     const BASE_URL =
       ENVIRONMENT === "production"
-        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfc.bank.in"
-        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in";
+        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfcbank.com"
+        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgatewayuat.hdfcbank.com";
+
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Idempotency: if already SUCCESS in payment_transactions, short-circuit (replay-safe)
+    const { data: existingTxn } = await adminClient
+      .from("payment_transactions")
+      .select("*")
+      .eq("order_id", order_id)
+      .maybeSingle();
+
+    if (existingTxn && existingTxn.status === "SUCCESS") {
+      return jsonResponse({
+        order_id,
+        status: "SUCCESS",
+        hdfc_status: "CHARGED",
+        amount: Number(existingTxn.amount),
+        txn_id: existingTxn.hdfc_txn_id,
+        payment_method: existingTxn.payment_method,
+        payment_method_type: existingTxn.payment_method,
+        refunded: false,
+        amount_refunded: 0,
+        gateway_response: { idempotent: true },
+      });
+    }
+
+    if (existingTxn && existingTxn.status === "TAMPERED") {
+      return jsonResponse({
+        order_id,
+        status: "TAMPERED",
+        hdfc_status: "TAMPERED",
+        amount: Number(existingTxn.amount),
+        txn_id: existingTxn.hdfc_txn_id,
+        payment_method: null,
+        payment_method_type: null,
+        refunded: false,
+        amount_refunded: 0,
+        gateway_response: { tampered: true },
+      });
+    }
 
     const basicAuth = btoa(API_KEY + ":");
 
@@ -46,8 +107,12 @@ Deno.serve(async (req) => {
     try {
       data = JSON.parse(body);
     } catch {
+      await logPayment(adminClient, order_id, "status_api", { order_id }, { http: res.status, raw: body });
       return jsonResponse({ error: "Invalid response from gateway", raw: body }, 502);
     }
+
+    // Always log status_api response
+    await logPayment(adminClient, order_id, "status_api", { order_id }, { http: res.status, body: data });
 
     const hdfcStatus = (data.status || "").toUpperCase();
     let mappedStatus = "UNKNOWN";
@@ -55,14 +120,44 @@ Deno.serve(async (req) => {
     else if (["NEW", "PENDING_VBV", "AUTHORIZING", "COD_INITIATED", "STARTED", "AUTHENTICATION_FAILED"].includes(hdfcStatus)) mappedStatus = "PENDING";
     else if (["AUTHORIZATION_FAILED", "JUSPAY_DECLINED", "NOT_FOUND", "VOIDED"].includes(hdfcStatus)) mappedStatus = "FAILED";
 
+    // --- TAMPER CHECK: compare HDFC response vs stored payment_transactions ---
+    if (mappedStatus === "SUCCESS" && existingTxn) {
+      const hdfcOrderId = String(data.order_id || "").trim();
+      const hdfcAmount = Number(data.amount || 0);
+      const storedAmount = Number(existingTxn.amount);
+
+      const orderMatch = hdfcOrderId === order_id;
+      const amountMatch = Math.abs(hdfcAmount - storedAmount) < 0.01;
+
+      if (!orderMatch || !amountMatch) {
+        console.error("TAMPER DETECTED", { order_id, hdfcOrderId, hdfcAmount, storedAmount });
+        await adminClient
+          .from("payment_transactions")
+          .update({
+            status: "TAMPERED",
+            hdfc_txn_id: data.txn_id || null,
+          })
+          .eq("order_id", order_id);
+        await logPayment(adminClient, order_id, "status_api", { tamper_check: true }, { hdfcOrderId, hdfcAmount, storedAmount });
+
+        return jsonResponse({
+          order_id,
+          status: "TAMPERED",
+          hdfc_status: hdfcStatus,
+          amount: storedAmount,
+          txn_id: data.txn_id || null,
+          payment_method: data.payment_method || null,
+          payment_method_type: data.payment_method_type || null,
+          refunded: false,
+          amount_refunded: 0,
+          gateway_response: data,
+        });
+      }
+    }
+
     // --- Sync payment & invoice in DB when status is conclusive ---
     if (mappedStatus === "SUCCESS" || mappedStatus === "FAILED") {
       try {
-        const adminClient = createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-        );
-
         const { data: payment } = await adminClient
           .from("payments")
           .select("*")
@@ -73,7 +168,6 @@ Deno.serve(async (req) => {
           const txnId = data.txn_id || null;
 
           if (mappedStatus === "SUCCESS") {
-            // Update payment to completed
             await adminClient.from("payments").update({
               status: "completed",
               transaction_reference: txnId,
@@ -83,7 +177,13 @@ Deno.serve(async (req) => {
               payment_mode_label: data.payment_method_type || data.payment_method || "online",
             }).eq("id", payment.id);
 
-            // Update invoice
+            // Update payment_transactions to SUCCESS (verified)
+            await adminClient.from("payment_transactions").update({
+              status: "SUCCESS",
+              hdfc_txn_id: txnId,
+              payment_method: data.payment_method_type || data.payment_method || null,
+            }).eq("order_id", order_id);
+
             const { data: invoice } = await adminClient
               .from("invoices")
               .select("*")
@@ -101,18 +201,19 @@ Deno.serve(async (req) => {
                 payment_method: "online",
               }).eq("id", invoice.id);
 
-              // Create accounting entries
               await createAccountingEntries(adminClient, payment, invoice, order_id, txnId);
-
-              // Notify student
               await notifyStudent(adminClient, payment, invoice, "success");
             }
           } else {
-            // FAILED
             await adminClient.from("payments").update({
               status: "failed",
               gateway_response: data,
             }).eq("id", payment.id);
+
+            await adminClient.from("payment_transactions").update({
+              status: "FAILED",
+              hdfc_txn_id: txnId,
+            }).eq("order_id", order_id);
 
             const { data: invoice } = await adminClient
               .from("invoices")
@@ -122,11 +223,19 @@ Deno.serve(async (req) => {
 
             if (invoice) await notifyStudent(adminClient, payment, invoice, "failed");
           }
+        } else if (existingTxn && existingTxn.status !== "SUCCESS") {
+          // payment_transactions exists but no payments row in pending state — still update txn status
+          await adminClient.from("payment_transactions").update({
+            status: mappedStatus === "SUCCESS" ? "SUCCESS" : "FAILED",
+            hdfc_txn_id: data.txn_id || null,
+            payment_method: data.payment_method_type || data.payment_method || null,
+          }).eq("order_id", order_id);
         }
       } catch (syncErr) {
         console.error("Error syncing payment status:", syncErr);
-        // Don't fail the response — still return the status to the client
       }
+    } else if (mappedStatus === "PENDING" && existingTxn && existingTxn.status === "INITIATED") {
+      await adminClient.from("payment_transactions").update({ status: "PENDING" }).eq("order_id", order_id);
     }
 
     return jsonResponse({
