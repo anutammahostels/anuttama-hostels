@@ -70,6 +70,18 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Audit log webhook event
+    try {
+      await adminClient.from("payment_logs").insert({
+        order_id: orderId,
+        log_type: "webhook",
+        request_payload: data as any,
+        response_payload: { event_name: eventName, hdfc_status: hdfcStatus, amount } as any,
+      });
+    } catch (e) {
+      console.error("payment_logs (webhook) insert failed:", e);
+    }
+
     // Find payment
     const { data: payment } = await adminClient
       .from("payments")

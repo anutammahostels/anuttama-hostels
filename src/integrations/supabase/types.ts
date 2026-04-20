@@ -980,6 +980,78 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_type: string
+          order_id: string
+          request_payload: Json | null
+          response_payload: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_type: string
+          order_id: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_type?: string
+          order_id?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+        }
+        Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          customer_id: string
+          hdfc_txn_id: string | null
+          id: string
+          invoice_id: string | null
+          order_id: string
+          payment_id: string | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          customer_id: string
+          hdfc_txn_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          order_id: string
+          payment_id?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          customer_id?: string
+          hdfc_txn_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          order_id?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number

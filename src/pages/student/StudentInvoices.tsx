@@ -60,7 +60,6 @@ export default function StudentInvoices() {
     try {
       const session = await createPaymentSession(
         invoice.id,
-        balance,
         `${(window.location.origin.includes('lovableproject.com') || window.location.origin.includes('lovable.app')) ? 'https://hostylia.com' : window.location.origin}/student/payment/status`
       );
 

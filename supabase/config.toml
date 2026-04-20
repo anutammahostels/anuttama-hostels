@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.hdfc-refund]
 verify_jwt = false
+
+[functions.hdfc-verify-payment]
+verify_jwt = false

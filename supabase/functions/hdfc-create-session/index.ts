@@ -13,6 +13,49 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+const ALPHANUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+function randomAlphanum(len: number): string {
+  let out = "";
+  const buf = new Uint8Array(len);
+  crypto.getRandomValues(buf);
+  for (let i = 0; i < len; i++) out += ALPHANUM[buf[i] % ALPHANUM.length];
+  return out;
+}
+
+// Audit-compliant order ID: ANT + 8 random alphanumeric + last 4 digits of timestamp = 15 chars
+async function generateUniqueOrderId(adminClient: any): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const ts = String(Date.now());
+    const candidate = `ANT${randomAlphanum(8)}${ts.slice(-4)}`;
+    const { data: existing } = await adminClient
+      .from("payment_transactions")
+      .select("id")
+      .eq("order_id", candidate)
+      .maybeSingle();
+    if (!existing) return candidate;
+  }
+  throw new Error("Failed to generate unique order_id after 5 attempts");
+}
+
+async function logPayment(
+  adminClient: any,
+  orderId: string,
+  logType: string,
+  request: unknown,
+  response: unknown,
+) {
+  try {
+    await adminClient.from("payment_logs").insert({
+      order_id: orderId,
+      log_type: logType,
+      request_payload: request as any,
+      response_payload: response as any,
+    });
+  } catch (e) {
+    console.error("payment_logs insert failed:", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -31,11 +74,10 @@ Deno.serve(async (req) => {
     if (userErr || !user) return jsonResponse({ error: "Unauthorized" }, 401);
     const userId = user.id;
 
-    // --- Request body ---
-    const { invoice_id, amount, return_url } = await req.json();
-    if (!invoice_id || !amount) return jsonResponse({ error: "invoice_id and amount required" }, 400);
+    // --- Request body (amount IGNORED — server computes it) ---
+    const { invoice_id, return_url } = await req.json();
+    if (!invoice_id) return jsonResponse({ error: "invoice_id required" }, 400);
 
-    // --- DB lookups ---
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -56,28 +98,31 @@ Deno.serve(async (req) => {
       .single();
     if (!invoice) return jsonResponse({ error: "Invoice not found" }, 404);
 
+    // --- SERVER-SIDE amount computation (tamper-proof) ---
+    const balance = Number(invoice.total_amount) - Number(invoice.paid_amount || 0);
+    if (balance <= 0) return jsonResponse({ error: "Invoice already paid" }, 400);
+
     const { data: profile } = await adminClient
       .from("profiles")
       .select("email, phone, full_name")
       .eq("id", userId)
       .single();
 
-    // --- Build order_id ---
-    const orderId = `HSTY_${Date.now()}_${invoice.invoice_number.replace(/[^a-zA-Z0-9]/g, "")}`;
+    // --- Generate audit-compliant order ID ---
+    const orderId = await generateUniqueOrderId(adminClient);
 
-    // --- HDFC secrets ---
+    // --- HDFC config ---
     const API_KEY = Deno.env.get("HDFC_API_KEY")!;
     const MERCHANT_ID = Deno.env.get("HDFC_MERCHANT_ID")!;
     const ENVIRONMENT = Deno.env.get("HDFC_ENVIRONMENT") || "sandbox";
     const BASE_URL =
       ENVIRONMENT === "production"
-        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfc.bank.in"
-        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in";
+        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfcbank.com"
+        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgatewayuat.hdfcbank.com";
     const PAYMENT_PAGE_CLIENT_ID =
       Deno.env.get("HDFC_PAYMENT_PAGE_CLIENT_ID") || Deno.env.get("HDFC_CLIENT_ID") || "hdfcmaster";
 
     // --- Resolve property_id ---
-    // Try beds -> rooms -> floors -> blocks -> property chain first
     let propertyId: string | null = null;
     const { data: bedData } = await adminClient
       .from("beds")
@@ -91,7 +136,6 @@ Deno.serve(async (req) => {
       const block = floor?.blocks;
       propertyId = block?.property_id || null;
     }
-    // Fallback: get property from existing payments for this student
     if (!propertyId) {
       const { data: existingPayment } = await adminClient
         .from("payments")
@@ -101,7 +145,6 @@ Deno.serve(async (req) => {
         .single();
       propertyId = existingPayment?.property_id || null;
     }
-    // Fallback: use the first property in the system
     if (!propertyId) {
       const { data: firstProp } = await adminClient
         .from("properties")
@@ -112,14 +155,31 @@ Deno.serve(async (req) => {
     }
     if (!propertyId) return jsonResponse({ error: "No property found" }, 400);
 
-    // --- Create pending payment record ---
+    // --- customer_id derived from auth.uid (no hardcoding) ---
+    const customerId = userId.replace(/-/g, "").substring(0, 30);
+
+    // --- Insert payment_transactions row (server source of truth) BEFORE calling HDFC ---
+    const { error: ptErr } = await adminClient.from("payment_transactions").insert({
+      order_id: orderId,
+      invoice_id: invoice.id,
+      customer_id: customerId,
+      amount: balance,
+      currency: "INR",
+      status: "INITIATED",
+    });
+    if (ptErr) {
+      console.error("payment_transactions insert failed:", ptErr);
+      return jsonResponse({ error: "Failed to create transaction record" }, 500);
+    }
+
+    // --- Create pending payment record (kept for backward compatibility) ---
     const { data: payment, error: paymentErr } = await adminClient
       .from("payments")
       .insert({
         invoice_id: invoice.id,
         student_id: student.id,
         property_id: propertyId,
-        amount: Number(amount),
+        amount: balance,
         payment_method: "online",
         status: "pending",
         transaction_id: orderId,
@@ -133,19 +193,22 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Failed to create payment record" }, 500);
     }
 
+    // Link payment_transactions → payments
+    await adminClient
+      .from("payment_transactions")
+      .update({ payment_id: payment.id })
+      .eq("order_id", orderId);
+
     // --- Call HDFC /session ---
     const callbackUrl =
       return_url || `${Deno.env.get("SUPABASE_URL")}/functions/v1/hdfc-payment-callback`;
 
-    const customerId = student.id.replace(/-/g, "").substring(0, 30);
-
-    // Append order_id and customer_id to return_url so the status page can identify the payment
     const separator = callbackUrl.includes("?") ? "&" : "?";
     const enrichedReturnUrl = `${callbackUrl}${separator}order_id=${encodeURIComponent(orderId)}&customer_id=${encodeURIComponent(customerId)}`;
 
     const sessionPayload: Record<string, unknown> = {
       order_id: orderId,
-      amount: String(Number(amount).toFixed(2)),
+      amount: String(balance.toFixed(2)),
       customer_id: customerId,
       customer_email: profile?.email || `student_${student.id}@hostylia.com`,
       customer_phone: profile?.phone || "9999999999",
@@ -179,15 +242,22 @@ Deno.serve(async (req) => {
     try {
       hdfcData = JSON.parse(hdfcBody);
     } catch {
+      await logPayment(adminClient, orderId, "session_create", sessionPayload, { raw: hdfcBody, http: hdfcRes.status });
       return jsonResponse({ error: "Invalid response from payment gateway", raw: hdfcBody }, 502);
     }
 
+    // Audit log of session create
+    await logPayment(adminClient, orderId, "session_create", sessionPayload, { http: hdfcRes.status, body: hdfcData });
+
     if (!hdfcRes.ok) {
-      // Update payment to failed
       await adminClient
         .from("payments")
         .update({ status: "failed", gateway_response: hdfcData })
         .eq("id", payment.id);
+      await adminClient
+        .from("payment_transactions")
+        .update({ status: "FAILED" })
+        .eq("order_id", orderId);
 
       return jsonResponse(
         {
@@ -199,13 +269,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Store gateway response
     await adminClient
       .from("payments")
       .update({ gateway_response: hdfcData })
       .eq("id", payment.id);
 
-    // Extract payment URL from HDFC response
     const paymentUrl =
       hdfcData.payment_links?.web ||
       hdfcData.payment_links?.iframe ||
@@ -218,6 +286,7 @@ Deno.serve(async (req) => {
       payment_links: hdfcData.payment_links || null,
       status: hdfcData.status || "CREATED",
       sdk_payload: hdfcData.sdk_payload || null,
+      amount: balance,
     });
   } catch (err) {
     console.error("hdfc-create-session error:", err);
