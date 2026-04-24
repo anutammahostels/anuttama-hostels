@@ -6,6 +6,7 @@ interface HostyliaLogoProps {
   showText?: boolean;
   variant?: "light" | "dark" | "auto";
   animated?: boolean;
+  rounded?: "xl" | "full";
 }
 
 const textSizeMap = {
