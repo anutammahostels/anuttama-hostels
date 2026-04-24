@@ -660,17 +660,21 @@ const Payroll = () => {
         throw new Error("This period is already locked. Unlock it first to regenerate.");
       }
       const totalDays = daysBetween(bulkStartDate, bulkEndDate);
+      const factor = periodFactor(totalDays);
       const records = activeEmployees.map(emp => {
-        const basic = emp.salary_amount || 0;
-        const hra = emp.hra || 0;
-        const sa = emp.special_allowance || 0;
-        const oa = emp.other_additions || 0;
+        // Pro-rate every monthly figure by the period factor
+        const basic = Math.round((emp.salary_amount || 0) * factor);
+        const hra = Math.round((emp.hra || 0) * factor);
+        const sa = Math.round((emp.special_allowance || 0) * factor);
+        const oa = Math.round((emp.other_additions || 0) * factor);
         const gross = basic + hra + sa + oa;
-        const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
-        const pfEr = Math.min(Math.round(basic * 0.12), 1800);
-        const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
-        const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
-        const pt = calculatePT(gross, bulkStartDate);
+        const monthlyGross = (emp.salary_amount || 0) + (emp.hra || 0) + (emp.special_allowance || 0) + (emp.other_additions || 0);
+        const pfCap = Math.round(1800 * factor);
+        const pfEmp = Math.min(Math.round(basic * 0.12), pfCap);
+        const pfEr = Math.min(Math.round(basic * 0.12), pfCap);
+        const esiEmp = monthlyGross <= 21000 ? Math.round(gross * 0.0075) : 0;
+        const esiEr = monthlyGross <= 21000 ? Math.round(gross * 0.0325) : 0;
+        const pt = calculatePTForPeriod(monthlyGross, bulkStartDate, bulkEndDate);
         const totalDed = pfEmp + esiEmp + pt;
         const net = Math.round(gross - totalDed);
         return {
