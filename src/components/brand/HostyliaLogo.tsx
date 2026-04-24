@@ -36,6 +36,7 @@ export const HostyliaLogo = ({
   showText = true,
   variant = "auto",
   animated = false,
+  rounded = "xl",
 }: HostyliaLogoProps) => {
   const textColor =
     variant === "dark"
@@ -44,12 +45,15 @@ export const HostyliaLogo = ({
         ? "text-foreground"
         : "text-foreground";
 
+  const roundedClass = rounded === "full" ? "rounded-full" : "rounded-xl";
+  const ringClass = variant === "dark" ? "ring-white/10" : "ring-black/5";
+
   return (
     <div className={`flex items-center ${gapMap[size]} ${className}`}>
       <img
         src={anuttamaLogo}
         alt="Anuttama Enterprises LLP"
-        className={`${imageSizeMap[size]} shrink-0 rounded-xl object-cover overflow-hidden ring-1 ring-black/5 shadow-sm ${animated ? "animate-float" : ""}`}
+        className={`${imageSizeMap[size]} shrink-0 ${roundedClass} object-cover overflow-hidden ring-1 ${ringClass} shadow-sm ${animated ? "animate-float" : ""}`}
         loading="eager"
         decoding="async"
       />
