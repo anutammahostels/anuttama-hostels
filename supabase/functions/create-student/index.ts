@@ -192,7 +192,7 @@ serve(async (req) => {
         course: course || null,
         department: department || null,
         year: year ? parseInt(year) : null,
-        date_of_birth: date_of_birth || null,
+        date_of_birth: toDateOnly(date_of_birth),
         blood_group: blood_group || null,
         emergency_contact: emergency_contact || null,
         father_name: father_name || null,
