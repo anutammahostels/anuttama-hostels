@@ -15,14 +15,11 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
 import {
-  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, Unlock, PlayCircle, CalendarIcon, Calculator,
+  UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, Unlock, PlayCircle, Calculator,
   AlertTriangle,
 } from "lucide-react";
-import { format, getDaysInMonth } from "date-fns";
+import { format } from "date-fns";
 import { exportToExcel } from "@/lib/exportExcel";
 
 interface Employee {
