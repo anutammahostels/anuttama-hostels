@@ -48,8 +48,12 @@ serve(async (req) => {
       date_of_birth, blood_group, emergency_contact, father_name, gender,
       // New finance fields
       final_fee, payment_date, account_number, alloted_room_no, remarks,
-      payment_mode_1, amount_1, transaction_details_1,
-      payment_mode_2, amount_2, transaction_details_2,
+      // Installment 1
+      payment_date_1, payment_mode_1, amount_1, transaction_details_1, utr_id_1,
+      // Installment 2
+      payment_date_2, payment_mode_2, amount_2, transaction_details_2, utr_id_2,
+      // Installment 3
+      payment_date_3, payment_mode_3, amount_3, transaction_details_3, utr_id_3,
       balance_payment,
     } = body;
 
