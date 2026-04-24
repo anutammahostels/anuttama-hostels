@@ -703,7 +703,7 @@ const Payroll = () => {
         "EPF Contribution (ER)": r.pf_employer,
         "EPS Contribution": Math.min(Math.round((r.basic_salary || 0) * 0.0833), 1250),
         "EDLI Contribution": Math.min(Math.round((r.basic_salary || 0) * 0.005), 75),
-        "Month": r.month,
+        "Period": formatPeriodDisplay(r.month),
       };
     });
     exportToExcel(data, `PF-ECR-${format(new Date(), "yyyy-MM-dd")}`, "PF ECR");
@@ -718,7 +718,7 @@ const Payroll = () => {
         "Gross Salary": r.gross_salary,
         "Employee ESI (0.75%)": r.esi_employee,
         "Employer ESI (3.25%)": r.esi_employer,
-        "Month": r.month,
+        "Period": formatPeriodDisplay(r.month),
       }));
     exportToExcel(data, `ESI-Statement-${format(new Date(), "yyyy-MM-dd")}`, "ESI");
   };
@@ -729,7 +729,7 @@ const Payroll = () => {
       "Emp No.": r.employees?.employee_number || "",
       "Gross Salary": r.gross_salary,
       "PT Deducted": r.professional_tax,
-      "Month": r.month,
+      "Period": formatPeriodDisplay(r.month),
     }));
     exportToExcel(data, `PT-Statement-${format(new Date(), "yyyy-MM-dd")}`, "PT Statement");
   };
@@ -768,7 +768,7 @@ const Payroll = () => {
       "Bank Name": r.employees?.bank_name || "",
       "Account Number": r.employees?.bank_account || "",
       "IFSC Code": r.employees?.bank_ifsc || "",
-      "Month": r.month,
+      "Period": formatPeriodDisplay(r.month),
     }));
     exportToExcel(data, `Bank-Transfer-${format(new Date(), "yyyy-MM-dd")}`, "Bank Transfer");
   };
@@ -782,7 +782,7 @@ const Payroll = () => {
     const propName = properties?.[0]?.name || "Hostylia";
     const propAddr = [properties?.[0]?.address, properties?.[0]?.city, properties?.[0]?.state].filter(Boolean).join(", ");
 
-    const htmlContent = `<!DOCTYPE html><html><head><title>Payslip - ${empName} - ${record.month}</title>
+    const htmlContent = `<!DOCTYPE html><html><head><title>Payslip - ${empName} - ${formatPeriodDisplay(record.month)}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#1a1a2e;font-size:12px}
@@ -815,7 +815,7 @@ td:last-child{text-align:right;font-weight:600}
 <div class="header">
   <h1>${propName.toUpperCase()}</h1>
   ${propAddr ? `<p class="addr">${propAddr}</p>` : ''}
-  <span class="badge">PAYSLIP — ${record.month}</span>
+  <span class="badge">PAYSLIP — ${formatPeriodDisplay(record.month)}</span>
 </div>
 <div class="personal">
   <h3>Employee Details</h3>
@@ -826,7 +826,7 @@ td:last-child{text-align:right;font-weight:600}
     <div class="p-item"><span class="lbl">Department</span><span class="val">${emp?.department || 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">DOJ</span><span class="val">${emp?.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">Gender</span><span class="val">${emp?.gender || 'N/A'}</span></div>
-    <div class="p-item"><span class="lbl">Pay Period</span><span class="val">${record.month}</span></div>
+    <div class="p-item"><span class="lbl">Pay Period</span><span class="val">${formatPeriodDisplay(record.month)}</span></div>
     <div class="p-item"><span class="lbl">Date of Payment</span><span class="val">${record.generated_at ? format(new Date(record.generated_at), "dd MMM yyyy") : format(new Date(), "dd MMM yyyy")}</span></div>
     <div class="p-item"><span class="lbl">Paid Days</span><span class="val">${record.days_worked || 30}</span></div>
     <div class="p-item"><span class="lbl">LOP Days</span><span class="val">${record.lop || 0}</span></div>
@@ -1255,7 +1255,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                 case "salary": exportToExcel(payrollRecords.map(r => ({
                   "Employee": (r.employees as any)?.full_name || "",
                   "Emp No.": (r.employees as any)?.employee_number || "",
-                  "Month": r.month,
+                  "Period": formatPeriodDisplay(r.month),
                   "Basic": r.basic_salary, "HRA": r.hra, "Special Allowance": r.special_allowance,
                   "Professional Fees": r.professional_fees, "Contract Fees": r.contract_fees,
                   "Other Additions": r.other_additions, "OT": r.ot, "Incentives": r.incentives, "Bonus": r.bonus,
