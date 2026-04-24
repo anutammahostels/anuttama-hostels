@@ -1,98 +1,86 @@
+## 26-Column Bulk Upload + Manual Form Hardening
 
+Bring the entire student creation pipeline (downloadable template, bulk Excel upload, manual "Add Student" dialog, and the `create-student` Edge Function) to parity with the canonical Anuttama 26-column format — supporting **3 payment installments** and **separate UTR IDs** per installment.
 
-## HDFC Production Security Hardening Plan
+> Spelling note: the user's source Excel uses the misspelling **"TRANSCETION"**. In all our generated templates, UI labels, code identifiers, and DB writes we will use the correct spelling **"TRANSACTION"**. The bulk-upload parser will still accept BOTH spellings as input headers so existing files admins have saved continue to import cleanly.
 
-This adds defense-in-depth security layers on top of the existing payment flow without breaking it. Existing `payments` table stays the system of record; we add two new tables (`payment_transactions`, `payment_logs`) for HDFC audit/compliance.
+---
 
-### 1. Database Migration (new tables)
+### 1. Template Download — `downloadTemplate()` in `src/pages/Students.tsx`
 
-**`payment_transactions`** — server-side source-of-truth for HDFC verification
-- `order_id TEXT UNIQUE NOT NULL` (≤21 chars, alphanumeric)
-- `payment_id UUID` (link to existing `payments.id`)
-- `invoice_id UUID`, `customer_id TEXT NOT NULL`
-- `amount NUMERIC(10,2) NOT NULL`, `currency TEXT DEFAULT 'INR'`
-- `status TEXT DEFAULT 'INITIATED'` — `INITIATED | PENDING | SUCCESS | FAILED | TAMPERED`
-- `hdfc_txn_id TEXT`, `payment_method TEXT`
-- `created_at`, `updated_at`
-- RLS: admins manage; students can SELECT their own (via payment→student join); service role bypasses
+Replace the current template headers with the 26-column canonical format (correct spelling):
 
-**`payment_logs`** — full HDFC request/response audit trail
-- `id UUID`, `order_id TEXT NOT NULL`
-- `log_type TEXT NOT NULL` — `session_create | callback | status_api | webhook | refund | verify`
-- `request_payload JSONB`, `response_payload JSONB`
-- `created_at TIMESTAMPTZ`
-- RLS: admins SELECT only; service role inserts
+```
+S.NO | FORM NO | STUDENT NAME | FATHER NAME | Gender | CONTACT NO1 | CONTACT NO 2 | GRADE | STREAM |
+DATE OF THE PAYMENT | FINAL FEE |
+PAYMENT MODE-1 | AMOUNT 1 | TRANSACTION DETAILS-1 | UTR ID |
+DATE OF THE PAYMENT (2nd) | PAYMENT MODE-2 | AMOUNT 2 | BALANCE PAYMENT DATE | TRANSACTION DETAILS-2 | UTR ID-2 |
+PAYMENT MODE-3 | AMOUNT 3 | BALANCE PAYMENT DATE (3rd) | TRANSACTION DETAILS-3 | UTR ID-3
+```
 
-Note: The user-supplied schema references `bookings(id)` which doesn't exist in this project — we use `invoice_id` instead (that's our equivalent).
+Drop legacy template-only columns (`ACCOUNT NUMBER`, `ALLOTED ROOM NO`, `REMARKS`) since the canonical format does not include them.
 
-### 2. Edge Function: `hdfc-create-session` (hardened)
+Add a sample row demonstrating Indian comma parsing (`1,80,000`) and sum expression (`90,000 + 21,000`).
 
-- **New order ID**: `ANT` + 8 random alphanumeric chars + last 4 digits of `Date.now()` → ~15 chars, alphanumeric only. Loop with uniqueness check against `payment_transactions.order_id` (max 5 retries).
-- **Server-side amount**: ignore client-supplied `amount`; compute `balance = invoice.total_amount - invoice.paid_amount` from DB.
-- **customer_id**: derived from `auth.uid()` (sanitized, no hardcoding).
-- **Remove `udf2`**: confirm not present (it isn't currently — keep it that way).
-- **Insert `payment_transactions` row** with `status='INITIATED'` BEFORE calling HDFC.
-- **Log** session request + response into `payment_logs` (`log_type='session_create'`).
-- Keep existing `payments` row creation for backward compatibility with the rest of the app.
+---
 
-### 3. Edge Function: `hdfc-order-status` (hardened verification)
+### 2. Bulk Upload Parser — `src/pages/Students.tsx`
 
-- After fetching HDFC status, **independently compare** `order_id` and `amount` from HDFC response vs the stored `payment_transactions` row.
-- If both match and HDFC says CHARGED → update `payment_transactions.status='SUCCESS'`.
-- If mismatch → set `status='TAMPERED'`, do NOT mark the linked `payments` row as completed, return `{ status: 'TAMPERED' }`.
-- **Idempotency**: if `payment_transactions.status` is already `SUCCESS`, skip update and return existing result (replay-attack safe).
-- Log every status check into `payment_logs` (`log_type='status_api'`), including TAMPERED and FAILED.
-- Keep existing accounting/notification side-effects, gated on the new verified-success path.
+Update the header normalization + mapping logic:
 
-### 4. New Edge Function: `hdfc-verify-payment`
+- **Index-based lookup for duplicate-named columns**: `UTR ID` / `UTR ID-2` / `UTR ID-3` and `DATE OF THE PAYMENT` / `DATE OF THE PAYMENT (2nd)` / `BALANCE PAYMENT DATE` / `BALANCE PAYMENT DATE (3rd)` must each be picked up by their position, not by name match alone — using the same `txnKeys` ordering pattern already in the file.
+- **Accept both spellings**: header normalization treats `transcetion` and `transaction` as the same token so older Excel files still parse.
+- New parsed fields per row sent to the edge function:
+  - `payment_date_1`, `payment_date_2`, `payment_date_3`
+  - `payment_mode_1/2/3`, `amount_1/2/3`
+  - `transaction_details_1/2/3`
+  - `utr_id_1/2/3`
+- Preserve existing helpers: header auto-detection (scan first 20 rows), `parseIndianNumber()` (commas + sum expressions), Excel-serial-date conversion.
 
-Used by the success/failure pages to fetch a server-trusted view (so the URL can't fake success).
+---
 
-- Input: `{ order_id }`
-- Auth: requires user JWT (student must own the linked invoice, or staff).
-- Reads `payment_transactions` (NOT URL params) and returns:
-  ```
-  { status, order_id, amount, currency, hdfc_txn_id, invoice_number }
-  ```
-- If row missing or status ≠ SUCCESS, returns the actual status — frontend renders failure UI.
+### 3. Manual "Add Student" Dialog — `src/pages/Students.tsx`
 
-### 5. Edge Function: `hdfc-payment-callback` (hardened)
+Extend the form schema and JSX to add a third installment block + UTR fields:
 
-- On callback, do not trust the POSTed status. Call `hdfc-order-status` internally (server-to-server) to re-verify.
-- Apply the tamper check + idempotency described in step 3.
-- Log callback payload into `payment_logs` (`log_type='callback'`).
+- **Installment 1**: payment_date_1, payment_mode_1, amount_1, transaction_details_1, **utr_id_1** (new)
+- **Installment 2**: payment_date_2, payment_mode_2, amount_2, transaction_details_2, **utr_id_2** (new)
+- **Installment 3 (new entire block)**: payment_date_3, payment_mode_3, amount_3, transaction_details_3, utr_id_3
+- Live-running paid-total + balance display already exists for installments 1 & 2 — extend to include installment 3.
+- Each installment block remains optional (skip if amount is empty/zero).
 
-### 6. Edge Function: `hdfc-webhook` (audit logging)
+---
 
-- Add `payment_logs` insert (`log_type='webhook'`) for every event. No flow changes — webhook already enforces server-side updates.
+### 4. Edge Function — `supabase/functions/create-student/index.ts`
 
-### 7. Frontend changes
+- Accept the new fields: `payment_date_1/2/3`, `payment_mode_1/2/3`, `amount_1/2/3`, `transaction_details_1/2/3`, `utr_id_1/2/3`.
+- Loop over installments 1–3 and insert one row into `payments` per non-zero installment with:
+  - `amount` ← `amount_n`
+  - `payment_date` ← `payment_date_n` (per-installment date, no longer a single shared date)
+  - `payment_mode_label` ← `payment_mode_n`
+  - `transaction_id` ← `transaction_details_n`
+  - `transaction_reference` ← `utr_id_n` *(currently both fields receive the same value — fix this)*
+- Recalculate `invoices.paid_amount = amount_1 + amount_2 + amount_3`.
+- Status logic unchanged: `paid` when total ≥ final_fee, else `partial`, else `pending`.
 
-**`src/pages/PaymentStatus.tsx`** and **`src/pages/PaymentCallback.tsx`**:
-- Replace direct `getOrderStatus` polling result with a **post-poll call to `hdfc-verify-payment`**. That verified response is the ONLY source for the success UI's Order ID, Amount, Status.
-- If `hdfc-verify-payment` returns anything other than `SUCCESS`, render Failed/Processing/Unknown — never trust URL params alone for success.
-- Keep existing 5s+15×3s HDFC polling and DB fallback (drives status transitions); render UI only from verified response.
-- Display the three required fields on success: **Order ID, Amount (INR), Status**.
+---
 
-**`src/lib/hdfc.ts`**:
-- Drop the `amount` argument from `createPaymentSession` (server computes it). Update the only caller `src/pages/student/StudentInvoices.tsx`.
-- Add `verifyPayment(orderId)` helper.
+### 5. Other Surfaces to Verify (no changes expected, but check)
 
-### 8. Environment switching
+- **`src/pages/Billing.tsx` / Invoice & Payment list views**: confirm they already render `transaction_reference` (UTR) alongside `transaction_id`. If they display only one, add a small "UTR" column.
+- **`useInvoices` / `usePayments` hooks**: no changes — they already select `*`.
+- **Receipt PDFs / data exports**: if any export writes "Transaction Details", confirm it doesn't say "Transcetion".
 
-Already implemented (`HDFC_ENVIRONMENT` + `HDFC_BASE_URL_SANDBOX` / `HDFC_BASE_URL_PRODUCTION`). No change needed; staying on `sandbox`.
+---
 
 ### Files Touched
 
-- New migration: `payment_transactions`, `payment_logs` tables + RLS
-- New edge function: `supabase/functions/hdfc-verify-payment/index.ts`
-- Modified edge functions: `hdfc-create-session`, `hdfc-order-status`, `hdfc-payment-callback`, `hdfc-webhook`
-- Modified frontend: `src/lib/hdfc.ts`, `src/pages/student/StudentInvoices.tsx`, `src/pages/PaymentStatus.tsx`, `src/pages/PaymentCallback.tsx`
-- `supabase/config.toml`: add `[functions.hdfc-verify-payment]` block (`verify_jwt = false`, in-code JWT validation)
+- `src/pages/Students.tsx` — template, parser, manual form
+- `supabase/functions/create-student/index.ts` — 3rd installment + UTR mapping + per-installment dates
+- (Read-only check) `src/pages/Billing.tsx`, payment/invoice display components
 
 ### What Stays the Same
 
-- Existing `payments` / `invoices` tables and the rest of the app continue to work unchanged.
-- The two-phase polling and 5-second auto-redirect behavior is preserved.
-- HDFC `/session` and `/orders/{id}` API contract is unchanged.
-
+- No DB schema change — `payments` already supports unlimited rows and has both `transaction_id` and `transaction_reference`.
+- Existing 2-installment Excel files still upload (parser accepts old + new header spellings, treats missing 3rd installment as optional).
+- Auto-invoice generation, login credential generation, and bed assignment logic unchanged.
