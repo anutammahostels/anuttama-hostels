@@ -407,11 +407,13 @@ const Payroll = () => {
     };
   }, [selectedEmployee, payrollForm, payrollStartDate, payrollEndDate]);
 
-  // TDS calculation result
+  // TDS calculation result — annual regime is computed on monthly-equivalent gross,
+  // then the per-month TDS is multiplied by the number of months the period covers.
   const tdsCalcResult = useMemo(() => {
     if (!selectedEmployee) return null;
-    return calculateMonthlyTDS(payrollCalc.gross);
-  }, [payrollCalc.gross, selectedEmployee]);
+    const base = calculateMonthlyTDS(payrollCalc.monthlyGross);
+    return { ...base, monthlyTds: base.monthlyTds * payrollCalc.months };
+  }, [payrollCalc.monthlyGross, payrollCalc.months, selectedEmployee]);
 
   // Create/Update employee
   const employeeMutation = useMutation({
