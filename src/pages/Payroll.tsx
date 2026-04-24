@@ -1345,16 +1345,20 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   {/* Date Range */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Start Month *</Label>
-                      <Input type="month" value={payrollStartMonth} onChange={e => setPayrollStartMonth(e.target.value)} />
+                      <Label>Start Date *</Label>
+                      <Input type="date" value={payrollStartDate} onChange={e => setPayrollStartDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>End Month *</Label>
-                      <Input type="month" value={payrollEndMonth} onChange={e => setPayrollEndMonth(e.target.value)} />
+                      <Label>End Date *</Label>
+                      <Input type="date" value={payrollEndDate} onChange={e => setPayrollEndDate(e.target.value)} />
                     </div>
                   </div>
-                  {payrollStartMonth > payrollEndMonth && (
-                    <p className="text-sm text-destructive font-medium">⚠️ Start month must be before or equal to end month.</p>
+                  {payrollStartDate > payrollEndDate ? (
+                    <p className="text-sm text-destructive font-medium">⚠️ Start date must be on or before end date.</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Total days: <strong>{daysBetween(payrollStartDate, payrollEndDate)}</strong>
+                    </p>
                   )}
 
                   {/* Show detailed form only when exactly 1 employee selected */}
