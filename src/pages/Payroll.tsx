@@ -997,44 +997,32 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     </div>
                     <div className="space-y-2">
                       <Label>Date of Joining</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="DD/MM/YYYY"
-                          value={empForm.date_of_joining ? format(empForm.date_of_joining, "dd/MM/yyyy") : ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const match = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                            if (match) {
-                              const parsed = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-                              if (!isNaN(parsed.getTime())) {
-                                setEmpForm(p => ({ ...p, date_of_joining: parsed }));
-                              }
-                            } else if (val === "") {
-                              setEmpForm(p => ({ ...p, date_of_joining: null }));
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="icon" className="shrink-0">
-                              <CalendarIcon className="h-4 w-4" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="end" side="bottom" sideOffset={12} avoidCollisions={true}>
-                            <Calendar
-                              mode="single"
-                              selected={empForm.date_of_joining || undefined}
-                              onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
-                              initialFocus
-                              className="p-2 pointer-events-auto text-xs scale-90 origin-top-right"
-                              captionLayout="dropdown-buttons"
-                              fromYear={1970}
-                              toYear={new Date().getFullYear()}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !empForm.date_of_joining && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {empForm.date_of_joining
+                              ? format(empForm.date_of_joining, "PPP")
+                              : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={empForm.date_of_joining || undefined}
+                            onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
                       <Label>Email</Label>
