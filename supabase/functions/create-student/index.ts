@@ -7,6 +7,55 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Robust date parser: handles DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, and ISO strings.
+// Returns a Date in UTC or null if unparseable.
+function parseDate(input: any): Date | null {
+  if (input === null || input === undefined || input === "") return null;
+  if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+  const str = String(input).trim();
+  if (!str) return null;
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (dmy) {
+    let [, d, m, y] = dmy;
+    let yearNum = parseInt(y, 10);
+    if (yearNum < 100) yearNum += 2000;
+    const dayNum = parseInt(d, 10);
+    const monthNum = parseInt(m, 10);
+    if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) return null;
+    const result = new Date(Date.UTC(yearNum, monthNum - 1, dayNum));
+    if (result.getUTCDate() !== dayNum || result.getUTCMonth() !== monthNum - 1) return null;
+    return result;
+  }
+
+  // YYYY-MM-DD
+  const iso = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) {
+    const result = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3]));
+    if (isNaN(result.getTime())) return null;
+    return result;
+  }
+
+  // Fallback to native parsing for anything else (full ISO timestamps, etc.)
+  const fallback = new Date(str);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
+// Safe ISO date string (YYYY-MM-DD) for date columns
+function toDateOnly(input: any, fallback?: string): string | null {
+  const d = parseDate(input);
+  if (d) return d.toISOString().split("T")[0];
+  return fallback ?? null;
+}
+
+// Safe full ISO timestamp for timestamptz columns
+function toIsoTimestamp(input: any, fallback?: string): string {
+  const d = parseDate(input);
+  if (d) return d.toISOString();
+  return fallback ?? new Date().toISOString();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -143,7 +192,7 @@ serve(async (req) => {
         course: course || null,
         department: department || null,
         year: year ? parseInt(year) : null,
-        date_of_birth: date_of_birth || null,
+        date_of_birth: toDateOnly(date_of_birth),
         blood_group: blood_group || null,
         emergency_contact: emergency_contact || null,
         father_name: father_name || null,
@@ -189,7 +238,8 @@ serve(async (req) => {
         const invoiceStatus = totalPaid >= parsedFinalFee ? "paid" : (totalPaid > 0 ? "partial" : "pending");
 
         const invoiceNumber = `INV-${roll_number}-${Date.now().toString(36).toUpperCase()}`;
-        const billingDate = payment_date_1 || payment_date || new Date().toISOString().split("T")[0];
+        const todayStr = new Date().toISOString().split("T")[0];
+        const billingDate = toDateOnly(payment_date_1, undefined) || toDateOnly(payment_date, undefined) || todayStr;
 
         const noteParts: string[] = [];
         if (balance_payment) noteParts.push(`Balance: ${balance_payment}`);
@@ -211,9 +261,7 @@ serve(async (req) => {
           // Create one payment row per non-zero installment
           for (const inst of installments) {
             if (inst.amt <= 0) continue;
-            const paidAt = inst.date
-              ? new Date(inst.date).toISOString()
-              : (billingDate ? new Date(billingDate).toISOString() : new Date().toISOString());
+            const paidAt = toIsoTimestamp(inst.date, toIsoTimestamp(billingDate));
             await adminClient.from("payments").insert({
               invoice_id: invoice.id,
               student_id: student.id,
@@ -225,7 +273,7 @@ serve(async (req) => {
               transaction_reference: inst.utr || null,
               payment_label: `Amount ${inst.n}`,
               status: "completed",
-              paid_at: isNaN(new Date(paidAt).getTime()) ? new Date().toISOString() : paidAt,
+              paid_at: paidAt,
             });
           }
         }
