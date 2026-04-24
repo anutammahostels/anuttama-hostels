@@ -1,26 +1,34 @@
 ## Goal
 
-Use the newly uploaded **Anuttama Enterprises LLP** logo (yellow square version) everywhere the logo appears, and make it visually fit by clipping the square into a rounded shape so it sits cleanly inside its parent container.
+Remove the scroll-driven color/theme switching on the landing-page navbar (`src/components/landing/Navbar.tsx`) and lock it to a single, consistent appearance that stays the same whether the user is at the top of the page or scrolled down.
 
-## Changes
+## Chosen Style
 
-### 1. Replace the logo asset
-- Copy `user-uploads://anuttama_logo.png` → `src/assets/anuttama-logo.png` (used by the React `HostyliaLogo` component).
-- Copy `user-uploads://anuttama_logo.png` → `public/anuttama-logo.png` (used by favicon + OG meta in `index.html`).
+Use the "scrolled" treatment as the permanent style — it's the more readable, accessible variant and works on every page (Home, Solutions, Features, About, Contact):
 
-This automatically refreshes the logo in: Navbar, Footer, Auth page, Onboarding header, Welcome screen, browser favicon, and social share previews.
+- Background: white with blur (`bg-white/90 dark:bg-background/90 backdrop-blur-xl`)
+- Border: subtle bottom border (`border-b border-border/50`)
+- Soft shadow (`shadow-sm`)
+- Logo: `light` variant (dark text on white)
+- Nav links: muted-foreground → foreground on hover; active link uses `text-primary bg-primary/10`
+- "Log in" button: default ghost styling (no white override)
+- Mobile menu icon: dark (`text-foreground`)
+- "Get Started" button: unchanged (gradient)
 
-### 2. Round the corners of the logo image — `src/components/brand/HostyliaLogo.tsx`
-The image is a yellow square; to make it sit nicely inside the parent flex container, clip the `<img>` itself with rounded corners and a subtle border:
+## Changes (single file)
 
-- Add `rounded-xl` (≈12 px radius — proportional rounded square, modern app-icon look) to the `<img>` so the yellow background becomes a rounded tile rather than a hard square.
-- Add `overflow-hidden` and a thin neutral border (`ring-1 ring-black/5`) so it reads as a polished badge on both light (white nav, auth panel) and dark (footer, navy hero) surfaces.
-- Keep `object-cover` so the artwork fills the rounded tile edge-to-edge with no transparent gaps.
-- Keep all existing props (`size`, `variant`, `className`, `showText`, `animated`) and the size maps unchanged so every existing call site (Navbar, Footer, Auth, Onboarding, Welcome) updates automatically.
+**`src/components/landing/Navbar.tsx`**
 
-### 3. No other files need to change
-`index.html` already references `/anuttama-logo.png` — overwriting the file is enough to refresh the favicon and OG image.
+1. Remove the `isScrolled` state, the `useEffect` scroll listener, and the `handleScroll` function.
+2. Replace the conditional `<nav>` className with the constant scrolled style.
+3. Replace `variant={isScrolled ? "light" : "dark"}` on `<HostyliaLogo>` with a fixed `variant="light"`.
+4. Simplify each nav `<Link>` className to only the "scrolled" branch (active vs inactive, no white-on-transparent variant).
+5. Simplify the "Log in" button — drop the `!isScrolled && "text-white..."` override.
+6. Simplify the mobile menu button + icon — always use `hover:bg-muted` and `text-foreground`.
 
-## Result
+No other files are affected. Mobile menu panel and "Get Started" button already use fixed styles, so they need no change.
 
-The yellow Anuttama Enterprises crest will appear with smooth rounded corners (like an app icon) next to the "Anuttama" wordmark in the navbar, footer, and auth/onboarding screens, fitting cleanly inside their parent containers without the harsh square edge.
+## Out of Scope
+
+- Logo, favicon, and brand assets remain as-is.
+- Dashboard / Student / Super Admin headers are untouched (they already have their own consistent styling).
