@@ -238,7 +238,8 @@ serve(async (req) => {
         const invoiceStatus = totalPaid >= parsedFinalFee ? "paid" : (totalPaid > 0 ? "partial" : "pending");
 
         const invoiceNumber = `INV-${roll_number}-${Date.now().toString(36).toUpperCase()}`;
-        const billingDate = payment_date_1 || payment_date || new Date().toISOString().split("T")[0];
+        const todayStr = new Date().toISOString().split("T")[0];
+        const billingDate = toDateOnly(payment_date_1, undefined) || toDateOnly(payment_date, undefined) || todayStr;
 
         const noteParts: string[] = [];
         if (balance_payment) noteParts.push(`Balance: ${balance_payment}`);
@@ -260,9 +261,7 @@ serve(async (req) => {
           // Create one payment row per non-zero installment
           for (const inst of installments) {
             if (inst.amt <= 0) continue;
-            const paidAt = inst.date
-              ? new Date(inst.date).toISOString()
-              : (billingDate ? new Date(billingDate).toISOString() : new Date().toISOString());
+            const paidAt = toIsoTimestamp(inst.date, toIsoTimestamp(billingDate));
             await adminClient.from("payments").insert({
               invoice_id: invoice.id,
               student_id: student.id,
@@ -274,7 +273,7 @@ serve(async (req) => {
               transaction_reference: inst.utr || null,
               payment_label: `Amount ${inst.n}`,
               status: "completed",
-              paid_at: isNaN(new Date(paidAt).getTime()) ? new Date().toISOString() : paidAt,
+              paid_at: paidAt,
             });
           }
         }
