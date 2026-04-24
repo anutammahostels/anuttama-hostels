@@ -1288,7 +1288,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
 
             <Dialog open={payrollDialogOpen} onOpenChange={(open) => {
               setPayrollDialogOpen(open);
-              if (!open) { setSelectedEmployeeIds([]); setPayrollForm(defaultPayrollForm); setPayrollStartMonth(format(new Date(), "yyyy-MM")); setPayrollEndMonth(format(new Date(), "yyyy-MM")); }
+              if (!open) { setSelectedEmployeeIds([]); setPayrollForm(defaultPayrollForm); setPayrollStartDate(monthStartIso); setPayrollEndDate(monthEndIso); }
             }}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" /> Generate Payroll</Button>
