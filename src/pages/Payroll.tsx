@@ -1576,7 +1576,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <TableHeader>
                     <TableRow>
                       <TableHead>Employee</TableHead>
-                      <TableHead>Month</TableHead>
+                      <TableHead>Period</TableHead>
                       <TableHead>Gross</TableHead>
                       <TableHead>PF</TableHead>
                       <TableHead>ESI</TableHead>
@@ -1596,7 +1596,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                         <TableCell className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {record.month}
+                            {formatPeriodDisplay(record.month)}
                             {record.is_locked && <Lock className="h-3 w-3 text-muted-foreground" />}
                           </div>
                         </TableCell>
