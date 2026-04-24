@@ -1370,7 +1370,8 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                         <div className="grid grid-cols-3 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs">Total Days</Label>
-                            <Input type="number" min="1" max="31" value={payrollForm.total_days} onChange={e => setPayrollForm(p => ({ ...p, total_days: e.target.value }))} />
+                            <Input type="number" value={payrollForm.total_days} disabled />
+                            <p className="text-[10px] text-muted-foreground">Auto from date range</p>
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">LOP (Days)</Label>
