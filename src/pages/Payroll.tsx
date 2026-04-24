@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
   UserPlus, FileText, Users, IndianRupee, Download, Trash2, Edit, Plus, Lock, Unlock, PlayCircle, Calculator,
   AlertTriangle,
