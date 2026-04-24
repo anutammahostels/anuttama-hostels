@@ -100,10 +100,12 @@ const validatePAN = (v: string) => !v || PAN_REGEX.test(v.toUpperCase());
 const validateIFSC = (v: string) => !v || IFSC_REGEX.test(v.toUpperCase());
 
 // ── Auto PT (Karnataka slabs) ──
-const calculatePT = (gross: number, month: string): number => {
+// Accepts either ISO date "YYYY-MM-DD", legacy "YYYY-MM", or a period key.
+const calculatePT = (gross: number, periodOrMonth: string): number => {
   if (gross < 25000) return 0;
+  // Extract month number from the start of the string (works for YYYY-MM-DD, YYYY-MM, and period keys)
+  const monthNum = parseInt(periodOrMonth.split("-")[1] || "0", 10);
   // February → ₹300, else ₹200
-  const monthNum = parseInt(month.split("-")[1]);
   return monthNum === 2 ? 300 : 200;
 };
 
@@ -206,6 +208,9 @@ const Payroll = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [netPayWarningOpen, setNetPayWarningOpen] = useState(false);
   const [tdsCalcOpen, setTdsCalcOpen] = useState(false);
+  const todayIso = format(new Date(), "yyyy-MM-dd");
+  const monthEndIso = format(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), "yyyy-MM-dd");
+  const monthStartIso = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
   const defaultPayrollForm = {
     employee_id: "", month: format(new Date(), "yyyy-MM"),
     hra: "0", special_allowance: "0", professional_fees: "0", contract_fees: "0",
@@ -217,13 +222,13 @@ const Payroll = () => {
     notes: "",
   };
   const [payrollForm, setPayrollForm] = useState(defaultPayrollForm);
-  const [bulkStartMonth, setBulkStartMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [bulkEndMonth, setBulkEndMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [bulkStartDate, setBulkStartDate] = useState(monthStartIso);
+  const [bulkEndDate, setBulkEndDate] = useState(monthEndIso);
 
   // Multi-employee selection for Generate Payroll dialog
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
-  const [payrollStartMonth, setPayrollStartMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [payrollEndMonth, setPayrollEndMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [payrollStartDate, setPayrollStartDate] = useState(monthStartIso);
+  const [payrollEndDate, setPayrollEndDate] = useState(monthEndIso);
 
   // Fetch employees
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
@@ -275,21 +280,16 @@ const Payroll = () => {
     }
   }, [selectedEmployee?.id]);
 
-  // Auto-set total days and PT when month changes (use payrollStartMonth for single employee)
+  // Auto-set total days from selected start/end date range
   useEffect(() => {
-    const month = selectedEmployeeIds.length === 1 ? payrollStartMonth : payrollForm.month;
-    if (month) {
-      try {
-        const [y, m] = month.split("-").map(Number);
-        const calDays = getDaysInMonth(new Date(y, m - 1));
-        setPayrollForm(p => ({ ...p, total_days: String(calDays) }));
-      } catch { /* ignore */ }
+    if (payrollStartDate && payrollEndDate && payrollStartDate <= payrollEndDate) {
+      setPayrollForm(p => ({ ...p, total_days: String(daysBetween(payrollStartDate, payrollEndDate)) }));
     }
-  }, [payrollStartMonth, payrollForm.month, selectedEmployeeIds.length]);
+  }, [payrollStartDate, payrollEndDate, selectedEmployeeIds.length]);
 
-  // Auto-calculate PT when gross changes
+  // Auto-calculate PT when gross changes (uses period start date for Feb rule)
   useEffect(() => {
-    if (selectedEmployee && payrollForm.month) {
+    if (selectedEmployee) {
       const basic = selectedEmployee.salary_amount || 0;
       const hra = parseFloat(payrollForm.hra) || 0;
       const sa = parseFloat(payrollForm.special_allowance) || 0;
@@ -300,7 +300,7 @@ const Payroll = () => {
       const inc = parseFloat(payrollForm.incentives) || 0;
       const bon = parseFloat(payrollForm.bonus) || 0;
       const gross = basic + hra + sa + pf + cf + oa + ot + inc + bon;
-      const autoPT = calculatePT(gross, payrollForm.month);
+      const autoPT = calculatePT(gross, payrollStartDate);
       setPayrollForm(p => ({ ...p, professional_tax: String(autoPT) }));
     }
   }, [selectedEmployee?.id, payrollForm.hra, payrollForm.special_allowance, payrollForm.professional_fees, payrollForm.contract_fees, payrollForm.other_additions, payrollForm.ot, payrollForm.incentives, payrollForm.bonus, payrollForm.month]);
@@ -428,13 +428,14 @@ const Payroll = () => {
   // Generate payroll for single employee — with net pay warning
   const doGeneratePayroll = async () => {
     if (!selectedEmployee) throw new Error("Employee not found");
-    const existingLocked = payrollRecords.find(r => r.month === payrollForm.month && r.is_locked);
-    if (existingLocked) throw new Error("This month is locked. Cannot generate new payroll.");
+    const periodKey = buildPeriodKey(payrollStartDate, payrollEndDate);
+    const existingLocked = payrollRecords.find(r => r.month === periodKey && r.is_locked);
+    if (existingLocked) throw new Error("This period is locked. Cannot generate new payroll.");
     const c = payrollCalc;
     const { error } = await supabase.from("payroll_records").insert({
       employee_id: payrollForm.employee_id,
       property_id: selectedPropertyId,
-      month: payrollForm.month,
+      month: periodKey,
       basic_salary: c.basic,
       hra: c.hra,
       special_allowance: c.specialAllowance,
@@ -470,7 +471,7 @@ const Payroll = () => {
   const payrollMutation = useMutation({
     mutationFn: async () => {
       const isSingle = selectedEmployeeIds.length === 1;
-      
+
       if (isSingle) {
         // Single employee with detailed form — use existing logic
         if (payrollCalc.net < 0) {
@@ -479,60 +480,48 @@ const Payroll = () => {
         }
         // Set employee_id from selectedEmployeeIds for doGeneratePayroll
         payrollForm.employee_id = selectedEmployeeIds[0];
-        payrollForm.month = payrollStartMonth; // single month for detailed
         await doGeneratePayroll();
       } else {
-        // Multi-employee: iterate employees × months using defaults
-        const months = getMonthsInRange(payrollStartMonth, payrollEndMonth);
-        if (months.length === 0) throw new Error("Invalid date range");
+        // Multi-employee bulk: ONE record per employee covering the full date range
         if (selectedEmployeeIds.length === 0) throw new Error("No employees selected");
-        
-        let totalGenerated = 0;
-        const skippedMonths: string[] = [];
-        
-        for (const month of months) {
-          if (isMonthLocked(month)) {
-            skippedMonths.push(month);
-            continue;
-          }
-          const [y, m] = month.split("-").map(Number);
-          const calDays = getDaysInMonth(new Date(y, m - 1));
-          
-          const selectedEmps = activeEmployees.filter(e => selectedEmployeeIds.includes(e.id));
-          const records = selectedEmps.map(emp => {
-            const basic = emp.salary_amount || 0;
-            const hra = emp.hra || 0;
-            const sa = emp.special_allowance || 0;
-            const oa = emp.other_additions || 0;
-            const gross = basic + hra + sa + oa;
-            const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
-            const pfEr = Math.min(Math.round(basic * 0.12), 1800);
-            const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
-            const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
-            const pt = calculatePT(gross, month);
-            const totalDed = pfEmp + esiEmp + pt;
-            const net = Math.round(gross - totalDed);
-            return {
-              employee_id: emp.id, property_id: selectedPropertyId, month,
-              basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
-              professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
-              gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
-              esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
-              professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
-              total_days: calDays, lop: 0, days_worked: calDays,
-              allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
-            };
-          });
-          if (records.length > 0) {
-            const { error } = await supabase.from("payroll_records").insert(records);
-            if (error) throw error;
-            totalGenerated += records.length;
-          }
+        if (!payrollStartDate || !payrollEndDate || payrollStartDate > payrollEndDate) {
+          throw new Error("Invalid date range");
         }
-        if (skippedMonths.length > 0) {
-          toast({ title: `Skipped locked months: ${skippedMonths.join(", ")}` });
+        const periodKey = buildPeriodKey(payrollStartDate, payrollEndDate);
+        if (isMonthLocked(periodKey)) {
+          throw new Error("This period is already locked. Unlock it first to regenerate.");
         }
-        return totalGenerated;
+        const totalDays = daysBetween(payrollStartDate, payrollEndDate);
+
+        const selectedEmps = activeEmployees.filter(e => selectedEmployeeIds.includes(e.id));
+        const records = selectedEmps.map(emp => {
+          const basic = emp.salary_amount || 0;
+          const hra = emp.hra || 0;
+          const sa = emp.special_allowance || 0;
+          const oa = emp.other_additions || 0;
+          const gross = basic + hra + sa + oa;
+          const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
+          const pfEr = Math.min(Math.round(basic * 0.12), 1800);
+          const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
+          const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
+          const pt = calculatePT(gross, payrollStartDate);
+          const totalDed = pfEmp + esiEmp + pt;
+          const net = Math.round(gross - totalDed);
+          return {
+            employee_id: emp.id, property_id: selectedPropertyId, month: periodKey,
+            basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
+            professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
+            gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
+            esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
+            professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
+            total_days: totalDays, lop: 0, days_worked: totalDays,
+            allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
+          };
+        });
+        if (records.length === 0) return 0;
+        const { error } = await supabase.from("payroll_records").insert(records);
+        if (error) throw error;
+        return records.length;
       }
     },
     onSuccess: (count) => {
@@ -540,8 +529,8 @@ const Payroll = () => {
       setPayrollDialogOpen(false);
       setPayrollForm(defaultPayrollForm);
       setSelectedEmployeeIds([]);
-      const msg = selectedEmployeeIds.length === 1 
-        ? "Payroll generated successfully" 
+      const msg = selectedEmployeeIds.length === 1
+        ? "Payroll generated successfully"
         : `Payroll generated: ${count} records`;
       toast({ title: msg });
     },
@@ -554,7 +543,6 @@ const Payroll = () => {
   const confirmNegativePayroll = useMutation({
     mutationFn: () => {
       payrollForm.employee_id = selectedEmployeeIds[0];
-      payrollForm.month = payrollStartMonth;
       return doGeneratePayroll();
     },
     onSuccess: () => {
@@ -568,71 +556,78 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Helper to generate months array from start to end (yyyy-MM format)
-  const getMonthsInRange = (start: string, end: string): string[] => {
-    const [sy, sm] = start.split("-").map(Number);
-    const [ey, em] = end.split("-").map(Number);
-    const months: string[] = [];
-    let cy = sy, cm = sm;
-    while (cy < ey || (cy === ey && cm <= em)) {
-      months.push(`${cy}-${String(cm).padStart(2, "0")}`);
-      cm++;
-      if (cm > 12) { cm = 1; cy++; }
+  // ── Period helpers (date-range payroll) ──
+  // The DB `month` text column stores either a legacy "YYYY-MM" or a period key "YYYY-MM-DD_to_YYYY-MM-DD".
+  const buildPeriodKey = (start: string, end: string) => `${start}_to_${end}`;
+
+  const parsePeriodKey = (m: string): { start: Date; end: Date } => {
+    if (m && m.includes("_to_")) {
+      const [s, e] = m.split("_to_");
+      return { start: new Date(s), end: new Date(e) };
     }
-    return months;
+    // Backward compat: legacy "YYYY-MM"
+    const [y, mo] = (m || "").split("-").map(Number);
+    if (!y || !mo) return { start: new Date(), end: new Date() };
+    return { start: new Date(y, mo - 1, 1), end: new Date(y, mo, 0) };
   };
 
-  // Bulk payroll run — with date range support
+  const daysBetween = (start: string, end: string): number => {
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+    return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+  };
+
+  const formatPeriodDisplay = (m: string): string => {
+    const { start, end } = parsePeriodKey(m);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return m;
+    return `${format(start, "dd MMM yyyy")} → ${format(end, "dd MMM yyyy")}`;
+  };
+
+  // Bulk payroll run — date-range based: ONE record per employee for the chosen period
   const bulkPayrollMutation = useMutation({
     mutationFn: async () => {
-      const months = getMonthsInRange(bulkStartMonth, bulkEndMonth);
-      if (months.length === 0) throw new Error("Invalid date range");
-      let totalGenerated = 0;
-      let skippedMonths: string[] = [];
-      for (const month of months) {
-        if (isMonthLocked(month)) {
-          skippedMonths.push(month);
-          continue;
-        }
-        const [y, m] = month.split("-").map(Number);
-        const calDays = getDaysInMonth(new Date(y, m - 1));
-        const records = activeEmployees.map(emp => {
-          const basic = emp.salary_amount || 0;
-          const hra = emp.hra || 0;
-          const sa = emp.special_allowance || 0;
-          const oa = emp.other_additions || 0;
-          const gross = basic + hra + sa + oa;
-          const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
-          const pfEr = Math.min(Math.round(basic * 0.12), 1800);
-          const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
-          const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
-          const pt = calculatePT(gross, month);
-          const totalDed = pfEmp + esiEmp + pt;
-          const net = Math.round(gross - totalDed);
-          return {
-            employee_id: emp.id, property_id: selectedPropertyId, month,
-            basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
-            professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
-            gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
-            esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
-            professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
-            total_days: calDays, lop: 0, days_worked: calDays,
-            allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
-          };
-        });
-        const { error } = await supabase.from("payroll_records").insert(records);
-        if (error) throw error;
-        totalGenerated += records.length;
+      if (!bulkStartDate || !bulkEndDate || bulkStartDate > bulkEndDate) {
+        throw new Error("Invalid date range");
       }
-      if (skippedMonths.length > 0) {
-        toast({ title: `Skipped locked months: ${skippedMonths.join(", ")}` });
+      const periodKey = buildPeriodKey(bulkStartDate, bulkEndDate);
+      if (isMonthLocked(periodKey)) {
+        throw new Error("This period is already locked. Unlock it first to regenerate.");
       }
-      return totalGenerated;
+      const totalDays = daysBetween(bulkStartDate, bulkEndDate);
+      const records = activeEmployees.map(emp => {
+        const basic = emp.salary_amount || 0;
+        const hra = emp.hra || 0;
+        const sa = emp.special_allowance || 0;
+        const oa = emp.other_additions || 0;
+        const gross = basic + hra + sa + oa;
+        const pfEmp = Math.min(Math.round(basic * 0.12), 1800);
+        const pfEr = Math.min(Math.round(basic * 0.12), 1800);
+        const esiEmp = gross <= 21000 ? Math.round(gross * 0.0075) : 0;
+        const esiEr = gross <= 21000 ? Math.round(gross * 0.0325) : 0;
+        const pt = calculatePT(gross, bulkStartDate);
+        const totalDed = pfEmp + esiEmp + pt;
+        const net = Math.round(gross - totalDed);
+        return {
+          employee_id: emp.id, property_id: selectedPropertyId, month: periodKey,
+          basic_salary: basic, hra, special_allowance: sa, other_additions: oa,
+          professional_fees: 0, contract_fees: 0, ot: 0, incentives: 0, bonus: 0,
+          gross_salary: gross, pf_employee: pfEmp, pf_employer: pfEr,
+          esi_employee: esiEmp, esi_employer: esiEr, lwf: 0, salary_advance: 0,
+          professional_tax: pt, tds: 0, tds_194c: 0, tds_194j: 0, other_deduction: 0,
+          total_days: totalDays, lop: 0, days_worked: totalDays,
+          allowances: hra + sa + oa, deductions: totalDed, net_salary: net,
+        };
+      });
+      if (records.length === 0) return 0;
+      const { error } = await supabase.from("payroll_records").insert(records);
+      if (error) throw error;
+      return records.length;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["payroll_records"] });
       setBulkDialogOpen(false);
-      toast({ title: `Payroll generated: ${count} records across selected months` });
+      toast({ title: `Payroll generated: ${count} records for the selected period` });
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -708,7 +703,7 @@ const Payroll = () => {
         "EPF Contribution (ER)": r.pf_employer,
         "EPS Contribution": Math.min(Math.round((r.basic_salary || 0) * 0.0833), 1250),
         "EDLI Contribution": Math.min(Math.round((r.basic_salary || 0) * 0.005), 75),
-        "Month": r.month,
+        "Period": formatPeriodDisplay(r.month),
       };
     });
     exportToExcel(data, `PF-ECR-${format(new Date(), "yyyy-MM-dd")}`, "PF ECR");
@@ -723,7 +718,7 @@ const Payroll = () => {
         "Gross Salary": r.gross_salary,
         "Employee ESI (0.75%)": r.esi_employee,
         "Employer ESI (3.25%)": r.esi_employer,
-        "Month": r.month,
+        "Period": formatPeriodDisplay(r.month),
       }));
     exportToExcel(data, `ESI-Statement-${format(new Date(), "yyyy-MM-dd")}`, "ESI");
   };
@@ -734,7 +729,7 @@ const Payroll = () => {
       "Emp No.": r.employees?.employee_number || "",
       "Gross Salary": r.gross_salary,
       "PT Deducted": r.professional_tax,
-      "Month": r.month,
+      "Period": formatPeriodDisplay(r.month),
     }));
     exportToExcel(data, `PT-Statement-${format(new Date(), "yyyy-MM-dd")}`, "PT Statement");
   };
@@ -773,7 +768,7 @@ const Payroll = () => {
       "Bank Name": r.employees?.bank_name || "",
       "Account Number": r.employees?.bank_account || "",
       "IFSC Code": r.employees?.bank_ifsc || "",
-      "Month": r.month,
+      "Period": formatPeriodDisplay(r.month),
     }));
     exportToExcel(data, `Bank-Transfer-${format(new Date(), "yyyy-MM-dd")}`, "Bank Transfer");
   };
@@ -787,7 +782,7 @@ const Payroll = () => {
     const propName = properties?.[0]?.name || "Hostylia";
     const propAddr = [properties?.[0]?.address, properties?.[0]?.city, properties?.[0]?.state].filter(Boolean).join(", ");
 
-    const htmlContent = `<!DOCTYPE html><html><head><title>Payslip - ${empName} - ${record.month}</title>
+    const htmlContent = `<!DOCTYPE html><html><head><title>Payslip - ${empName} - ${formatPeriodDisplay(record.month)}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#1a1a2e;font-size:12px}
@@ -820,7 +815,7 @@ td:last-child{text-align:right;font-weight:600}
 <div class="header">
   <h1>${propName.toUpperCase()}</h1>
   ${propAddr ? `<p class="addr">${propAddr}</p>` : ''}
-  <span class="badge">PAYSLIP — ${record.month}</span>
+  <span class="badge">PAYSLIP — ${formatPeriodDisplay(record.month)}</span>
 </div>
 <div class="personal">
   <h3>Employee Details</h3>
@@ -831,7 +826,7 @@ td:last-child{text-align:right;font-weight:600}
     <div class="p-item"><span class="lbl">Department</span><span class="val">${emp?.department || 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">DOJ</span><span class="val">${emp?.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : 'N/A'}</span></div>
     <div class="p-item"><span class="lbl">Gender</span><span class="val">${emp?.gender || 'N/A'}</span></div>
-    <div class="p-item"><span class="lbl">Pay Period</span><span class="val">${record.month}</span></div>
+    <div class="p-item"><span class="lbl">Pay Period</span><span class="val">${formatPeriodDisplay(record.month)}</span></div>
     <div class="p-item"><span class="lbl">Date of Payment</span><span class="val">${record.generated_at ? format(new Date(record.generated_at), "dd MMM yyyy") : format(new Date(), "dd MMM yyyy")}</span></div>
     <div class="p-item"><span class="lbl">Paid Days</span><span class="val">${record.days_worked || 30}</span></div>
     <div class="p-item"><span class="lbl">LOP Days</span><span class="val">${record.lop || 0}</span></div>
@@ -997,44 +992,32 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     </div>
                     <div className="space-y-2">
                       <Label>Date of Joining</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="DD/MM/YYYY"
-                          value={empForm.date_of_joining ? format(empForm.date_of_joining, "dd/MM/yyyy") : ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const match = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                            if (match) {
-                              const parsed = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-                              if (!isNaN(parsed.getTime())) {
-                                setEmpForm(p => ({ ...p, date_of_joining: parsed }));
-                              }
-                            } else if (val === "") {
-                              setEmpForm(p => ({ ...p, date_of_joining: null }));
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="icon" className="shrink-0">
-                              <CalendarIcon className="h-4 w-4" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="end" side="bottom" sideOffset={12} avoidCollisions={true}>
-                            <Calendar
-                              mode="single"
-                              selected={empForm.date_of_joining || undefined}
-                              onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
-                              initialFocus
-                              className="p-2 pointer-events-auto text-xs scale-90 origin-top-right"
-                              captionLayout="dropdown-buttons"
-                              fromYear={1970}
-                              toYear={new Date().getFullYear()}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !empForm.date_of_joining && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {empForm.date_of_joining
+                              ? format(empForm.date_of_joining, "PPP")
+                              : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={empForm.date_of_joining || undefined}
+                            onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
                       <Label>Email</Label>
@@ -1202,25 +1185,25 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
               <Select onValueChange={(month) => {
                 const locked = isMonthLocked(month);
                 if (locked) {
-                  if (confirm(`Unlock payroll for ${month}? This will allow edits to payroll records.`)) {
+                  if (confirm(`Unlock payroll for ${formatPeriodDisplay(month)}? This will allow edits to payroll records.`)) {
                     unlockMonthMutation.mutate(month);
                   }
                 } else {
-                  if (confirm(`Lock payroll for ${month}? Payroll records will be read-only.`)) {
+                  if (confirm(`Lock payroll for ${formatPeriodDisplay(month)}? Payroll records will be read-only.`)) {
                     lockMonthMutation.mutate(month);
                   }
                 }
               }}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[260px]">
                   <Lock className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Lock / Unlock Month" />
+                  <SelectValue placeholder="Lock / Unlock Period" />
                 </SelectTrigger>
                 <SelectContent>
                   {uniqueMonths.map(m => (
                     <SelectItem key={m} value={m}>
                       <span className="flex items-center gap-2">
                         {isMonthLocked(m) ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                        {m} — {isMonthLocked(m) ? "Locked (click to unlock)" : "Unlocked (click to lock)"}
+                        {formatPeriodDisplay(m)} — {isMonthLocked(m) ? "Locked" : "Unlocked"}
                       </span>
                     </SelectItem>
                   ))}
@@ -1239,22 +1222,26 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                 </DialogHeader>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults. Select a date range to generate across multiple months.
+                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults. Select a date range — total days will be auto-calculated.
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Start Month *</Label>
-                      <Input type="month" value={bulkStartMonth} onChange={e => setBulkStartMonth(e.target.value)} />
+                      <Label>Start Date *</Label>
+                      <Input type="date" value={bulkStartDate} onChange={e => setBulkStartDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>End Month *</Label>
-                      <Input type="month" value={bulkEndMonth} onChange={e => setBulkEndMonth(e.target.value)} />
+                      <Label>End Date *</Label>
+                      <Input type="date" value={bulkEndDate} onChange={e => setBulkEndDate(e.target.value)} />
                     </div>
                   </div>
-                  {bulkStartMonth > bulkEndMonth && (
-                    <p className="text-sm text-destructive font-medium">⚠️ Start month must be before or equal to end month.</p>
+                  {bulkStartDate > bulkEndDate ? (
+                    <p className="text-sm text-destructive font-medium">⚠️ Start date must be on or before end date.</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Total days: <strong>{daysBetween(bulkStartDate, bulkEndDate)}</strong>
+                    </p>
                   )}
-                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || bulkStartMonth > bulkEndMonth || activeEmployees.length === 0}>
+                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || bulkStartDate > bulkEndDate || activeEmployees.length === 0}>
                     {bulkPayrollMutation.isPending ? "Processing..." : `Generate for ${activeEmployees.length} Employees`}
                   </Button>
                 </div>
@@ -1268,7 +1255,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                 case "salary": exportToExcel(payrollRecords.map(r => ({
                   "Employee": (r.employees as any)?.full_name || "",
                   "Emp No.": (r.employees as any)?.employee_number || "",
-                  "Month": r.month,
+                  "Period": formatPeriodDisplay(r.month),
                   "Basic": r.basic_salary, "HRA": r.hra, "Special Allowance": r.special_allowance,
                   "Professional Fees": r.professional_fees, "Contract Fees": r.contract_fees,
                   "Other Additions": r.other_additions, "OT": r.ot, "Incentives": r.incentives, "Bonus": r.bonus,
@@ -1301,7 +1288,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
 
             <Dialog open={payrollDialogOpen} onOpenChange={(open) => {
               setPayrollDialogOpen(open);
-              if (!open) { setSelectedEmployeeIds([]); setPayrollForm(defaultPayrollForm); setPayrollStartMonth(format(new Date(), "yyyy-MM")); setPayrollEndMonth(format(new Date(), "yyyy-MM")); }
+              if (!open) { setSelectedEmployeeIds([]); setPayrollForm(defaultPayrollForm); setPayrollStartDate(monthStartIso); setPayrollEndDate(monthEndIso); }
             }}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" /> Generate Payroll</Button>
@@ -1358,16 +1345,20 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   {/* Date Range */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Start Month *</Label>
-                      <Input type="month" value={payrollStartMonth} onChange={e => setPayrollStartMonth(e.target.value)} />
+                      <Label>Start Date *</Label>
+                      <Input type="date" value={payrollStartDate} onChange={e => setPayrollStartDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>End Month *</Label>
-                      <Input type="month" value={payrollEndMonth} onChange={e => setPayrollEndMonth(e.target.value)} />
+                      <Label>End Date *</Label>
+                      <Input type="date" value={payrollEndDate} onChange={e => setPayrollEndDate(e.target.value)} />
                     </div>
                   </div>
-                  {payrollStartMonth > payrollEndMonth && (
-                    <p className="text-sm text-destructive font-medium">⚠️ Start month must be before or equal to end month.</p>
+                  {payrollStartDate > payrollEndDate ? (
+                    <p className="text-sm text-destructive font-medium">⚠️ Start date must be on or before end date.</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Total days: <strong>{daysBetween(payrollStartDate, payrollEndDate)}</strong>
+                    </p>
                   )}
 
                   {/* Show detailed form only when exactly 1 employee selected */}
@@ -1379,7 +1370,8 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                         <div className="grid grid-cols-3 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs">Total Days</Label>
-                            <Input type="number" min="1" max="31" value={payrollForm.total_days} onChange={e => setPayrollForm(p => ({ ...p, total_days: e.target.value }))} />
+                            <Input type="number" value={payrollForm.total_days} disabled />
+                            <p className="text-[10px] text-muted-foreground">Auto from date range</p>
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">LOP (Days)</Label>
@@ -1532,7 +1524,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     <div className="bg-muted/30 rounded-lg p-4 space-y-1">
                       <p className="text-sm font-medium">Bulk generation mode</p>
                       <p className="text-xs text-muted-foreground">
-                        Payroll will be generated for <strong>{selectedEmployeeIds.length}</strong> employees across {getMonthsInRange(payrollStartMonth, payrollEndMonth).length} month(s) using their saved salary defaults. Locked months will be skipped.
+                        Payroll will be generated for <strong>{selectedEmployeeIds.length}</strong> employees for the period <strong>{formatPeriodDisplay(buildPeriodKey(payrollStartDate, payrollEndDate))}</strong> ({daysBetween(payrollStartDate, payrollEndDate)} days) using their saved salary defaults. If this period is locked, generation will be blocked.
                       </p>
                     </div>
                   )}
@@ -1544,7 +1536,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={payrollMutation.isPending || selectedEmployeeIds.length === 0 || payrollStartMonth > payrollEndMonth}
+                    disabled={payrollMutation.isPending || selectedEmployeeIds.length === 0 || payrollStartDate > payrollEndDate}
                   >
                     {payrollMutation.isPending ? "Processing..." : selectedEmployeeIds.length === 1 ? "Generate Payroll" : `Generate for ${selectedEmployeeIds.length} Employees`}
                   </Button>
@@ -1566,7 +1558,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</p>
-                        <p className="text-xs text-muted-foreground">{record.month} {record.is_locked && "🔒"}</p>
+                        <p className="text-xs text-muted-foreground">{formatPeriodDisplay(record.month)} {record.is_locked && "🔒"}</p>
                       </div>
                       <Badge variant={record.is_locked ? "secondary" : "outline"}>{record.is_locked ? "Locked" : record.status}</Badge>
                     </div>
@@ -1584,7 +1576,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <TableHeader>
                     <TableRow>
                       <TableHead>Employee</TableHead>
-                      <TableHead>Month</TableHead>
+                      <TableHead>Period</TableHead>
                       <TableHead>Gross</TableHead>
                       <TableHead>PF</TableHead>
                       <TableHead>ESI</TableHead>
@@ -1604,7 +1596,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                         <TableCell className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {record.month}
+                            {formatPeriodDisplay(record.month)}
                             {record.is_locked && <Lock className="h-3 w-3 text-muted-foreground" />}
                           </div>
                         </TableCell>
