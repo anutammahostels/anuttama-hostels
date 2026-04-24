@@ -280,21 +280,16 @@ const Payroll = () => {
     }
   }, [selectedEmployee?.id]);
 
-  // Auto-set total days and PT when month changes (use payrollStartMonth for single employee)
+  // Auto-set total days from selected start/end date range
   useEffect(() => {
-    const month = selectedEmployeeIds.length === 1 ? payrollStartMonth : payrollForm.month;
-    if (month) {
-      try {
-        const [y, m] = month.split("-").map(Number);
-        const calDays = getDaysInMonth(new Date(y, m - 1));
-        setPayrollForm(p => ({ ...p, total_days: String(calDays) }));
-      } catch { /* ignore */ }
+    if (payrollStartDate && payrollEndDate && payrollStartDate <= payrollEndDate) {
+      setPayrollForm(p => ({ ...p, total_days: String(daysBetween(payrollStartDate, payrollEndDate)) }));
     }
-  }, [payrollStartMonth, payrollForm.month, selectedEmployeeIds.length]);
+  }, [payrollStartDate, payrollEndDate, selectedEmployeeIds.length]);
 
-  // Auto-calculate PT when gross changes
+  // Auto-calculate PT when gross changes (uses period start date for Feb rule)
   useEffect(() => {
-    if (selectedEmployee && payrollForm.month) {
+    if (selectedEmployee) {
       const basic = selectedEmployee.salary_amount || 0;
       const hra = parseFloat(payrollForm.hra) || 0;
       const sa = parseFloat(payrollForm.special_allowance) || 0;
@@ -305,7 +300,7 @@ const Payroll = () => {
       const inc = parseFloat(payrollForm.incentives) || 0;
       const bon = parseFloat(payrollForm.bonus) || 0;
       const gross = basic + hra + sa + pf + cf + oa + ot + inc + bon;
-      const autoPT = calculatePT(gross, payrollForm.month);
+      const autoPT = calculatePT(gross, payrollStartDate);
       setPayrollForm(p => ({ ...p, professional_tax: String(autoPT) }));
     }
   }, [selectedEmployee?.id, payrollForm.hra, payrollForm.special_allowance, payrollForm.professional_fees, payrollForm.contract_fees, payrollForm.other_additions, payrollForm.ot, payrollForm.incentives, payrollForm.bonus, payrollForm.month]);
