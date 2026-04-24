@@ -100,10 +100,12 @@ const validatePAN = (v: string) => !v || PAN_REGEX.test(v.toUpperCase());
 const validateIFSC = (v: string) => !v || IFSC_REGEX.test(v.toUpperCase());
 
 // ── Auto PT (Karnataka slabs) ──
-const calculatePT = (gross: number, month: string): number => {
+// Accepts either ISO date "YYYY-MM-DD", legacy "YYYY-MM", or a period key.
+const calculatePT = (gross: number, periodOrMonth: string): number => {
   if (gross < 25000) return 0;
+  // Extract month number from the start of the string (works for YYYY-MM-DD, YYYY-MM, and period keys)
+  const monthNum = parseInt(periodOrMonth.split("-")[1] || "0", 10);
   // February → ₹300, else ₹200
-  const monthNum = parseInt(month.split("-")[1]);
   return monthNum === 2 ? 300 : 200;
 };
 
