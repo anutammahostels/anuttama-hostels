@@ -446,3 +446,20 @@ html, body {
 .animate-slide-in-left {
   animation: slideInLeft 0.4s ease-out forwards;
 }
+/* react-day-picker: hide redundant caption label when dropdowns are shown */
+.rdp-caption:has(.rdp-caption_dropdowns) > .rdp-caption_label {
+  display: none;
+}
+.rdp-caption_dropdowns {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+.rdp-dropdown_month,
+.rdp-dropdown_year {
+  position: relative;
+}
+.rdp-dropdown_month select,
+.rdp-dropdown_year select {
+  cursor: pointer;
+}
