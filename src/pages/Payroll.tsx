@@ -208,6 +208,9 @@ const Payroll = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [netPayWarningOpen, setNetPayWarningOpen] = useState(false);
   const [tdsCalcOpen, setTdsCalcOpen] = useState(false);
+  const todayIso = format(new Date(), "yyyy-MM-dd");
+  const monthEndIso = format(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), "yyyy-MM-dd");
+  const monthStartIso = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
   const defaultPayrollForm = {
     employee_id: "", month: format(new Date(), "yyyy-MM"),
     hra: "0", special_allowance: "0", professional_fees: "0", contract_fees: "0",
@@ -219,13 +222,13 @@ const Payroll = () => {
     notes: "",
   };
   const [payrollForm, setPayrollForm] = useState(defaultPayrollForm);
-  const [bulkStartMonth, setBulkStartMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [bulkEndMonth, setBulkEndMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [bulkStartDate, setBulkStartDate] = useState(monthStartIso);
+  const [bulkEndDate, setBulkEndDate] = useState(monthEndIso);
 
   // Multi-employee selection for Generate Payroll dialog
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
-  const [payrollStartMonth, setPayrollStartMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [payrollEndMonth, setPayrollEndMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [payrollStartDate, setPayrollStartDate] = useState(monthStartIso);
+  const [payrollEndDate, setPayrollEndDate] = useState(monthEndIso);
 
   // Fetch employees
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
