@@ -1,86 +1,200 @@
-## 26-Column Bulk Upload + Manual Form Hardening
+# Plan: Date-Range Payroll Generation + Clean Employee Date Picker
 
-Bring the entire student creation pipeline (downloadable template, bulk Excel upload, manual "Add Student" dialog, and the `create-student` Edge Function) to parity with the canonical Anuttama 26-column format — supporting **3 payment installments** and **separate UTR IDs** per installment.
+## 1. Replace cluttered Employee Date-of-Joining picker (Payroll.tsx ~lines 999-1038)
 
-> Spelling note: the user's source Excel uses the misspelling **"TRANSCETION"**. In all our generated templates, UI labels, code identifiers, and DB writes we will use the correct spelling **"TRANSACTION"**. The bulk-upload parser will still accept BOTH spellings as input headers so existing files admins have saved continue to import cleanly.
+Replace the dual input + scaled dropdown calendar with the standard shadcn Popover + Button + Calendar pattern (single trigger, default chevron navigation, full-size, no `captionLayout="dropdown-buttons"`):
 
----
-
-### 1. Template Download — `downloadTemplate()` in `src/pages/Students.tsx`
-
-Replace the current template headers with the 26-column canonical format (correct spelling):
-
+```tsx
+<div className="space-y-2">
+  <Label>Date of Joining</Label>
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button
+        type="button"
+        variant="outline"
+        className={cn(
+          "w-full justify-start text-left font-normal",
+          !empForm.date_of_joining && "text-muted-foreground"
+        )}
+      >
+        <CalendarIcon className="mr-2 h-4 w-4" />
+        {empForm.date_of_joining
+          ? format(empForm.date_of_joining, "PPP")
+          : <span>Pick a date</span>}
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-auto p-0" align="start">
+      <Calendar
+        mode="single"
+        selected={empForm.date_of_joining || undefined}
+        onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
+        initialFocus
+        className={cn("p-3 pointer-events-auto")}
+      />
+    </PopoverContent>
+  </Popover>
+</div>
 ```
-S.NO | FORM NO | STUDENT NAME | FATHER NAME | Gender | CONTACT NO1 | CONTACT NO 2 | GRADE | STREAM |
-DATE OF THE PAYMENT | FINAL FEE |
-PAYMENT MODE-1 | AMOUNT 1 | TRANSACTION DETAILS-1 | UTR ID |
-DATE OF THE PAYMENT (2nd) | PAYMENT MODE-2 | AMOUNT 2 | BALANCE PAYMENT DATE | TRANSACTION DETAILS-2 | UTR ID-2 |
-PAYMENT MODE-3 | AMOUNT 3 | BALANCE PAYMENT DATE (3rd) | TRANSACTION DETAILS-3 | UTR ID-3
+
+## 2. Date-Range Payroll Generation (Payroll.tsx)
+
+### 2a. Period helpers (replace `getMonthsInRange` block ~lines 571-583)
+
+Add utilities that work on date ranges instead of months. The DB `month` text column will store a period token: `"YYYY-MM-DD_to_YYYY-MM-DD"` so no migration is needed and existing locking logic (`isMonthLocked`, lock/unlock mutations that key off `r.month === month`) keeps working.
+
+```ts
+// Build period token from start/end ISO date strings
+const buildPeriodKey = (start: string, end: string) => `${start}_to_${end}`;
+
+// Parse a stored month/period back to {start, end} dates
+const parsePeriodKey = (m: string): { start: Date; end: Date } => {
+  if (m.includes("_to_")) {
+    const [s, e] = m.split("_to_");
+    return { start: new Date(s), end: new Date(e) };
+  }
+  // Backward compat: legacy "YYYY-MM"
+  const [y, mo] = m.split("-").map(Number);
+  const start = new Date(y, mo - 1, 1);
+  const end = new Date(y, mo, 0);
+  return { start, end };
+};
+
+// Inclusive day count between two ISO dates
+const daysBetween = (start: string, end: string): number => {
+  const s = new Date(start); const e = new Date(end);
+  return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+};
+
+// Display helper for tables / payslip / exports
+const formatPeriodDisplay = (m: string): string => {
+  const { start, end } = parsePeriodKey(m);
+  return `${format(start, "dd MMM yyyy")} → ${format(end, "dd MMM yyyy")}`;
+};
 ```
 
-Drop legacy template-only columns (`ACCOUNT NUMBER`, `ALLOTED ROOM NO`, `REMARKS`) since the canonical format does not include them.
+Remove `getMonthsInRange` and the per-month iteration — bulk generation now creates ONE record per employee for the chosen range.
 
-Add a sample row demonstrating Indian comma parsing (`1,80,000`) and sum expression (`90,000 + 21,000`).
+### 2b. State changes (~lines 210-226)
 
----
+Replace month-based state with date-based:
 
-### 2. Bulk Upload Parser — `src/pages/Students.tsx`
+```ts
+const todayIso = format(new Date(), "yyyy-MM-dd");
+const defaultPayrollForm = {
+  employee_id: "",
+  start_date: todayIso,
+  end_date: todayIso,
+  // ... rest unchanged ...
+  total_days: "1", lop: "0",
+  notes: "",
+};
+const [bulkStartDate, setBulkStartDate] = useState(todayIso);
+const [bulkEndDate, setBulkEndDate] = useState(todayIso);
+const [payrollStartDate, setPayrollStartDate] = useState(todayIso);
+const [payrollEndDate, setPayrollEndDate] = useState(todayIso);
+```
 
-Update the header normalization + mapping logic:
+### 2c. Auto-calculate total_days (replace effect ~lines 278-288)
 
-- **Index-based lookup for duplicate-named columns**: `UTR ID` / `UTR ID-2` / `UTR ID-3` and `DATE OF THE PAYMENT` / `DATE OF THE PAYMENT (2nd)` / `BALANCE PAYMENT DATE` / `BALANCE PAYMENT DATE (3rd)` must each be picked up by their position, not by name match alone — using the same `txnKeys` ordering pattern already in the file.
-- **Accept both spellings**: header normalization treats `transcetion` and `transaction` as the same token so older Excel files still parse.
-- New parsed fields per row sent to the edge function:
-  - `payment_date_1`, `payment_date_2`, `payment_date_3`
-  - `payment_mode_1/2/3`, `amount_1/2/3`
-  - `transaction_details_1/2/3`
-  - `utr_id_1/2/3`
-- Preserve existing helpers: header auto-detection (scan first 20 rows), `parseIndianNumber()` (commas + sum expressions), Excel-serial-date conversion.
+```ts
+useEffect(() => {
+  const s = selectedEmployeeIds.length === 1 ? payrollStartDate : payrollForm.start_date;
+  const e = selectedEmployeeIds.length === 1 ? payrollEndDate   : payrollForm.end_date;
+  if (s && e && s <= e) {
+    setPayrollForm(p => ({ ...p, total_days: String(daysBetween(s, e)) }));
+  }
+}, [payrollStartDate, payrollEndDate, payrollForm.start_date, payrollForm.end_date, selectedEmployeeIds.length]);
+```
 
----
+### 2d. Update `calculatePT` (~line 103)
 
-### 3. Manual "Add Student" Dialog — `src/pages/Students.tsx`
+```ts
+const calculatePT = (gross: number, periodStartIso: string): number => {
+  if (gross < 25000) return 0;
+  const monthNum = new Date(periodStartIso).getMonth() + 1; // 1-12
+  return monthNum === 2 ? 300 : 200;
+};
+```
 
-Extend the form schema and JSX to add a third installment block + UTR fields:
+Update all call sites to pass the period start ISO instead of `"YYYY-MM"`.
 
-- **Installment 1**: payment_date_1, payment_mode_1, amount_1, transaction_details_1, **utr_id_1** (new)
-- **Installment 2**: payment_date_2, payment_mode_2, amount_2, transaction_details_2, **utr_id_2** (new)
-- **Installment 3 (new entire block)**: payment_date_3, payment_mode_3, amount_3, transaction_details_3, utr_id_3
-- Live-running paid-total + balance display already exists for installments 1 & 2 — extend to include installment 3.
-- Each installment block remains optional (skip if amount is empty/zero).
+### 2e. `doGeneratePayroll` (~lines 429-468)
 
----
+```ts
+const periodKey = buildPeriodKey(payrollStartDate, payrollEndDate);
+const existingLocked = payrollRecords.find(r => r.month === periodKey && r.is_locked);
+// ...
+.insert({ ..., month: periodKey, ... })
+```
 
-### 4. Edge Function — `supabase/functions/create-student/index.ts`
+### 2f. Bulk generation in `payrollMutation` and `bulkPayrollMutation` (~lines 484-535, 586-631)
 
-- Accept the new fields: `payment_date_1/2/3`, `payment_mode_1/2/3`, `amount_1/2/3`, `transaction_details_1/2/3`, `utr_id_1/2/3`.
-- Loop over installments 1–3 and insert one row into `payments` per non-zero installment with:
-  - `amount` ← `amount_n`
-  - `payment_date` ← `payment_date_n` (per-installment date, no longer a single shared date)
-  - `payment_mode_label` ← `payment_mode_n`
-  - `transaction_id` ← `transaction_details_n`
-  - `transaction_reference` ← `utr_id_n` *(currently both fields receive the same value — fix this)*
-- Recalculate `invoices.paid_amount = amount_1 + amount_2 + amount_3`.
-- Status logic unchanged: `paid` when total ≥ final_fee, else `partial`, else `pending`.
+Replace the `for (const month of months)` loop with a single iteration using `periodKey`. `total_days` and `days_worked` come from `daysBetween(start, end)`. Skip if `isMonthLocked(periodKey)`.
 
----
+```ts
+const periodKey = buildPeriodKey(bulkStartDate, bulkEndDate);
+if (isMonthLocked(periodKey)) {
+  toast({ title: "This period is already locked. Unlock it first to regenerate." });
+  return 0;
+}
+const totalDays = daysBetween(bulkStartDate, bulkEndDate);
+const records = activeEmployees.map(emp => {
+  // ... pro-rate basic for non-monthly ranges? Keep current behavior — basic = emp.salary_amount.
+  // total_days/days_worked = totalDays
+  // pt = calculatePT(gross, bulkStartDate)
+  return { ..., month: periodKey, total_days: totalDays, days_worked: totalDays, ... };
+});
+const { error } = await supabase.from("payroll_records").insert(records);
+```
 
-### 5. Other Surfaces to Verify (no changes expected, but check)
+### 2g. UI: replace month inputs with date inputs (~lines 1244-1256, 1359-1371)
 
-- **`src/pages/Billing.tsx` / Invoice & Payment list views**: confirm they already render `transaction_reference` (UTR) alongside `transaction_id`. If they display only one, add a small "UTR" column.
-- **`useInvoices` / `usePayments` hooks**: no changes — they already select `*`.
-- **Receipt PDFs / data exports**: if any export writes "Transaction Details", confirm it doesn't say "Transcetion".
+```tsx
+<div className="grid grid-cols-2 gap-4">
+  <div className="space-y-2">
+    <Label>Start Date *</Label>
+    <Input type="date" value={bulkStartDate} onChange={e => setBulkStartDate(e.target.value)} />
+  </div>
+  <div className="space-y-2">
+    <Label>End Date *</Label>
+    <Input type="date" value={bulkEndDate} onChange={e => setBulkEndDate(e.target.value)} />
+  </div>
+</div>
+{bulkStartDate > bulkEndDate && (
+  <p className="text-sm text-destructive font-medium">⚠️ Start date must be on or before end date.</p>
+)}
+<p className="text-xs text-muted-foreground">
+  Total days: <strong>{daysBetween(bulkStartDate, bulkEndDate)}</strong>
+</p>
+```
 
----
+Same swap for the `payrollStartMonth`/`payrollEndMonth` block in the Generate Payroll dialog.
 
-### Files Touched
+### 2h. Make Total Days read-only inside detailed form (~line 1382)
 
-- `src/pages/Students.tsx` — template, parser, manual form
-- `supabase/functions/create-student/index.ts` — 3rd installment + UTR mapping + per-installment dates
-- (Read-only check) `src/pages/Billing.tsx`, payment/invoice display components
+```tsx
+<Input type="number" value={payrollForm.total_days} disabled />
+<p className="text-[10px] text-muted-foreground">Auto-calculated from date range</p>
+```
 
-### What Stays the Same
+### 2i. Display & export updates
 
-- No DB schema change — `payments` already supports unlimited rows and has both `transaction_id` and `transaction_reference`.
-- Existing 2-installment Excel files still upload (parser accepts old + new header spellings, treats missing 3rd installment as optional).
-- Auto-invoice generation, login credential generation, and bed assignment logic unchanged.
+- **Lock/Unlock select** (~lines 1219-1225): show `formatPeriodDisplay(m)` instead of raw `m`.
+- **Payroll records table** (~lines 1569, 1607): replace `{record.month}` with `{formatPeriodDisplay(record.month)}`. Header label: "Period".
+- **Mobile card** (~line 1569): same.
+- **Excel exports** (~lines 1271, 711, 726, 737, 776): rename column `"Month"` → `"Period"` and use `formatPeriodDisplay(r.month)`.
+- **Payslip PDF** (~lines 790, 823, 834): title and badge use `formatPeriodDisplay(record.month)`. "Pay Period" row already exists — feed the formatted period.
+
+### 2j. Submit-button disabled checks (~line 1547, 1257)
+
+Replace `payrollStartMonth > payrollEndMonth` with `payrollStartDate > payrollEndDate` (and same for bulk).
+
+## 3. Backward compatibility
+
+`parsePeriodKey` and `formatPeriodDisplay` both gracefully handle legacy `"YYYY-MM"` records, so existing payroll history continues to render correctly. No DB migration required.
+
+## 4. Files touched
+
+- `src/pages/Payroll.tsx` — all changes above.
+
+No edge function, schema, or other component changes needed.
