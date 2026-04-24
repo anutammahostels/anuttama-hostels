@@ -1523,7 +1523,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     <div className="bg-muted/30 rounded-lg p-4 space-y-1">
                       <p className="text-sm font-medium">Bulk generation mode</p>
                       <p className="text-xs text-muted-foreground">
-                        Payroll will be generated for <strong>{selectedEmployeeIds.length}</strong> employees across {getMonthsInRange(payrollStartMonth, payrollEndMonth).length} month(s) using their saved salary defaults. Locked months will be skipped.
+                        Payroll will be generated for <strong>{selectedEmployeeIds.length}</strong> employees for the period <strong>{formatPeriodDisplay(buildPeriodKey(payrollStartDate, payrollEndDate))}</strong> ({daysBetween(payrollStartDate, payrollEndDate)} days) using their saved salary defaults. If this period is locked, generation will be blocked.
                       </p>
                     </div>
                   )}
@@ -1535,7 +1535,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={payrollMutation.isPending || selectedEmployeeIds.length === 0 || payrollStartMonth > payrollEndMonth}
+                    disabled={payrollMutation.isPending || selectedEmployeeIds.length === 0 || payrollStartDate > payrollEndDate}
                   >
                     {payrollMutation.isPending ? "Processing..." : selectedEmployeeIds.length === 1 ? "Generate Payroll" : `Generate for ${selectedEmployeeIds.length} Employees`}
                   </Button>
