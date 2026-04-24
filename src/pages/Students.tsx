@@ -1368,66 +1368,88 @@ const Students = () => {
                   </div>
                 </div>
 
-                <h5 className="text-xs font-semibold text-muted-foreground mt-2">Payment 1</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs font-semibold">Amount 1</Label>
-                    <Input type="number" placeholder="e.g. 100000" value={form.amount_1} onChange={(e) => setForm(f => ({ ...f, amount_1: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Payment Mode 1</Label>
-                    <Select value={form.payment_mode_1} onValueChange={(v) => setForm(f => ({ ...f, payment_mode_1: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="RTGS">RTGS</SelectItem>
-                        <SelectItem value="NEFT">NEFT</SelectItem>
-                        <SelectItem value="Cheque">Cheque</SelectItem>
-                        <SelectItem value="DD">DD</SelectItem>
-                        <SelectItem value="Online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Transaction Details 1</Label>
-                    <Input placeholder="UTR / Ref No." value={form.transaction_details_1} onChange={(e) => setForm(f => ({ ...f, transaction_details_1: e.target.value }))} />
-                  </div>
-                </div>
+                {(() => {
+                  const paymentModes = ["Cash", "UPI", "RTGS", "NEFT", "Cheque", "DD", "Online"];
+                  const renderInstallment = (n: 1 | 2 | 3, label: string) => {
+                    const dateKey = `payment_date_${n}` as const;
+                    const amtKey = `amount_${n}` as const;
+                    const modeKey = `payment_mode_${n}` as const;
+                    const txnKey = `transaction_details_${n}` as const;
+                    const utrKey = `utr_id_${n}` as const;
+                    return (
+                      <div key={n} className="space-y-2">
+                        <h5 className="text-xs font-semibold text-muted-foreground mt-2">{label}</h5>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                          <div>
+                            <Label className="text-xs font-semibold">Date</Label>
+                            <Input type="date" value={form[dateKey]} onChange={(e) => setForm(f => ({ ...f, [dateKey]: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Amount {n}</Label>
+                            <Input type="number" placeholder="e.g. 100000" value={form[amtKey]} onChange={(e) => setForm(f => ({ ...f, [amtKey]: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Payment Mode {n}</Label>
+                            <Select value={form[modeKey]} onValueChange={(v) => setForm(f => ({ ...f, [modeKey]: v }))}>
+                              <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                              <SelectContent>
+                                {paymentModes.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Transaction Details {n}</Label>
+                            <Input placeholder="Receipt / Ref note" value={form[txnKey]} onChange={(e) => setForm(f => ({ ...f, [txnKey]: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">UTR ID {n}</Label>
+                            <Input placeholder="UTR / Bank ref" value={form[utrKey]} onChange={(e) => setForm(f => ({ ...f, [utrKey]: e.target.value }))} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  };
 
-                <h5 className="text-xs font-semibold text-muted-foreground mt-2">Payment 2</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs font-semibold">Amount 2</Label>
-                    <Input type="number" placeholder="e.g. 80000" value={form.amount_2} onChange={(e) => setForm(f => ({ ...f, amount_2: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Payment Mode 2</Label>
-                    <Select value={form.payment_mode_2} onValueChange={(v) => setForm(f => ({ ...f, payment_mode_2: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="RTGS">RTGS</SelectItem>
-                        <SelectItem value="NEFT">NEFT</SelectItem>
-                        <SelectItem value="Cheque">Cheque</SelectItem>
-                        <SelectItem value="DD">DD</SelectItem>
-                        <SelectItem value="Online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Transaction Details 2</Label>
-                    <Input placeholder="UTR / Ref No." value={form.transaction_details_2} onChange={(e) => setForm(f => ({ ...f, transaction_details_2: e.target.value }))} />
-                  </div>
-                </div>
+                  const totalPaid =
+                    (parseFloat(form.amount_1) || 0) +
+                    (parseFloat(form.amount_2) || 0) +
+                    (parseFloat(form.amount_3) || 0);
+                  const finalFeeNum = parseFloat(form.final_fee) || 0;
+                  const balance = Math.max(0, finalFeeNum - totalPaid);
 
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <Label className="text-xs font-semibold">Balance Payment</Label>
-                    <Input placeholder="Balance amount / date" value={form.balance_payment} onChange={(e) => setForm(f => ({ ...f, balance_payment: e.target.value }))} />
-                  </div>
-                </div>
+                  return (
+                    <>
+                      {renderInstallment(1, "Payment 1")}
+                      {renderInstallment(2, "Payment 2")}
+                      {renderInstallment(3, "Payment 3")}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border bg-muted/40 p-3">
+                        <div>
+                          <Label className="text-xs font-semibold text-muted-foreground">Final Fee</Label>
+                          <p className="text-sm font-semibold">₹ {finalFeeNum.toLocaleString("en-IN")}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs font-semibold text-muted-foreground">Total Paid</Label>
+                          <p className="text-sm font-semibold">₹ {totalPaid.toLocaleString("en-IN")}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs font-semibold text-muted-foreground">Balance Due</Label>
+                          <p className={`text-sm font-semibold ${balance > 0 ? "text-destructive" : "text-emerald-600"}`}>
+                            ₹ {balance.toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <Label className="text-xs font-semibold">Notes (optional balance / remarks)</Label>
+                          <Input placeholder="Free-form note" value={form.balance_payment} onChange={(e) => setForm(f => ({ ...f, balance_payment: e.target.value }))} />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
               </div>
 
               <DialogFooter>
