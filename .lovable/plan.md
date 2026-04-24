@@ -1,200 +1,114 @@
-# Plan: Date-Range Payroll Generation + Clean Employee Date Picker
 
-## 1. Replace cluttered Employee Date-of-Joining picker (Payroll.tsx ~lines 999-1038)
+## Problem
 
-Replace the dual input + scaled dropdown calendar with the standard shadcn Popover + Button + Calendar pattern (single trigger, default chevron navigation, full-size, no `captionLayout="dropdown-buttons"`):
+The Payroll generator currently accepts Start Date / End Date and stores the period as `YYYY-MM-DD_to_YYYY-MM-DD`, but every salary component (Basic, HRA, Special Allowance, PF, ESI, PT, TDS, etc.) is still treated as a **single month's amount**. So whether the user picks 1 Apr → 30 Apr (30 days) or 1 Apr → 31 May (61 days) or 1 Apr → 15 Apr (15 days), the payout is identical — one month's salary. That is why "it is still generating only single month's payroll."
 
-```tsx
-<div className="space-y-2">
-  <Label>Date of Joining</Label>
-  <Popover>
-    <PopoverTrigger asChild>
-      <Button
-        type="button"
-        variant="outline"
-        className={cn(
-          "w-full justify-start text-left font-normal",
-          !empForm.date_of_joining && "text-muted-foreground"
-        )}
-      >
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {empForm.date_of_joining
-          ? format(empForm.date_of_joining, "PPP")
-          : <span>Pick a date</span>}
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent className="w-auto p-0" align="start">
-      <Calendar
-        mode="single"
-        selected={empForm.date_of_joining || undefined}
-        onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
-        initialFocus
-        className={cn("p-3 pointer-events-auto")}
-      />
-    </PopoverContent>
-  </Popover>
-</div>
+The fix is to **pro-rate every earnings/deduction line by the number of days in the chosen period**, using the employee's stored monthly figures as the per-month baseline.
+
+## Core formula
+
+For every record we will introduce a `periodFactor`:
+
+```
+standardMonthDays = 30          // canonical working month (Indian payroll convention)
+totalDays         = daysBetween(startDate, endDate)   // already computed
+daysWorked        = totalDays - lop
+periodFactor      = daysWorked / standardMonthDays
 ```
 
-## 2. Date-Range Payroll Generation (Payroll.tsx)
+Every per-month component is multiplied by `periodFactor` *before* statutory caps and slabs are applied:
 
-### 2a. Period helpers (replace `getMonthsInRange` block ~lines 571-583)
+| Component | New formula |
+|---|---|
+| Basic | `emp.salary_amount × periodFactor` |
+| HRA | `emp.hra × periodFactor` |
+| Special Allowance | `emp.special_allowance × periodFactor` |
+| Other Additions | `emp.other_additions × periodFactor` |
+| Professional Fees / Contract Fees / OT / Incentives / Bonus | manual input × `periodFactor` (single-employee form keeps user-entered totals — see "UI behaviour" below) |
+| Gross | sum of all pro-rated earnings |
+| PF Employee / Employer | `min(proRatedBasic × 12%, 1800 × periodFactor)` — cap also scales so a 2-month run caps at ₹3,600 |
+| ESI Employee / Employer | only if **monthly** gross (`gross / periodFactor`) ≤ ₹21,000 → then `proRatedGross × 0.75% / 3.25%` |
+| Professional Tax | apply Karnataka slab on **monthly-equivalent gross**, then multiply the slab amount by the count of distinct calendar months the period covers (so a 2-month range = 2× PT, Feb included → ₹300 for that month) |
+| LWF / Salary Advance / Other Ded | user-entered, taken as-is (one-off amounts) |
+| TDS (annual regime) | computed on annualised gross = `monthlyEquivalentGross × 12`, then `monthlyTds × monthsCovered` |
+| LOP deduction | `(proRatedGross / totalDays) × lopDays` (already correct, just feed pro-rated gross) |
+| Net | `gross − totalDeductions − lopDeduction` |
 
-Add utilities that work on date ranges instead of months. The DB `month` text column will store a period token: `"YYYY-MM-DD_to_YYYY-MM-DD"` so no migration is needed and existing locking logic (`isMonthLocked`, lock/unlock mutations that key off `r.month === month`) keeps working.
+Helpers to add:
 
 ```ts
-// Build period token from start/end ISO date strings
-const buildPeriodKey = (start: string, end: string) => `${start}_to_${end}`;
+const STANDARD_MONTH_DAYS = 30;
 
-// Parse a stored month/period back to {start, end} dates
-const parsePeriodKey = (m: string): { start: Date; end: Date } => {
-  if (m.includes("_to_")) {
-    const [s, e] = m.split("_to_");
-    return { start: new Date(s), end: new Date(e) };
-  }
-  // Backward compat: legacy "YYYY-MM"
-  const [y, mo] = m.split("-").map(Number);
-  const start = new Date(y, mo - 1, 1);
-  const end = new Date(y, mo, 0);
-  return { start, end };
+const monthsCovered = (start: string, end: string): number => {
+  // Inclusive count of distinct YYYY-MM buckets the range touches.
+  const s = new Date(start), e = new Date(end);
+  return (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1;
 };
 
-// Inclusive day count between two ISO dates
-const daysBetween = (start: string, end: string): number => {
-  const s = new Date(start); const e = new Date(end);
-  return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
-};
-
-// Display helper for tables / payslip / exports
-const formatPeriodDisplay = (m: string): string => {
-  const { start, end } = parsePeriodKey(m);
-  return `${format(start, "dd MMM yyyy")} → ${format(end, "dd MMM yyyy")}`;
-};
+const periodFactor = (totalDays: number) => totalDays / STANDARD_MONTH_DAYS;
 ```
 
-Remove `getMonthsInRange` and the per-month iteration — bulk generation now creates ONE record per employee for the chosen range.
+Update `calculatePT` to accept the full range and sum PT per month it covers (Feb = ₹300, others = ₹200, only when monthly-equivalent gross ≥ ₹25,000).
 
-### 2b. State changes (~lines 210-226)
+## Files to change — `src/pages/Payroll.tsx` only
 
-Replace month-based state with date-based:
+1. **Add helpers** (near `calculatePT`, ~line 100):
+   - `STANDARD_MONTH_DAYS = 30`
+   - `monthsCovered(start, end)`
+   - `periodFactor(totalDays)`
+   - Refactor `calculatePT` → `calculatePTForPeriod(monthlyEquivalentGross, startIso, endIso)` that walks each month in the range and accumulates ₹200 / ₹300.
 
-```ts
-const todayIso = format(new Date(), "yyyy-MM-dd");
-const defaultPayrollForm = {
-  employee_id: "",
-  start_date: todayIso,
-  end_date: todayIso,
-  // ... rest unchanged ...
-  total_days: "1", lop: "0",
-  notes: "",
-};
-const [bulkStartDate, setBulkStartDate] = useState(todayIso);
-const [bulkEndDate, setBulkEndDate] = useState(todayIso);
-const [payrollStartDate, setPayrollStartDate] = useState(todayIso);
-const [payrollEndDate, setPayrollEndDate] = useState(todayIso);
-```
+2. **`payrollCalc` useMemo (~line 307)** — single-employee dialog:
+   - Compute `factor = periodFactor(totalDays)` (totalDays already auto-set from range).
+   - Pro-rate `basic`, `hra`, `specialAllowance`, `otherAdditions` from the employee record using `factor`.
+   - Keep user-entered `professionalFees / contractFees / ot / incentives / bonus / lwf / salaryAdvance / otherDed` as literal one-off totals (these are usually entered by the admin already aware of the period).
+   - PF cap = `1800 × factor`, ESI gating uses monthly-equivalent gross.
+   - Replace `pt` auto-fill effect to use `calculatePTForPeriod(monthlyGross, payrollStartDate, payrollEndDate)`.
+   - TDS auto-suggest (in `tdsCalcResult`) uses monthly-equivalent gross × `monthsCovered`.
 
-### 2c. Auto-calculate total_days (replace effect ~lines 278-288)
+3. **Multi-employee branch in `payrollMutation` (~line 482)** and **`bulkPayrollMutation` (~line 586)** — apply the same pro-rating to every record they build:
+   ```ts
+   const factor = totalDays / STANDARD_MONTH_DAYS;
+   const months = monthsCovered(startDate, endDate);
+   const basic = (emp.salary_amount || 0) * factor;
+   const hra   = (emp.hra || 0) * factor;
+   const sa    = (emp.special_allowance || 0) * factor;
+   const oa    = (emp.other_additions || 0) * factor;
+   const gross = Math.round(basic + hra + sa + oa);
+   const pfCap = Math.round(1800 * factor);
+   const pfEmp = Math.min(Math.round(basic * 0.12), pfCap);
+   const pfEr  = pfEmp;
+   const monthlyGross = gross / factor;
+   const esiEmp = monthlyGross <= 21000 ? Math.round(gross * 0.0075) : 0;
+   const esiEr  = monthlyGross <= 21000 ? Math.round(gross * 0.0325) : 0;
+   const pt     = calculatePTForPeriod(monthlyGross, startDate, endDate);
+   ```
+   Round all stored values to whole rupees with `Math.round`.
 
-```ts
-useEffect(() => {
-  const s = selectedEmployeeIds.length === 1 ? payrollStartDate : payrollForm.start_date;
-  const e = selectedEmployeeIds.length === 1 ? payrollEndDate   : payrollForm.end_date;
-  if (s && e && s <= e) {
-    setPayrollForm(p => ({ ...p, total_days: String(daysBetween(s, e)) }));
-  }
-}, [payrollStartDate, payrollEndDate, payrollForm.start_date, payrollForm.end_date, selectedEmployeeIds.length]);
-```
+4. **UI hints** in the Generate Payroll & Bulk Generate dialogs:
+   - Below the date range show: `Total Days: 61 (~2.03 months) · Pay multiplier ×2.03`.
+   - In the single-employee Earnings section, mark Basic/HRA/SA/OA inputs as read-only, displaying the pro-rated value with a tooltip `Monthly ₹X × period factor Y`.
+   - Update the "Professional Tax" auto-fill label to "Auto (sum across months in period)".
 
-### 2d. Update `calculatePT` (~line 103)
+5. **Payslip PDF and Excel exports** (Salary Register, PF, ESI, Form 16-style, payslip):
+   - Already use `formatPeriodDisplay`. Add a new column "Period Factor" (e.g. 2.03) and show "Monthly Equivalent Gross" alongside "Period Gross" so auditors can see both.
+   - Payslip header: replace "Pay Month" with "Pay Period: 01 Apr 2026 → 31 May 2026 (61 days, 2.03 months)".
 
-```ts
-const calculatePT = (gross: number, periodStartIso: string): number => {
-  if (gross < 25000) return 0;
-  const monthNum = new Date(periodStartIso).getMonth() + 1; // 1-12
-  return monthNum === 2 ? 300 : 200;
-};
-```
+6. **Backward compatibility**: legacy records with `month = "YYYY-MM"` continue to render via `parsePeriodKey` (already handles it) and will be treated as 30-day periods (factor = 1) — existing data remains correct.
 
-Update all call sites to pass the period start ISO instead of `"YYYY-MM"`.
+## What stays the same
 
-### 2e. `doGeneratePayroll` (~lines 429-468)
+- DB schema (no migration needed — `month` text column already stores the period key).
+- Lock / Unlock by period.
+- All existing exports and UI tables (only labels/extra columns added).
 
-```ts
-const periodKey = buildPeriodKey(payrollStartDate, payrollEndDate);
-const existingLocked = payrollRecords.find(r => r.month === periodKey && r.is_locked);
-// ...
-.insert({ ..., month: periodKey, ... })
-```
+## Quick sanity examples
 
-### 2f. Bulk generation in `payrollMutation` and `bulkPayrollMutation` (~lines 484-535, 586-631)
+- 1 Apr → 30 Apr (30 days) on ₹30,000 basic → factor 1.00 → Basic ₹30,000, PF ₹1,800, PT ₹200.
+- 1 Apr → 15 Apr (15 days) on ₹30,000 basic → factor 0.50 → Basic ₹15,000, PF ₹900, PT ₹0 (monthly gross ₹30k → slab ₹200, but only half a month = ₹100? — we keep PT at full slab once the period contains any portion of a month, so PT = ₹200 for April).
+- 1 Apr → 31 May (61 days) on ₹30,000 basic → factor 2.033 → Basic ₹61,000, PF ₹3,660 (cap 2×₹1,800 = ₹3,600 → ₹3,600), PT ₹400 (Apr ₹200 + May ₹200).
+- 1 Feb → 31 Mar on ₹30,000 → factor ≈ 1.97 → PT = ₹300 (Feb) + ₹200 (Mar) = ₹500.
 
-Replace the `for (const month of months)` loop with a single iteration using `periodKey`. `total_days` and `days_worked` come from `daysBetween(start, end)`. Skip if `isMonthLocked(periodKey)`.
+## Approval
 
-```ts
-const periodKey = buildPeriodKey(bulkStartDate, bulkEndDate);
-if (isMonthLocked(periodKey)) {
-  toast({ title: "This period is already locked. Unlock it first to regenerate." });
-  return 0;
-}
-const totalDays = daysBetween(bulkStartDate, bulkEndDate);
-const records = activeEmployees.map(emp => {
-  // ... pro-rate basic for non-monthly ranges? Keep current behavior — basic = emp.salary_amount.
-  // total_days/days_worked = totalDays
-  // pt = calculatePT(gross, bulkStartDate)
-  return { ..., month: periodKey, total_days: totalDays, days_worked: totalDays, ... };
-});
-const { error } = await supabase.from("payroll_records").insert(records);
-```
-
-### 2g. UI: replace month inputs with date inputs (~lines 1244-1256, 1359-1371)
-
-```tsx
-<div className="grid grid-cols-2 gap-4">
-  <div className="space-y-2">
-    <Label>Start Date *</Label>
-    <Input type="date" value={bulkStartDate} onChange={e => setBulkStartDate(e.target.value)} />
-  </div>
-  <div className="space-y-2">
-    <Label>End Date *</Label>
-    <Input type="date" value={bulkEndDate} onChange={e => setBulkEndDate(e.target.value)} />
-  </div>
-</div>
-{bulkStartDate > bulkEndDate && (
-  <p className="text-sm text-destructive font-medium">⚠️ Start date must be on or before end date.</p>
-)}
-<p className="text-xs text-muted-foreground">
-  Total days: <strong>{daysBetween(bulkStartDate, bulkEndDate)}</strong>
-</p>
-```
-
-Same swap for the `payrollStartMonth`/`payrollEndMonth` block in the Generate Payroll dialog.
-
-### 2h. Make Total Days read-only inside detailed form (~line 1382)
-
-```tsx
-<Input type="number" value={payrollForm.total_days} disabled />
-<p className="text-[10px] text-muted-foreground">Auto-calculated from date range</p>
-```
-
-### 2i. Display & export updates
-
-- **Lock/Unlock select** (~lines 1219-1225): show `formatPeriodDisplay(m)` instead of raw `m`.
-- **Payroll records table** (~lines 1569, 1607): replace `{record.month}` with `{formatPeriodDisplay(record.month)}`. Header label: "Period".
-- **Mobile card** (~line 1569): same.
-- **Excel exports** (~lines 1271, 711, 726, 737, 776): rename column `"Month"` → `"Period"` and use `formatPeriodDisplay(r.month)`.
-- **Payslip PDF** (~lines 790, 823, 834): title and badge use `formatPeriodDisplay(record.month)`. "Pay Period" row already exists — feed the formatted period.
-
-### 2j. Submit-button disabled checks (~line 1547, 1257)
-
-Replace `payrollStartMonth > payrollEndMonth` with `payrollStartDate > payrollEndDate` (and same for bulk).
-
-## 3. Backward compatibility
-
-`parsePeriodKey` and `formatPeriodDisplay` both gracefully handle legacy `"YYYY-MM"` records, so existing payroll history continues to render correctly. No DB migration required.
-
-## 4. Files touched
-
-- `src/pages/Payroll.tsx` — all changes above.
-
-No edge function, schema, or other component changes needed.
+Once you approve, I'll implement all of the above in `src/pages/Payroll.tsx` in one pass and update the payslip / export labels accordingly.
