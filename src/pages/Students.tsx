@@ -402,7 +402,7 @@ const Students = () => {
   };
 
   // Form state
-  const [form, setForm] = useState({
+  const emptyForm = {
     full_name: "",
     email: "",
     phone: "",
@@ -420,19 +420,33 @@ const Students = () => {
     remarks: "",
     account_number: "",
     payment_date: "",
+    // Installment 1
+    payment_date_1: "",
     amount_1: "",
     payment_mode_1: "",
     transaction_details_1: "",
+    utr_id_1: "",
+    // Installment 2
+    payment_date_2: "",
     amount_2: "",
     payment_mode_2: "",
     transaction_details_2: "",
+    utr_id_2: "",
+    // Installment 3
+    payment_date_3: "",
+    amount_3: "",
+    payment_mode_3: "",
+    transaction_details_3: "",
+    utr_id_3: "",
     balance_payment: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   const resetForm = () => {
-    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "", father_name: "", gender: "", final_fee: "", alloted_room_no: "", remarks: "", account_number: "", payment_date: "", amount_1: "", payment_mode_1: "", transaction_details_1: "", amount_2: "", payment_mode_2: "", transaction_details_2: "", balance_payment: "" });
+    setForm(emptyForm);
     setCreatedCredentials(null);
   };
+
 
   const handleSubmit = async () => {
     if (!form.full_name.trim() || !form.roll_number.trim()) {
