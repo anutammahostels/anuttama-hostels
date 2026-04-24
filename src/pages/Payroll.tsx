@@ -1185,25 +1185,25 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
               <Select onValueChange={(month) => {
                 const locked = isMonthLocked(month);
                 if (locked) {
-                  if (confirm(`Unlock payroll for ${month}? This will allow edits to payroll records.`)) {
+                  if (confirm(`Unlock payroll for ${formatPeriodDisplay(month)}? This will allow edits to payroll records.`)) {
                     unlockMonthMutation.mutate(month);
                   }
                 } else {
-                  if (confirm(`Lock payroll for ${month}? Payroll records will be read-only.`)) {
+                  if (confirm(`Lock payroll for ${formatPeriodDisplay(month)}? Payroll records will be read-only.`)) {
                     lockMonthMutation.mutate(month);
                   }
                 }
               }}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[260px]">
                   <Lock className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Lock / Unlock Month" />
+                  <SelectValue placeholder="Lock / Unlock Period" />
                 </SelectTrigger>
                 <SelectContent>
                   {uniqueMonths.map(m => (
                     <SelectItem key={m} value={m}>
                       <span className="flex items-center gap-2">
                         {isMonthLocked(m) ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                        {m} — {isMonthLocked(m) ? "Locked (click to unlock)" : "Unlocked (click to lock)"}
+                        {formatPeriodDisplay(m)} — {isMonthLocked(m) ? "Locked" : "Unlocked"}
                       </span>
                     </SelectItem>
                   ))}
