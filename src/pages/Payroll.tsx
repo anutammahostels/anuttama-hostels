@@ -1287,6 +1287,9 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   ) : (
                     <p className="text-xs text-muted-foreground">
                       Total days: <strong>{daysBetween(bulkStartDate, bulkEndDate)}</strong>
+                      {" · "}Months covered: <strong>{monthsCovered(bulkStartDate, bulkEndDate)}</strong>
+                      {" · "}Pay multiplier: <strong>×{periodFactor(daysBetween(bulkStartDate, bulkEndDate)).toFixed(2)}</strong>
+                      <span className="block text-[11px] mt-0.5">Each employee's monthly Basic, HRA, Special Allowance and Other Additions are pro-rated by this multiplier.</span>
                     </p>
                   )}
                   <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || bulkStartDate > bulkEndDate || activeEmployees.length === 0}>
