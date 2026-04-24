@@ -48,8 +48,12 @@ serve(async (req) => {
       date_of_birth, blood_group, emergency_contact, father_name, gender,
       // New finance fields
       final_fee, payment_date, account_number, alloted_room_no, remarks,
-      payment_mode_1, amount_1, transaction_details_1,
-      payment_mode_2, amount_2, transaction_details_2,
+      // Installment 1
+      payment_date_1, payment_mode_1, amount_1, transaction_details_1, utr_id_1,
+      // Installment 2
+      payment_date_2, payment_mode_2, amount_2, transaction_details_2, utr_id_2,
+      // Installment 3
+      payment_date_3, payment_mode_3, amount_3, transaction_details_3, utr_id_3,
       balance_payment,
     } = body;
 
@@ -175,13 +179,17 @@ serve(async (req) => {
       const propertyId = propData?.id;
 
       if (propertyId) {
-        const parsedAmt1 = parseFloat(String(amount_1 || "0").replace(/,/g, "")) || 0;
-        const parsedAmt2 = parseFloat(String(amount_2 || "0").replace(/,/g, "")) || 0;
-        const totalPaid = parsedAmt1 + parsedAmt2;
+        const toAmt = (v: any) => parseFloat(String(v ?? "0").replace(/,/g, "")) || 0;
+        const installments = [
+          { n: 1, amt: toAmt(amount_1), mode: payment_mode_1, txn: transaction_details_1, utr: utr_id_1, date: payment_date_1 || payment_date },
+          { n: 2, amt: toAmt(amount_2), mode: payment_mode_2, txn: transaction_details_2, utr: utr_id_2, date: payment_date_2 },
+          { n: 3, amt: toAmt(amount_3), mode: payment_mode_3, txn: transaction_details_3, utr: utr_id_3, date: payment_date_3 },
+        ];
+        const totalPaid = installments.reduce((s, i) => s + i.amt, 0);
         const invoiceStatus = totalPaid >= parsedFinalFee ? "paid" : (totalPaid > 0 ? "partial" : "pending");
 
         const invoiceNumber = `INV-${roll_number}-${Date.now().toString(36).toUpperCase()}`;
-        const billingDate = payment_date || new Date().toISOString().split("T")[0];
+        const billingDate = payment_date_1 || payment_date || new Date().toISOString().split("T")[0];
 
         const noteParts: string[] = [];
         if (balance_payment) noteParts.push(`Balance: ${balance_payment}`);
@@ -200,37 +208,24 @@ serve(async (req) => {
         }).select().single();
 
         if (!invError && invoice) {
-          // Create payment record for Amount 1
-          if (parsedAmt1 > 0) {
+          // Create one payment row per non-zero installment
+          for (const inst of installments) {
+            if (inst.amt <= 0) continue;
+            const paidAt = inst.date
+              ? new Date(inst.date).toISOString()
+              : (billingDate ? new Date(billingDate).toISOString() : new Date().toISOString());
             await adminClient.from("payments").insert({
               invoice_id: invoice.id,
               student_id: student.id,
               property_id: propertyId,
-              amount: parsedAmt1,
-              payment_method: (payment_mode_1 || "cash").toLowerCase(),
-              payment_mode_label: payment_mode_1 || null,
-              transaction_id: transaction_details_1 || null,
-              transaction_reference: transaction_details_1 || null,
-              payment_label: "Amount 1",
+              amount: inst.amt,
+              payment_method: (inst.mode || "cash").toLowerCase(),
+              payment_mode_label: inst.mode || null,
+              transaction_id: inst.txn || null,
+              transaction_reference: inst.utr || null,
+              payment_label: `Amount ${inst.n}`,
               status: "completed",
-              paid_at: billingDate ? new Date(billingDate).toISOString() : new Date().toISOString(),
-            });
-          }
-
-          // Create payment record for Amount 2
-          if (parsedAmt2 > 0) {
-            await adminClient.from("payments").insert({
-              invoice_id: invoice.id,
-              student_id: student.id,
-              property_id: propertyId,
-              amount: parsedAmt2,
-              payment_method: (payment_mode_2 || "cash").toLowerCase(),
-              payment_mode_label: payment_mode_2 || null,
-              transaction_id: transaction_details_2 || null,
-              transaction_reference: transaction_details_2 || null,
-              payment_label: "Amount 2",
-              status: "completed",
-              paid_at: billingDate ? new Date(billingDate).toISOString() : new Date().toISOString(),
+              paid_at: isNaN(new Date(paidAt).getTime()) ? new Date().toISOString() : paidAt,
             });
           }
         }

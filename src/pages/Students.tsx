@@ -124,62 +124,80 @@ const Students = () => {
   const assignBeds = (assignRooms.find(r => r.id === selectedRoomId)?.beds || [])
     .filter(bed => !bed.student_id && bed.status === "vacant");
 
-  const parseCSV = (text: string) => {
+  // Normalize header text: lowercase, collapse spaces, treat misspelling "transcetion" === "transaction"
+  const normalizeHeader = (h: string) =>
+    String(h ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/transcetion/g, "transaction");
+
+  // Convert Excel serial date or string to ISO yyyy-mm-dd (if parseable), else return original trimmed string
+  const normalizeDateValue = (val: any): string => {
+    if (val == null || val === "") return "";
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      return val.toISOString().split("T")[0];
+    }
+    if (typeof val === "number" && val > 25569) {
+      // Excel serial number → JS date
+      const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+    }
+    return String(val).trim();
+  };
+
+  // Position-aware row: each row is { headers: string[], values: string[] }
+  // Headers preserve duplicates so callers can index by occurrence (e.g. 1st vs 2nd "UTR ID")
+  type PositionalRow = { headers: string[]; values: string[]; map: Record<string, string> };
+
+  const parseCSV = (text: string): PositionalRow[] => {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return [];
-    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    const headers = lines[0].split(",").map(h => normalizeHeader(h));
     return lines.slice(1).map(line => {
       const values = line.split(",").map(v => v.trim());
-      const obj: Record<string, string> = {};
-      headers.forEach((h, i) => { obj[h] = values[i] || ""; });
-      return obj;
+      const map: Record<string, string> = {};
+      headers.forEach((h, i) => { if (!(h in map)) map[h] = values[i] || ""; });
+      return { headers, values, map };
     });
   };
 
-  const parseExcel = async (file: File): Promise<Record<string, string>[]> => {
+  const parseExcel = async (file: File): Promise<PositionalRow[]> => {
     const XLSX = await import("xlsx");
     const data = await file.arrayBuffer();
     const wb = XLSX.read(data, { type: "array", cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
 
-    // Auto-detect header row: find first row containing "Student Details" or "Enrollment number"
-    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
-    let headerRow = range.s.r; // default to first row
-    const knownHeaders = ["student details", "enrollment number", "full_name", "email", "sr. no.", "form no", "student name", "father name", "contact no1", "gender", "grade", "stream"];
-    for (let r = range.s.r; r <= Math.min(range.s.r + 20, range.e.r); r++) {
-      const cellValues: string[] = [];
-      for (let c = range.s.c; c <= range.e.c; c++) {
-        const addr = XLSX.utils.encode_cell({ r, c });
-        const cell = ws[addr];
-        if (cell?.v) cellValues.push(String(cell.v).trim().toLowerCase());
-      }
-      if (cellValues.some(v => knownHeaders.includes(v))) {
-        headerRow = r;
+    // Read sheet as array-of-arrays so duplicate header columns survive
+    const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, blankrows: false });
+    if (!aoa.length) return [];
+
+    // Auto-detect header row in first 20 rows
+    const knownTokens = ["student_name", "form_no", "father_name", "contact_no1", "grade", "stream", "final_fee", "enrollment_number", "full_name", "payment_mode-1"];
+    let headerRowIdx = 0;
+    for (let r = 0; r < Math.min(20, aoa.length); r++) {
+      const norm = aoa[r].map((c: any) => normalizeHeader(c));
+      if (norm.some(v => knownTokens.includes(v))) {
+        headerRowIdx = r;
         break;
       }
     }
 
-    // Parse from detected header row
-    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(ws, {
-      defval: "",
-      range: headerRow,
-      raw: false,
-    });
-
-    return jsonData
-      .filter(row => {
-        // Skip completely empty rows and summary/total rows
-        const vals = Object.values(row).filter(v => v !== "" && v != null);
-        return vals.length >= 3;
-      })
-      .map(row => {
-        const normalized: Record<string, string> = {};
-        Object.keys(row).forEach(key => {
-          const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, "_");
-          normalized[normalizedKey] = String(row[key] ?? "").trim();
-        });
-        return normalized;
+    const headers = aoa[headerRowIdx].map((c: any) => normalizeHeader(c));
+    const rows: PositionalRow[] = [];
+    for (let r = headerRowIdx + 1; r < aoa.length; r++) {
+      const raw = aoa[r];
+      const nonEmpty = raw.filter((v: any) => v !== "" && v != null).length;
+      if (nonEmpty < 3) continue; // skip empty / summary rows
+      const values: string[] = headers.map((_, i) => {
+        const v = raw[i];
+        return v == null ? "" : (v instanceof Date ? normalizeDateValue(v) : String(v).trim());
       });
+      const map: Record<string, string> = {};
+      headers.forEach((h, i) => { if (!(h in map)) map[h] = values[i] || ""; });
+      rows.push({ headers, values, map });
+    }
+    return rows;
   };
 
   const parseAmount = (val: string | undefined): number => {
@@ -195,28 +213,34 @@ const Students = () => {
 
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
+    // Canonical 26-column Anuttama Hostels format (correct "TRANSACTION" spelling)
     const headers = [
       "S.NO", "FORM NO", "STUDENT NAME", "FATHER NAME",
       "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM",
-      "DATE OF THE PAYMENT", "FINAL FEE", "PAYMENT MODE-1", "AMOUNT 1",
-      "TRANSCETION DETAILS-1", "PAYMENT MODE-2", "AMOUNT 2",
-      "BALANCE PAYMENT DATE/AMT", "TRANSCETION DETAILS-2",
-      "ACCOUNT NUMBER", "ALLOTED ROOM NO", "REMARKS"
+      "DATE OF THE PAYMENT", "FINAL FEE",
+      "PAYMENT MODE-1", "AMOUNT 1", "TRANSACTION DETAILS-1", "UTR ID",
+      "DATE OF THE PAYMENT (2nd)", "PAYMENT MODE-2", "AMOUNT 2",
+      "BALANCE PAYMENT DATE", "TRANSACTION DETAILS-2", "UTR ID-2",
+      "PAYMENT MODE-3", "AMOUNT 3", "BALANCE PAYMENT DATE (3rd)",
+      "TRANSACTION DETAILS-3", "UTR ID-3"
     ];
     const sampleRow = [
       1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
       "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science",
-      "01-04-2026", "1,80,000", "RTGS", "1,00,000",
-      "UTR123456", "UPI", "80,000",
-      "", "", "1234567890", "A-101", ""
+      "01-04-2026", "1,80,000",
+      "RTGS", "90,000 + 21,000", "Bank Transfer Ref", "UTR123456789",
+      "15-05-2026", "UPI", "30,000",
+      "20-06-2026", "UPI Ref", "UTRUPI22222",
+      "Cash", "19,000", "20-07-2026", "Cash Receipt #45", "—"
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
     ws["!cols"] = headers.map(h => ({ wch: Math.max(h.length + 2, 18) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, "hostel_payment_template.xlsx");
+    XLSX.writeFile(wb, "anuttama_hostels_student_template.xlsx");
   };
+
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -225,7 +249,7 @@ const Students = () => {
     const fileName = file.name.toLowerCase();
     const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".xlsb") || fileName.endsWith(".xlsm");
     
-    let rows: Record<string, string>[];
+    let rows: PositionalRow[];
     try {
       if (isExcel) {
         rows = await parseExcel(file);
@@ -233,7 +257,7 @@ const Students = () => {
         const text = await file.text();
         rows = parseCSV(text);
       }
-    } catch (err: any) {
+    } catch {
       toast({ title: "File Error", description: "Could not parse the file. Please use the template format.", variant: "destructive" });
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
@@ -252,46 +276,86 @@ const Students = () => {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      // Map all columns from row keys (already lowercased & underscored)
-      const keys = Object.keys(row);
-      const findCol = (patterns: string[]) => {
+      const map = row.map;
+      // Position-aware: get the Nth occurrence (0-indexed) of any header matching a substring
+      const valueAtOccurrence = (substrings: string[], occurrence: number): string => {
+        let seen = 0;
+        for (let idx = 0; idx < row.headers.length; idx++) {
+          const h = row.headers[idx];
+          if (substrings.some(s => h.includes(s))) {
+            if (seen === occurrence) return (row.values[idx] ?? "").trim();
+            seen++;
+          }
+        }
+        return "";
+      };
+      const findCol = (patterns: string[]): string => {
         for (const p of patterns) {
-          const found = keys.find(k => k.includes(p));
-          if (found && row[found]) return row[found];
+          for (const k of Object.keys(map)) {
+            if (k.includes(p) && map[k]) return map[k];
+          }
         }
         return "";
       };
 
-      // Transaction details columns: there are two with same header "transcetion_details-1"
-      // First occurrence → transaction_details_1, second → transaction_details_2
-      // In the normalized keys they may appear as transcetion_details-1 or similar
-      const txnKeys = keys.filter(k => k.includes("transcetion") || k.includes("transaction"));
-      const txn1 = txnKeys.length > 0 ? row[txnKeys[0]] || "" : "";
-      const txn2 = txnKeys.length > 1 ? row[txnKeys[1]] || "" : "";
+      // 26-col format: there are THREE "transaction_details" cols and THREE "utr_id" cols (UTR ID, UTR ID-2, UTR ID-3)
+      // Also THREE date cols: DATE OF THE PAYMENT, DATE OF THE PAYMENT (2nd), BALANCE PAYMENT DATE (and BALANCE PAYMENT DATE (3rd))
+      // Resolve them by their occurrence index in the actual header row.
+      const txn1 = valueAtOccurrence(["transaction_details"], 0);
+      const txn2 = valueAtOccurrence(["transaction_details"], 1);
+      const txn3 = valueAtOccurrence(["transaction_details"], 2);
+      const utr1 = valueAtOccurrence(["utr_id", "utr"], 0);
+      const utr2 = valueAtOccurrence(["utr_id", "utr"], 1);
+      const utr3 = valueAtOccurrence(["utr_id", "utr"], 2);
+      // Dates: 1st = DATE OF THE PAYMENT, 2nd = DATE OF THE PAYMENT (2nd), 3rd = BALANCE PAYMENT DATE (3rd) — but
+      // there's also a generic "BALANCE PAYMENT DATE" between installments 2 and 3 in the format.
+      // Strategy: collect all date-of-payment / balance-payment-date columns in document order and assign positionally.
+      const allDateValues: string[] = [];
+      for (let idx = 0; idx < row.headers.length; idx++) {
+        const h = row.headers[idx];
+        if (h.includes("date_of_the_payment") || h.includes("balance_payment_date") || h === "payment_date") {
+          allDateValues.push(normalizeDateValue(row.values[idx]));
+        }
+      }
+      const date1 = allDateValues[0] || "";
+      const date2 = allDateValues[1] || "";
+      const date3 = allDateValues[2] || allDateValues[allDateValues.length - 1] || "";
 
       const formData = {
-        full_name: row.student_name || row.student_details || row.full_name || row.name || "",
-        email: row.email || "",
-        phone: row.contact_no1 || row.phone_number || row.phone || "",
-        roll_number: row.form_no || row.enrollment_number || row.roll_number || "",
-        course: row.grade || row.class || row.course || "",
-        department: row.stream || row.department || "",
-        year: row.year || "",
-        date_of_birth: row.date_of_birth || "",
-        blood_group: row.blood_group || "",
-        emergency_contact: row.contact_no_2 || row.emergency_contact || "",
-        father_name: row.father_name || "",
-        gender: row.gender || "",
-        // Finance fields
-        payment_date: findCol(["date_of_the_payment", "payment_date"]),
+        full_name: map.student_name || map.student_details || map.full_name || map.name || "",
+        email: map.email || "",
+        phone: map.contact_no1 || map.phone_number || map.phone || "",
+        roll_number: map.form_no || map.enrollment_number || map.roll_number || "",
+        course: map.grade || map.class || map.course || "",
+        department: map.stream || map.department || "",
+        year: map.year || "",
+        date_of_birth: normalizeDateValue(map.date_of_birth) || "",
+        blood_group: map.blood_group || "",
+        emergency_contact: map.contact_no_2 || map.emergency_contact || "",
+        father_name: map.father_name || "",
+        gender: map.gender || "",
+        // Finance fields — payment_date kept for backward compat (= installment-1 date)
+        payment_date: date1,
         final_fee: String(parseAmount(findCol(["final_fee"]))),
+        // Installment 1
+        payment_date_1: date1,
         payment_mode_1: findCol(["payment_mode-1", "payment_mode_1"]),
-        amount_1: String(parseAmount(findCol(["amount_1", "amount1"]))),
+        amount_1: String(parseAmount(findCol(["amount_1", "amount1", "amount-1"]))),
         transaction_details_1: txn1,
+        utr_id_1: utr1,
+        // Installment 2
+        payment_date_2: date2,
         payment_mode_2: findCol(["payment_mode-2", "payment_mode_2"]),
-        amount_2: String(parseAmount(findCol(["amount_2", "amount2"]))),
-        balance_payment: findCol(["balance_payment", "balance"]),
+        amount_2: String(parseAmount(findCol(["amount_2", "amount2", "amount-2"]))),
         transaction_details_2: txn2,
+        utr_id_2: utr2,
+        // Installment 3 (new)
+        payment_date_3: date3,
+        payment_mode_3: findCol(["payment_mode-3", "payment_mode_3"]),
+        amount_3: String(parseAmount(findCol(["amount_3", "amount3", "amount-3"]))),
+        transaction_details_3: txn3,
+        utr_id_3: utr3,
+        balance_payment: findCol(["balance_payment_date", "balance_payment", "balance"]),
         account_number: findCol(["account_number"]),
         alloted_room_no: findCol(["alloted_room", "alloted_room_no"]),
         remarks: findCol(["remarks"]),
@@ -338,7 +402,7 @@ const Students = () => {
   };
 
   // Form state
-  const [form, setForm] = useState({
+  const emptyForm = {
     full_name: "",
     email: "",
     phone: "",
@@ -356,19 +420,33 @@ const Students = () => {
     remarks: "",
     account_number: "",
     payment_date: "",
+    // Installment 1
+    payment_date_1: "",
     amount_1: "",
     payment_mode_1: "",
     transaction_details_1: "",
+    utr_id_1: "",
+    // Installment 2
+    payment_date_2: "",
     amount_2: "",
     payment_mode_2: "",
     transaction_details_2: "",
+    utr_id_2: "",
+    // Installment 3
+    payment_date_3: "",
+    amount_3: "",
+    payment_mode_3: "",
+    transaction_details_3: "",
+    utr_id_3: "",
     balance_payment: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   const resetForm = () => {
-    setForm({ full_name: "", email: "", phone: "", roll_number: "", course: "", department: "", year: "", date_of_birth: "", blood_group: "", emergency_contact: "", father_name: "", gender: "", final_fee: "", alloted_room_no: "", remarks: "", account_number: "", payment_date: "", amount_1: "", payment_mode_1: "", transaction_details_1: "", amount_2: "", payment_mode_2: "", transaction_details_2: "", balance_payment: "" });
+    setForm(emptyForm);
     setCreatedCredentials(null);
   };
+
 
   const handleSubmit = async () => {
     if (!form.full_name.trim() || !form.roll_number.trim()) {
@@ -1290,66 +1368,88 @@ const Students = () => {
                   </div>
                 </div>
 
-                <h5 className="text-xs font-semibold text-muted-foreground mt-2">Payment 1</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs font-semibold">Amount 1</Label>
-                    <Input type="number" placeholder="e.g. 100000" value={form.amount_1} onChange={(e) => setForm(f => ({ ...f, amount_1: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Payment Mode 1</Label>
-                    <Select value={form.payment_mode_1} onValueChange={(v) => setForm(f => ({ ...f, payment_mode_1: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="RTGS">RTGS</SelectItem>
-                        <SelectItem value="NEFT">NEFT</SelectItem>
-                        <SelectItem value="Cheque">Cheque</SelectItem>
-                        <SelectItem value="DD">DD</SelectItem>
-                        <SelectItem value="Online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Transaction Details 1</Label>
-                    <Input placeholder="UTR / Ref No." value={form.transaction_details_1} onChange={(e) => setForm(f => ({ ...f, transaction_details_1: e.target.value }))} />
-                  </div>
-                </div>
+                {(() => {
+                  const paymentModes = ["Cash", "UPI", "RTGS", "NEFT", "Cheque", "DD", "Online"];
+                  const renderInstallment = (n: 1 | 2 | 3, label: string) => {
+                    const dateKey = `payment_date_${n}` as const;
+                    const amtKey = `amount_${n}` as const;
+                    const modeKey = `payment_mode_${n}` as const;
+                    const txnKey = `transaction_details_${n}` as const;
+                    const utrKey = `utr_id_${n}` as const;
+                    return (
+                      <div key={n} className="space-y-2">
+                        <h5 className="text-xs font-semibold text-muted-foreground mt-2">{label}</h5>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                          <div>
+                            <Label className="text-xs font-semibold">Date</Label>
+                            <Input type="date" value={form[dateKey]} onChange={(e) => setForm(f => ({ ...f, [dateKey]: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Amount {n}</Label>
+                            <Input type="number" placeholder="e.g. 100000" value={form[amtKey]} onChange={(e) => setForm(f => ({ ...f, [amtKey]: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Payment Mode {n}</Label>
+                            <Select value={form[modeKey]} onValueChange={(v) => setForm(f => ({ ...f, [modeKey]: v }))}>
+                              <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                              <SelectContent>
+                                {paymentModes.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Transaction Details {n}</Label>
+                            <Input placeholder="Receipt / Ref note" value={form[txnKey]} onChange={(e) => setForm(f => ({ ...f, [txnKey]: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">UTR ID {n}</Label>
+                            <Input placeholder="UTR / Bank ref" value={form[utrKey]} onChange={(e) => setForm(f => ({ ...f, [utrKey]: e.target.value }))} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  };
 
-                <h5 className="text-xs font-semibold text-muted-foreground mt-2">Payment 2</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs font-semibold">Amount 2</Label>
-                    <Input type="number" placeholder="e.g. 80000" value={form.amount_2} onChange={(e) => setForm(f => ({ ...f, amount_2: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Payment Mode 2</Label>
-                    <Select value={form.payment_mode_2} onValueChange={(v) => setForm(f => ({ ...f, payment_mode_2: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="RTGS">RTGS</SelectItem>
-                        <SelectItem value="NEFT">NEFT</SelectItem>
-                        <SelectItem value="Cheque">Cheque</SelectItem>
-                        <SelectItem value="DD">DD</SelectItem>
-                        <SelectItem value="Online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Transaction Details 2</Label>
-                    <Input placeholder="UTR / Ref No." value={form.transaction_details_2} onChange={(e) => setForm(f => ({ ...f, transaction_details_2: e.target.value }))} />
-                  </div>
-                </div>
+                  const totalPaid =
+                    (parseFloat(form.amount_1) || 0) +
+                    (parseFloat(form.amount_2) || 0) +
+                    (parseFloat(form.amount_3) || 0);
+                  const finalFeeNum = parseFloat(form.final_fee) || 0;
+                  const balance = Math.max(0, finalFeeNum - totalPaid);
 
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <Label className="text-xs font-semibold">Balance Payment</Label>
-                    <Input placeholder="Balance amount / date" value={form.balance_payment} onChange={(e) => setForm(f => ({ ...f, balance_payment: e.target.value }))} />
-                  </div>
-                </div>
+                  return (
+                    <>
+                      {renderInstallment(1, "Payment 1")}
+                      {renderInstallment(2, "Payment 2")}
+                      {renderInstallment(3, "Payment 3")}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border bg-muted/40 p-3">
+                        <div>
+                          <Label className="text-xs font-semibold text-muted-foreground">Final Fee</Label>
+                          <p className="text-sm font-semibold">₹ {finalFeeNum.toLocaleString("en-IN")}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs font-semibold text-muted-foreground">Total Paid</Label>
+                          <p className="text-sm font-semibold">₹ {totalPaid.toLocaleString("en-IN")}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs font-semibold text-muted-foreground">Balance Due</Label>
+                          <p className={`text-sm font-semibold ${balance > 0 ? "text-destructive" : "text-emerald-600"}`}>
+                            ₹ {balance.toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <Label className="text-xs font-semibold">Notes (optional balance / remarks)</Label>
+                          <Input placeholder="Free-form note" value={form.balance_payment} onChange={(e) => setForm(f => ({ ...f, balance_payment: e.target.value }))} />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
               </div>
 
               <DialogFooter>
@@ -1458,7 +1558,7 @@ const Students = () => {
                 Download Excel Template
               </Button>
               <p className="text-xs text-muted-foreground">
-                Required columns: <code className="bg-muted px-1 rounded">STUDENT NAME</code>, <code className="bg-muted px-1 rounded">FORM NO</code>. Optional: FATHER NAME, Gender, CONTACT NO1/2, GRADE, STREAM, DATE OF THE PAYMENT, FINAL FEE, PAYMENT MODE-1/2, AMOUNT 1/2, TRANSACTION DETAILS, BALANCE PAYMENT, ACCOUNT NUMBER, ALLOTED ROOM NO, REMARKS.
+                Required columns: <code className="bg-muted px-1 rounded">STUDENT NAME</code>, <code className="bg-muted px-1 rounded">FORM NO</code>. Optional 26-col format: FATHER NAME, Gender, CONTACT NO1/2, GRADE, STREAM, DATE OF THE PAYMENT, FINAL FEE, PAYMENT MODE-1/2/3, AMOUNT 1/2/3, TRANSACTION DETAILS-1/2/3, UTR ID / UTR ID-2 / UTR ID-3, BALANCE PAYMENT DATE. Old "TRANSCETION" spelling is also accepted.
               </p>
             </div>
           )}
