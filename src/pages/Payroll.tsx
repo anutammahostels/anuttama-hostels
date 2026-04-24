@@ -97,15 +97,53 @@ const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const validatePAN = (v: string) => !v || PAN_REGEX.test(v.toUpperCase());
 const validateIFSC = (v: string) => !v || IFSC_REGEX.test(v.toUpperCase());
 
-// ── Auto PT (Karnataka slabs) ──
-// Accepts either ISO date "YYYY-MM-DD", legacy "YYYY-MM", or a period key.
-const calculatePT = (gross: number, periodOrMonth: string): number => {
-  if (gross < 25000) return 0;
-  // Extract month number from the start of the string (works for YYYY-MM-DD, YYYY-MM, and period keys)
-  const monthNum = parseInt(periodOrMonth.split("-")[1] || "0", 10);
-  // February → ₹300, else ₹200
-  return monthNum === 2 ? 300 : 200;
+// ── Date-range payroll helpers ──
+// Standard Indian payroll month convention (used to compute pro-rate factor)
+const STANDARD_MONTH_DAYS = 30;
+
+// Number of distinct calendar months a [start, end] range touches (inclusive).
+const monthsCovered = (startIso: string, endIso: string): number => {
+  if (!startIso || !endIso) return 1;
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 1;
+  return Math.max(1, (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1);
 };
+
+// Pro-rate factor: how many "standard months" the chosen period represents.
+const periodFactor = (totalDays: number): number => {
+  if (!totalDays || totalDays <= 0) return 1;
+  return totalDays / STANDARD_MONTH_DAYS;
+};
+
+// ── Auto PT (Karnataka slabs) — supports any date range ──
+// Sums PT across every calendar month the range touches:
+//   • Feb → ₹300, other months → ₹200, only when monthly-equivalent gross ≥ ₹25,000.
+// Backward compatible: also accepts a legacy "YYYY-MM" or single date string in `startIso`
+// when `endIso` is omitted.
+const calculatePTForPeriod = (monthlyEquivalentGross: number, startIso: string, endIso?: string): number => {
+  if (monthlyEquivalentGross < 25000) return 0;
+  // Single-date / legacy fallback
+  if (!endIso) {
+    const monthNum = parseInt((startIso || "").split("-")[1] || "0", 10);
+    return monthNum === 2 ? 300 : 200;
+  }
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  let total = 0;
+  const cursor = new Date(s.getFullYear(), s.getMonth(), 1);
+  const last = new Date(e.getFullYear(), e.getMonth(), 1);
+  while (cursor <= last) {
+    total += cursor.getMonth() === 1 ? 300 : 200; // Feb is index 1
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return total;
+};
+
+// Legacy alias kept for existing call sites (auto-PT effect, exports, etc.)
+const calculatePT = (gross: number, periodOrMonth: string): number =>
+  calculatePTForPeriod(gross, periodOrMonth);
 
 // ── TDS Calculator (New Tax Regime FY 2025-26) ──
 const calculateMonthlyTDS = (monthlyGross: number): { annualTax: number; monthlyTds: number; taxableIncome: number } => {
