@@ -7,6 +7,55 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Robust date parser: handles DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, and ISO strings.
+// Returns a Date in UTC or null if unparseable.
+function parseDate(input: any): Date | null {
+  if (input === null || input === undefined || input === "") return null;
+  if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+  const str = String(input).trim();
+  if (!str) return null;
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (dmy) {
+    let [, d, m, y] = dmy;
+    let yearNum = parseInt(y, 10);
+    if (yearNum < 100) yearNum += 2000;
+    const dayNum = parseInt(d, 10);
+    const monthNum = parseInt(m, 10);
+    if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) return null;
+    const result = new Date(Date.UTC(yearNum, monthNum - 1, dayNum));
+    if (result.getUTCDate() !== dayNum || result.getUTCMonth() !== monthNum - 1) return null;
+    return result;
+  }
+
+  // YYYY-MM-DD
+  const iso = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) {
+    const result = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3]));
+    if (isNaN(result.getTime())) return null;
+    return result;
+  }
+
+  // Fallback to native parsing for anything else (full ISO timestamps, etc.)
+  const fallback = new Date(str);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
+// Safe ISO date string (YYYY-MM-DD) for date columns
+function toDateOnly(input: any, fallback?: string): string | null {
+  const d = parseDate(input);
+  if (d) return d.toISOString().split("T")[0];
+  return fallback ?? null;
+}
+
+// Safe full ISO timestamp for timestamptz columns
+function toIsoTimestamp(input: any, fallback?: string): string {
+  const d = parseDate(input);
+  if (d) return d.toISOString();
+  return fallback ?? new Date().toISOString();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
