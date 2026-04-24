@@ -213,28 +213,34 @@ const Students = () => {
 
   const downloadTemplate = async () => {
     const XLSX = await import("xlsx");
+    // Canonical 26-column Anuttama Hostels format (correct "TRANSACTION" spelling)
     const headers = [
       "S.NO", "FORM NO", "STUDENT NAME", "FATHER NAME",
       "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM",
-      "DATE OF THE PAYMENT", "FINAL FEE", "PAYMENT MODE-1", "AMOUNT 1",
-      "TRANSCETION DETAILS-1", "PAYMENT MODE-2", "AMOUNT 2",
-      "BALANCE PAYMENT DATE/AMT", "TRANSCETION DETAILS-2",
-      "ACCOUNT NUMBER", "ALLOTED ROOM NO", "REMARKS"
+      "DATE OF THE PAYMENT", "FINAL FEE",
+      "PAYMENT MODE-1", "AMOUNT 1", "TRANSACTION DETAILS-1", "UTR ID",
+      "DATE OF THE PAYMENT (2nd)", "PAYMENT MODE-2", "AMOUNT 2",
+      "BALANCE PAYMENT DATE", "TRANSACTION DETAILS-2", "UTR ID-2",
+      "PAYMENT MODE-3", "AMOUNT 3", "BALANCE PAYMENT DATE (3rd)",
+      "TRANSACTION DETAILS-3", "UTR ID-3"
     ];
     const sampleRow = [
       1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
       "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science",
-      "01-04-2026", "1,80,000", "RTGS", "1,00,000",
-      "UTR123456", "UPI", "80,000",
-      "", "", "1234567890", "A-101", ""
+      "01-04-2026", "1,80,000",
+      "RTGS", "90,000 + 21,000", "Bank Transfer Ref", "UTR123456789",
+      "15-05-2026", "UPI", "30,000",
+      "20-06-2026", "UPI Ref", "UTRUPI22222",
+      "Cash", "19,000", "20-07-2026", "Cash Receipt #45", "—"
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
     ws["!cols"] = headers.map(h => ({ wch: Math.max(h.length + 2, 18) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, "hostel_payment_template.xlsx");
+    XLSX.writeFile(wb, "anuttama_hostels_student_template.xlsx");
   };
+
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
