@@ -428,13 +428,14 @@ const Payroll = () => {
   // Generate payroll for single employee — with net pay warning
   const doGeneratePayroll = async () => {
     if (!selectedEmployee) throw new Error("Employee not found");
-    const existingLocked = payrollRecords.find(r => r.month === payrollForm.month && r.is_locked);
-    if (existingLocked) throw new Error("This month is locked. Cannot generate new payroll.");
+    const periodKey = buildPeriodKey(payrollStartDate, payrollEndDate);
+    const existingLocked = payrollRecords.find(r => r.month === periodKey && r.is_locked);
+    if (existingLocked) throw new Error("This period is locked. Cannot generate new payroll.");
     const c = payrollCalc;
     const { error } = await supabase.from("payroll_records").insert({
       employee_id: payrollForm.employee_id,
       property_id: selectedPropertyId,
-      month: payrollForm.month,
+      month: periodKey,
       basic_salary: c.basic,
       hra: c.hra,
       special_allowance: c.specialAllowance,
