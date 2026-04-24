@@ -243,7 +243,7 @@ const Students = () => {
     const fileName = file.name.toLowerCase();
     const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".xlsb") || fileName.endsWith(".xlsm");
     
-    let rows: Record<string, string>[];
+    let rows: PositionalRow[];
     try {
       if (isExcel) {
         rows = await parseExcel(file);
@@ -251,7 +251,7 @@ const Students = () => {
         const text = await file.text();
         rows = parseCSV(text);
       }
-    } catch (err: any) {
+    } catch {
       toast({ title: "File Error", description: "Could not parse the file. Please use the template format.", variant: "destructive" });
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
@@ -270,46 +270,86 @@ const Students = () => {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      // Map all columns from row keys (already lowercased & underscored)
-      const keys = Object.keys(row);
-      const findCol = (patterns: string[]) => {
+      const map = row.map;
+      // Position-aware: get the Nth occurrence (0-indexed) of any header matching a substring
+      const valueAtOccurrence = (substrings: string[], occurrence: number): string => {
+        let seen = 0;
+        for (let idx = 0; idx < row.headers.length; idx++) {
+          const h = row.headers[idx];
+          if (substrings.some(s => h.includes(s))) {
+            if (seen === occurrence) return (row.values[idx] ?? "").trim();
+            seen++;
+          }
+        }
+        return "";
+      };
+      const findCol = (patterns: string[]): string => {
         for (const p of patterns) {
-          const found = keys.find(k => k.includes(p));
-          if (found && row[found]) return row[found];
+          for (const k of Object.keys(map)) {
+            if (k.includes(p) && map[k]) return map[k];
+          }
         }
         return "";
       };
 
-      // Transaction details columns: there are two with same header "transcetion_details-1"
-      // First occurrence → transaction_details_1, second → transaction_details_2
-      // In the normalized keys they may appear as transcetion_details-1 or similar
-      const txnKeys = keys.filter(k => k.includes("transcetion") || k.includes("transaction"));
-      const txn1 = txnKeys.length > 0 ? row[txnKeys[0]] || "" : "";
-      const txn2 = txnKeys.length > 1 ? row[txnKeys[1]] || "" : "";
+      // 26-col format: there are THREE "transaction_details" cols and THREE "utr_id" cols (UTR ID, UTR ID-2, UTR ID-3)
+      // Also THREE date cols: DATE OF THE PAYMENT, DATE OF THE PAYMENT (2nd), BALANCE PAYMENT DATE (and BALANCE PAYMENT DATE (3rd))
+      // Resolve them by their occurrence index in the actual header row.
+      const txn1 = valueAtOccurrence(["transaction_details"], 0);
+      const txn2 = valueAtOccurrence(["transaction_details"], 1);
+      const txn3 = valueAtOccurrence(["transaction_details"], 2);
+      const utr1 = valueAtOccurrence(["utr_id", "utr"], 0);
+      const utr2 = valueAtOccurrence(["utr_id", "utr"], 1);
+      const utr3 = valueAtOccurrence(["utr_id", "utr"], 2);
+      // Dates: 1st = DATE OF THE PAYMENT, 2nd = DATE OF THE PAYMENT (2nd), 3rd = BALANCE PAYMENT DATE (3rd) — but
+      // there's also a generic "BALANCE PAYMENT DATE" between installments 2 and 3 in the format.
+      // Strategy: collect all date-of-payment / balance-payment-date columns in document order and assign positionally.
+      const allDateValues: string[] = [];
+      for (let idx = 0; idx < row.headers.length; idx++) {
+        const h = row.headers[idx];
+        if (h.includes("date_of_the_payment") || h.includes("balance_payment_date") || h === "payment_date") {
+          allDateValues.push(normalizeDateValue(row.values[idx]));
+        }
+      }
+      const date1 = allDateValues[0] || "";
+      const date2 = allDateValues[1] || "";
+      const date3 = allDateValues[2] || allDateValues[allDateValues.length - 1] || "";
 
       const formData = {
-        full_name: row.student_name || row.student_details || row.full_name || row.name || "",
-        email: row.email || "",
-        phone: row.contact_no1 || row.phone_number || row.phone || "",
-        roll_number: row.form_no || row.enrollment_number || row.roll_number || "",
-        course: row.grade || row.class || row.course || "",
-        department: row.stream || row.department || "",
-        year: row.year || "",
-        date_of_birth: row.date_of_birth || "",
-        blood_group: row.blood_group || "",
-        emergency_contact: row.contact_no_2 || row.emergency_contact || "",
-        father_name: row.father_name || "",
-        gender: row.gender || "",
-        // Finance fields
-        payment_date: findCol(["date_of_the_payment", "payment_date"]),
+        full_name: map.student_name || map.student_details || map.full_name || map.name || "",
+        email: map.email || "",
+        phone: map.contact_no1 || map.phone_number || map.phone || "",
+        roll_number: map.form_no || map.enrollment_number || map.roll_number || "",
+        course: map.grade || map.class || map.course || "",
+        department: map.stream || map.department || "",
+        year: map.year || "",
+        date_of_birth: normalizeDateValue(map.date_of_birth) || "",
+        blood_group: map.blood_group || "",
+        emergency_contact: map.contact_no_2 || map.emergency_contact || "",
+        father_name: map.father_name || "",
+        gender: map.gender || "",
+        // Finance fields — payment_date kept for backward compat (= installment-1 date)
+        payment_date: date1,
         final_fee: String(parseAmount(findCol(["final_fee"]))),
+        // Installment 1
+        payment_date_1: date1,
         payment_mode_1: findCol(["payment_mode-1", "payment_mode_1"]),
-        amount_1: String(parseAmount(findCol(["amount_1", "amount1"]))),
+        amount_1: String(parseAmount(findCol(["amount_1", "amount1", "amount-1"]))),
         transaction_details_1: txn1,
+        utr_id_1: utr1,
+        // Installment 2
+        payment_date_2: date2,
         payment_mode_2: findCol(["payment_mode-2", "payment_mode_2"]),
-        amount_2: String(parseAmount(findCol(["amount_2", "amount2"]))),
-        balance_payment: findCol(["balance_payment", "balance"]),
+        amount_2: String(parseAmount(findCol(["amount_2", "amount2", "amount-2"]))),
         transaction_details_2: txn2,
+        utr_id_2: utr2,
+        // Installment 3 (new)
+        payment_date_3: date3,
+        payment_mode_3: findCol(["payment_mode-3", "payment_mode_3"]),
+        amount_3: String(parseAmount(findCol(["amount_3", "amount3", "amount-3"]))),
+        transaction_details_3: txn3,
+        utr_id_3: utr3,
+        balance_payment: findCol(["balance_payment_date", "balance_payment", "balance"]),
         account_number: findCol(["account_number"]),
         alloted_room_no: findCol(["alloted_room", "alloted_room_no"]),
         remarks: findCol(["remarks"]),
