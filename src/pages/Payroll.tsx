@@ -323,7 +323,7 @@ const Payroll = () => {
     }
   }, [payrollStartDate, payrollEndDate, selectedEmployeeIds.length]);
 
-  // Auto-calculate PT when gross changes (uses period start date for Feb rule)
+  // Auto-calculate PT when monthly gross changes (sums slabs across every month in the period)
   useEffect(() => {
     if (selectedEmployee) {
       const basic = selectedEmployee.salary_amount || 0;
@@ -335,30 +335,54 @@ const Payroll = () => {
       const ot = parseFloat(payrollForm.ot) || 0;
       const inc = parseFloat(payrollForm.incentives) || 0;
       const bon = parseFloat(payrollForm.bonus) || 0;
-      const gross = basic + hra + sa + pf + cf + oa + ot + inc + bon;
-      const autoPT = calculatePT(gross, payrollStartDate);
+      // PT slabs are evaluated on MONTHLY-equivalent gross, then summed across covered months.
+      const monthlyGross = basic + hra + sa + pf + cf + oa + ot + inc + bon;
+      const autoPT = calculatePTForPeriod(monthlyGross, payrollStartDate, payrollEndDate);
       setPayrollForm(p => ({ ...p, professional_tax: String(autoPT) }));
     }
-  }, [selectedEmployee?.id, payrollForm.hra, payrollForm.special_allowance, payrollForm.professional_fees, payrollForm.contract_fees, payrollForm.other_additions, payrollForm.ot, payrollForm.incentives, payrollForm.bonus, payrollForm.month]);
+  }, [selectedEmployee?.id, payrollForm.hra, payrollForm.special_allowance, payrollForm.professional_fees, payrollForm.contract_fees, payrollForm.other_additions, payrollForm.ot, payrollForm.incentives, payrollForm.bonus, payrollStartDate, payrollEndDate]);
 
-  // Auto-calculations with PF cap at ₹1,800 and proper LOP
+  // Auto-calculations — pro-rate every monthly earning by the period factor (totalDays / 30).
+  // Statutory caps and ESI gating use MONTHLY-equivalent values so they remain compliant.
   const payrollCalc = useMemo(() => {
-    const basic = selectedEmployee?.salary_amount || 0;
-    const hra = parseFloat(payrollForm.hra) || 0;
-    const specialAllowance = parseFloat(payrollForm.special_allowance) || 0;
-    const professionalFees = parseFloat(payrollForm.professional_fees) || 0;
-    const contractFees = parseFloat(payrollForm.contract_fees) || 0;
-    const otherAdditions = parseFloat(payrollForm.other_additions) || 0;
-    const ot = parseFloat(payrollForm.ot) || 0;
-    const incentives = parseFloat(payrollForm.incentives) || 0;
-    const bonus = parseFloat(payrollForm.bonus) || 0;
+    // Monthly baseline (form fields hold per-month figures auto-filled from employee master)
+    const basicM = selectedEmployee?.salary_amount || 0;
+    const hraM = parseFloat(payrollForm.hra) || 0;
+    const specialAllowanceM = parseFloat(payrollForm.special_allowance) || 0;
+    const professionalFeesM = parseFloat(payrollForm.professional_fees) || 0;
+    const contractFeesM = parseFloat(payrollForm.contract_fees) || 0;
+    const otherAdditionsM = parseFloat(payrollForm.other_additions) || 0;
+    const otM = parseFloat(payrollForm.ot) || 0;
+    const incentivesM = parseFloat(payrollForm.incentives) || 0;
+    const bonusM = parseFloat(payrollForm.bonus) || 0;
+    const monthlyGross = basicM + hraM + specialAllowanceM + professionalFeesM + contractFeesM + otherAdditionsM + otM + incentivesM + bonusM;
+
+    const totalDays = parseInt(payrollForm.total_days) || 30;
+    const lop = parseInt(payrollForm.lop) || 0;
+    const daysWorked = totalDays - lop;
+    const factor = periodFactor(totalDays);
+    const months = monthsCovered(payrollStartDate, payrollEndDate);
+
+    // Pro-rated earnings for the chosen period
+    const basic = Math.round(basicM * factor);
+    const hra = Math.round(hraM * factor);
+    const specialAllowance = Math.round(specialAllowanceM * factor);
+    const professionalFees = Math.round(professionalFeesM * factor);
+    const contractFees = Math.round(contractFeesM * factor);
+    const otherAdditions = Math.round(otherAdditionsM * factor);
+    const ot = Math.round(otM * factor);
+    const incentives = Math.round(incentivesM * factor);
+    const bonus = Math.round(bonusM * factor);
     const gross = basic + hra + specialAllowance + professionalFees + contractFees + otherAdditions + ot + incentives + bonus;
 
-    // PF capped at ₹1,800
-    const pfEmployee = payrollForm.pf_enabled ? Math.min(Math.round(basic * 0.12), 1800) : 0;
-    const pfEmployer = payrollForm.pf_enabled ? Math.min(Math.round(basic * 0.12), 1800) : 0;
-    const esiEmployee = payrollForm.esi_enabled && gross <= 21000 ? Math.round(gross * 0.0075) : 0;
-    const esiEmployer = payrollForm.esi_enabled && gross <= 21000 ? Math.round(gross * 0.0325) : 0;
+    // PF: 12% of pro-rated basic, monthly cap ₹1,800 → scales with the period (e.g. 2 months ⇒ ₹3,600)
+    const pfCap = Math.round(1800 * factor);
+    const pfEmployee = payrollForm.pf_enabled ? Math.min(Math.round(basic * 0.12), pfCap) : 0;
+    const pfEmployer = payrollForm.pf_enabled ? Math.min(Math.round(basic * 0.12), pfCap) : 0;
+    // ESI gating uses MONTHLY-equivalent gross (₹21,000 threshold is a per-month rule)
+    const esiEmployee = payrollForm.esi_enabled && monthlyGross <= 21000 ? Math.round(gross * 0.0075) : 0;
+    const esiEmployer = payrollForm.esi_enabled && monthlyGross <= 21000 ? Math.round(gross * 0.0325) : 0;
+    // One-off deductions — taken as entered (admin enters period totals)
     const lwf = parseFloat(payrollForm.lwf) || 0;
     const salaryAdvance = parseFloat(payrollForm.salary_advance) || 0;
     const pt = parseFloat(payrollForm.professional_tax) || 0;
@@ -367,11 +391,7 @@ const Payroll = () => {
     const tds194j = parseFloat(payrollForm.tds_194j) || 0;
     const otherDed = parseFloat(payrollForm.other_deduction) || 0;
 
-    const totalDays = parseInt(payrollForm.total_days) || 30;
-    const lop = parseInt(payrollForm.lop) || 0;
-    const daysWorked = totalDays - lop;
-
-    // LOP deduction = (Gross / Calendar Days) × LOP Days
+    // LOP deduction = (Period Gross / Calendar Days) × LOP Days
     const lopDeduction = calculateLOPDeduction(gross, totalDays, lop);
 
     const totalDeductions = pfEmployee + esiEmployee + lwf + salaryAdvance + pt + tds + tds194c + tds194j + otherDed;
@@ -381,8 +401,11 @@ const Payroll = () => {
       basic, hra, specialAllowance, professionalFees, contractFees, otherAdditions, ot, incentives, bonus, gross,
       pfEmployee, pfEmployer, esiEmployee, esiEmployer, lwf, salaryAdvance, pt, tds, tds194c, tds194j, otherDed,
       totalDeductions, totalDays, lop, daysWorked, lopDeduction, net,
+      // Period metadata for UI hints / exports
+      monthlyGross, factor, months,
+      basicMonthly: basicM, hraMonthly: hraM, specialAllowanceMonthly: specialAllowanceM, otherAdditionsMonthly: otherAdditionsM,
     };
-  }, [selectedEmployee, payrollForm]);
+  }, [selectedEmployee, payrollForm, payrollStartDate, payrollEndDate]);
 
   // TDS calculation result
   const tdsCalcResult = useMemo(() => {
