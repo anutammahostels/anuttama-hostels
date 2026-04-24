@@ -573,18 +573,32 @@ const Payroll = () => {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Helper to generate months array from start to end (yyyy-MM format)
-  const getMonthsInRange = (start: string, end: string): string[] => {
-    const [sy, sm] = start.split("-").map(Number);
-    const [ey, em] = end.split("-").map(Number);
-    const months: string[] = [];
-    let cy = sy, cm = sm;
-    while (cy < ey || (cy === ey && cm <= em)) {
-      months.push(`${cy}-${String(cm).padStart(2, "0")}`);
-      cm++;
-      if (cm > 12) { cm = 1; cy++; }
+  // ── Period helpers (date-range payroll) ──
+  // The DB `month` text column stores either a legacy "YYYY-MM" or a period key "YYYY-MM-DD_to_YYYY-MM-DD".
+  const buildPeriodKey = (start: string, end: string) => `${start}_to_${end}`;
+
+  const parsePeriodKey = (m: string): { start: Date; end: Date } => {
+    if (m && m.includes("_to_")) {
+      const [s, e] = m.split("_to_");
+      return { start: new Date(s), end: new Date(e) };
     }
-    return months;
+    // Backward compat: legacy "YYYY-MM"
+    const [y, mo] = (m || "").split("-").map(Number);
+    if (!y || !mo) return { start: new Date(), end: new Date() };
+    return { start: new Date(y, mo - 1, 1), end: new Date(y, mo, 0) };
+  };
+
+  const daysBetween = (start: string, end: string): number => {
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+    return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+  };
+
+  const formatPeriodDisplay = (m: string): string => {
+    const { start, end } = parsePeriodKey(m);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return m;
+    return `${format(start, "dd MMM yyyy")} → ${format(end, "dd MMM yyyy")}`;
   };
 
   // Bulk payroll run — with date range support
