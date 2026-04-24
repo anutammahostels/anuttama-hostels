@@ -43,23 +43,15 @@ export const HostyliaLogo = ({
         ? "text-foreground"
         : "text-foreground";
 
-  // Subtle white ring behind the crest on dark backgrounds for legibility
-  const crestWrapper =
-    variant === "dark"
-      ? "rounded-full bg-white/95 p-0.5 shadow-sm ring-1 ring-white/20"
-      : "";
-
   return (
     <div className={`flex items-center ${gapMap[size]} ${className}`}>
-      <span className={`inline-flex items-center justify-center ${crestWrapper}`}>
-        <img
-          src={anuttamaLogo}
-          alt="Anuttama Enterprises LLP"
-          className={`${imageSizeMap[size]} object-contain ${animated ? "animate-float" : ""}`}
-          loading="eager"
-          decoding="async"
-        />
-      </span>
+      <img
+        src={anuttamaLogo}
+        alt="Anuttama Enterprises LLP"
+        className={`${imageSizeMap[size]} shrink-0 rounded-xl object-cover overflow-hidden ring-1 ring-black/5 shadow-sm ${animated ? "animate-float" : ""}`}
+        loading="eager"
+        decoding="async"
+      />
       {showText && (
         <span
           className={`${textSizeMap[size]} font-bold tracking-tight ${textColor}`}
