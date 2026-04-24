@@ -1222,22 +1222,26 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                 </DialogHeader>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults. Select a date range to generate across multiple months.
+                    This will generate payroll for <strong>{activeEmployees.length}</strong> active employees using their saved salary structure defaults. Select a date range — total days will be auto-calculated.
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Start Month *</Label>
-                      <Input type="month" value={bulkStartMonth} onChange={e => setBulkStartMonth(e.target.value)} />
+                      <Label>Start Date *</Label>
+                      <Input type="date" value={bulkStartDate} onChange={e => setBulkStartDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>End Month *</Label>
-                      <Input type="month" value={bulkEndMonth} onChange={e => setBulkEndMonth(e.target.value)} />
+                      <Label>End Date *</Label>
+                      <Input type="date" value={bulkEndDate} onChange={e => setBulkEndDate(e.target.value)} />
                     </div>
                   </div>
-                  {bulkStartMonth > bulkEndMonth && (
-                    <p className="text-sm text-destructive font-medium">⚠️ Start month must be before or equal to end month.</p>
+                  {bulkStartDate > bulkEndDate ? (
+                    <p className="text-sm text-destructive font-medium">⚠️ Start date must be on or before end date.</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Total days: <strong>{daysBetween(bulkStartDate, bulkEndDate)}</strong>
+                    </p>
                   )}
-                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || bulkStartMonth > bulkEndMonth || activeEmployees.length === 0}>
+                  <Button className="w-full" onClick={() => bulkPayrollMutation.mutate()} disabled={bulkPayrollMutation.isPending || bulkStartDate > bulkEndDate || activeEmployees.length === 0}>
                     {bulkPayrollMutation.isPending ? "Processing..." : `Generate for ${activeEmployees.length} Employees`}
                   </Button>
                 </div>
