@@ -124,62 +124,80 @@ const Students = () => {
   const assignBeds = (assignRooms.find(r => r.id === selectedRoomId)?.beds || [])
     .filter(bed => !bed.student_id && bed.status === "vacant");
 
-  const parseCSV = (text: string) => {
+  // Normalize header text: lowercase, collapse spaces, treat misspelling "transcetion" === "transaction"
+  const normalizeHeader = (h: string) =>
+    String(h ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/transcetion/g, "transaction");
+
+  // Convert Excel serial date or string to ISO yyyy-mm-dd (if parseable), else return original trimmed string
+  const normalizeDateValue = (val: any): string => {
+    if (val == null || val === "") return "";
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      return val.toISOString().split("T")[0];
+    }
+    if (typeof val === "number" && val > 25569) {
+      // Excel serial number → JS date
+      const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+    }
+    return String(val).trim();
+  };
+
+  // Position-aware row: each row is { headers: string[], values: string[] }
+  // Headers preserve duplicates so callers can index by occurrence (e.g. 1st vs 2nd "UTR ID")
+  type PositionalRow = { headers: string[]; values: string[]; map: Record<string, string> };
+
+  const parseCSV = (text: string): PositionalRow[] => {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return [];
-    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    const headers = lines[0].split(",").map(h => normalizeHeader(h));
     return lines.slice(1).map(line => {
       const values = line.split(",").map(v => v.trim());
-      const obj: Record<string, string> = {};
-      headers.forEach((h, i) => { obj[h] = values[i] || ""; });
-      return obj;
+      const map: Record<string, string> = {};
+      headers.forEach((h, i) => { if (!(h in map)) map[h] = values[i] || ""; });
+      return { headers, values, map };
     });
   };
 
-  const parseExcel = async (file: File): Promise<Record<string, string>[]> => {
+  const parseExcel = async (file: File): Promise<PositionalRow[]> => {
     const XLSX = await import("xlsx");
     const data = await file.arrayBuffer();
     const wb = XLSX.read(data, { type: "array", cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
 
-    // Auto-detect header row: find first row containing "Student Details" or "Enrollment number"
-    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
-    let headerRow = range.s.r; // default to first row
-    const knownHeaders = ["student details", "enrollment number", "full_name", "email", "sr. no.", "form no", "student name", "father name", "contact no1", "gender", "grade", "stream"];
-    for (let r = range.s.r; r <= Math.min(range.s.r + 20, range.e.r); r++) {
-      const cellValues: string[] = [];
-      for (let c = range.s.c; c <= range.e.c; c++) {
-        const addr = XLSX.utils.encode_cell({ r, c });
-        const cell = ws[addr];
-        if (cell?.v) cellValues.push(String(cell.v).trim().toLowerCase());
-      }
-      if (cellValues.some(v => knownHeaders.includes(v))) {
-        headerRow = r;
+    // Read sheet as array-of-arrays so duplicate header columns survive
+    const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, blankrows: false });
+    if (!aoa.length) return [];
+
+    // Auto-detect header row in first 20 rows
+    const knownTokens = ["student_name", "form_no", "father_name", "contact_no1", "grade", "stream", "final_fee", "enrollment_number", "full_name", "payment_mode-1"];
+    let headerRowIdx = 0;
+    for (let r = 0; r < Math.min(20, aoa.length); r++) {
+      const norm = aoa[r].map((c: any) => normalizeHeader(c));
+      if (norm.some(v => knownTokens.includes(v))) {
+        headerRowIdx = r;
         break;
       }
     }
 
-    // Parse from detected header row
-    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(ws, {
-      defval: "",
-      range: headerRow,
-      raw: false,
-    });
-
-    return jsonData
-      .filter(row => {
-        // Skip completely empty rows and summary/total rows
-        const vals = Object.values(row).filter(v => v !== "" && v != null);
-        return vals.length >= 3;
-      })
-      .map(row => {
-        const normalized: Record<string, string> = {};
-        Object.keys(row).forEach(key => {
-          const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, "_");
-          normalized[normalizedKey] = String(row[key] ?? "").trim();
-        });
-        return normalized;
+    const headers = aoa[headerRowIdx].map((c: any) => normalizeHeader(c));
+    const rows: PositionalRow[] = [];
+    for (let r = headerRowIdx + 1; r < aoa.length; r++) {
+      const raw = aoa[r];
+      const nonEmpty = raw.filter((v: any) => v !== "" && v != null).length;
+      if (nonEmpty < 3) continue; // skip empty / summary rows
+      const values: string[] = headers.map((_, i) => {
+        const v = raw[i];
+        return v == null ? "" : (v instanceof Date ? normalizeDateValue(v) : String(v).trim());
       });
+      const map: Record<string, string> = {};
+      headers.forEach((h, i) => { if (!(h in map)) map[h] = values[i] || ""; });
+      rows.push({ headers, values, map });
+    }
+    return rows;
   };
 
   const parseAmount = (val: string | undefined): number => {
