@@ -992,32 +992,11 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     </div>
                     <div className="space-y-2">
                       <Label>Date of Joining</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !empForm.date_of_joining && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {empForm.date_of_joining
-                              ? format(empForm.date_of_joining, "PPP")
-                              : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={empForm.date_of_joining || undefined}
-                            onSelect={(d) => setEmpForm(p => ({ ...p, date_of_joining: d || null }))}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={empForm.date_of_joining ? format(empForm.date_of_joining, "yyyy-MM-dd") : ""}
+                        onChange={e => setEmpForm(p => ({ ...p, date_of_joining: e.target.value ? new Date(e.target.value) : null }))}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Email</Label>
