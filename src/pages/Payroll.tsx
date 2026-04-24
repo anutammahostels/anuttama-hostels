@@ -1558,7 +1558,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</p>
-                        <p className="text-xs text-muted-foreground">{record.month} {record.is_locked && "🔒"}</p>
+                        <p className="text-xs text-muted-foreground">{formatPeriodDisplay(record.month)} {record.is_locked && "🔒"}</p>
                       </div>
                       <Badge variant={record.is_locked ? "secondary" : "outline"}>{record.is_locked ? "Locked" : record.status}</Badge>
                     </div>
