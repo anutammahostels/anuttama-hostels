@@ -1,43 +1,26 @@
 ## Goal
 
-Replace the text-only "Anuttama" wordmark with the uploaded **Anuttama Enterprises LLP** crest logo across the landing site, auth/onboarding pages, browser favicon, and social share previews.
+Use the newly uploaded **Anuttama Enterprises LLP** logo (yellow square version) everywhere the logo appears, and make it visually fit by clipping the square into a rounded shape so it sits cleanly inside its parent container.
 
-## Files to change
+## Changes
 
-### 1. Add the logo asset
-- Copy `user-uploads://image-13.png` → `src/assets/anuttama-logo.png` (used by React components, benefits from bundling/optimization).
-- Copy `user-uploads://image-13.png` → `public/anuttama-logo.png` (used as favicon + OG image referenced from `index.html`).
+### 1. Replace the logo asset
+- Copy `user-uploads://anuttama_logo.png` → `src/assets/anuttama-logo.png` (used by the React `HostyliaLogo` component).
+- Copy `user-uploads://anuttama_logo.png` → `public/anuttama-logo.png` (used by favicon + OG meta in `index.html`).
 
-### 2. Upgrade `src/components/brand/HostyliaLogo.tsx`
-Make the component render the actual logo image alongside the "Anuttama" wordmark, while preserving the existing API (`size`, `variant`, `className`, `animated`, `showText`) so all 6 existing usages keep working without further edits.
+This automatically refreshes the logo in: Navbar, Footer, Auth page, Onboarding header, Welcome screen, browser favicon, and social share previews.
 
-- Import the logo from `@/assets/anuttama-logo.png`.
-- Render an `<img>` (the crest) + the wordmark text in a flex row.
-- Map `size` prop to both the image dimensions (sm: 28px, md: 36px, lg: 44px, xl: 56px) and existing text size.
-- Respect `showText` (default true) so callers can hide text and show only the crest if needed.
-- Keep `variant` controlling text color exactly as today.
-- Add `alt="Anuttama Enterprises LLP"` for accessibility.
-- Add a subtle white circular background ring behind the crest only when `variant="dark"` so the yellow/red logo stays legible on the dark navy navbar/footer.
+### 2. Round the corners of the logo image — `src/components/brand/HostyliaLogo.tsx`
+The image is a yellow square; to make it sit nicely inside the parent flex container, clip the `<img>` itself with rounded corners and a subtle border:
 
-This single change automatically updates:
-- Landing Navbar (`Navbar.tsx`)
-- Landing Footer (`Footer.tsx`)
-- Auth page (`Auth.tsx`, both desktop side panel + mobile)
-- Onboarding header (`Onboarding.tsx`)
-- Welcome screen (`WelcomeScreen.tsx`)
+- Add `rounded-xl` (≈12 px radius — proportional rounded square, modern app-icon look) to the `<img>` so the yellow background becomes a rounded tile rather than a hard square.
+- Add `overflow-hidden` and a thin neutral border (`ring-1 ring-black/5`) so it reads as a polished badge on both light (white nav, auth panel) and dark (footer, navy hero) surfaces.
+- Keep `object-cover` so the artwork fills the rounded tile edge-to-edge with no transparent gaps.
+- Keep all existing props (`size`, `variant`, `className`, `showText`, `animated`) and the size maps unchanged so every existing call site (Navbar, Footer, Auth, Onboarding, Welcome) updates automatically.
 
-### 3. Favicon + meta — `index.html`
-- Replace `/hostylia-favicon.svg` references with `/anuttama-logo.png`:
-  - `<link rel="icon" type="image/png" href="/anuttama-logo.png" />`
-  - `<link rel="apple-touch-icon" href="/anuttama-logo.png" />`
-- Add an Open Graph image: `<meta property="og:image" content="/anuttama-logo.png" />` and matching `twitter:image`.
-- Leave the existing `hostylia-favicon.svg` file in place (no deletion needed; it just stops being referenced).
-
-## Out of scope
-
-- Dashboard sidebars (admin/student/super-admin) — those use icon/text headers, not the `HostyliaLogo` component. Happy to extend in a follow-up if you want the crest there too.
-- Renaming the `HostyliaLogo` component (kept as-is to avoid touching 6 import sites).
+### 3. No other files need to change
+`index.html` already references `/anuttama-logo.png` — overwriting the file is enough to refresh the favicon and OG image.
 
 ## Result
 
-Every place currently showing the "Anuttama" text mark will now show the **circular Anuttama Enterprises crest + wordmark**, and the browser tab + shared link previews will display the new logo.
+The yellow Anuttama Enterprises crest will appear with smooth rounded corners (like an app icon) next to the "Anuttama" wordmark in the navbar, footer, and auth/onboarding screens, fitting cleanly inside their parent containers without the harsh square edge.
