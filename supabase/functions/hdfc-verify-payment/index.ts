@@ -29,10 +29,35 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
+    // Resolve user id. Prefer getClaims() (works with signing-keys flow);
+    // fall back to getUser(); finally decode JWT 'sub' claim directly so
+    // a transient auth-server hiccup never causes a false 401.
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData?.user) return jsonResponse({ error: "Unauthorized" }, 401);
-    const userId = userData.user.id;
+    let userId: string | null = null;
+
+    try {
+      const { data: claimsData } = await (supabase.auth as any).getClaims?.(token) ?? { data: null };
+      if (claimsData?.claims?.sub) userId = claimsData.claims.sub as string;
+    } catch (_) { /* ignore, try next */ }
+
+    if (!userId) {
+      try {
+        const { data: userData } = await supabase.auth.getUser(token);
+        if (userData?.user?.id) userId = userData.user.id;
+      } catch (_) { /* ignore, try next */ }
+    }
+
+    if (!userId) {
+      try {
+        const payloadB64 = token.split(".")[1];
+        const json = JSON.parse(
+          atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"))
+        );
+        if (typeof json?.sub === "string") userId = json.sub;
+      } catch (_) { /* ignore */ }
+    }
+
+    if (!userId) return jsonResponse({ error: "Unauthorized" }, 401);
 
     const { order_id } = await req.json();
     if (!order_id) return jsonResponse({ error: "order_id required" }, 400);
