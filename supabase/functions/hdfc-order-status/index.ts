@@ -90,15 +90,39 @@ Deno.serve(async (req) => {
     }
 
     const basicAuth = btoa(API_KEY + ":");
+    const RESELLER_ID = Deno.env.get("HDFC_RESELLER_ID") || "hdfc_reseller";
+
+    // Customer ID must match what was sent at session creation.
+    // Stored on payment_transactions; fall back to a deterministic anonymous id.
+    const customerId =
+      (existingTxn?.customer_id as string | undefined) || `${MERCHANT_ID}_anon`;
 
     const res = await fetch(`${BASE_URL}/orders/${order_id}`, {
       method: "GET",
       headers: {
         Authorization: `Basic ${basicAuth}`,
         "Content-Type": "application/json",
+        version: "2023-06-30",
         "x-merchantid": MERCHANT_ID,
+        "x-customerid": customerId,
+        "x-resellerid": RESELLER_ID,
       },
     });
+
+    // Per spec: 400 / 401 / 500 are explicit error envelopes
+    if (res.status === 401 || res.status === 400 || res.status >= 500) {
+      const errBody = await res.text();
+      console.error("HDFC order status non-2xx:", res.status, errBody);
+      await logPayment(adminClient, order_id, "status_api", { order_id, customer_id: customerId }, { http: res.status, raw: errBody });
+      return jsonResponse(
+        {
+          error: "Gateway returned an error",
+          http_status: res.status,
+          gateway_error: (() => { try { return JSON.parse(errBody); } catch { return errBody; } })(),
+        },
+        res.status === 401 ? 502 : 502
+      );
+    }
 
     const body = await res.text();
     console.log("HDFC order status response:", res.status, body);
