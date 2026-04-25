@@ -94,10 +94,17 @@ export default function StudentInvoices() {
     } catch (err: any) {
       if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
       console.error("Payment initiation failed:", err);
+      const msg: string = err?.message || "";
+      const isProfileIssue = /profile|phone|email/i.test(msg);
       toast({
-        title: "Payment Failed",
-        description: err.message || "Could not initiate payment. Please try again.",
+        title: isProfileIssue ? "Profile incomplete" : "Payment Failed",
+        description: msg || "Could not initiate payment. Please try again.",
         variant: "destructive",
+        action: isProfileIssue ? (
+          <ToastAction altText="Update profile" onClick={() => navigate("/student/profile")}>
+            Update profile
+          </ToastAction>
+        ) : undefined,
       });
     } finally {
       setPayingInvoiceId(null);
