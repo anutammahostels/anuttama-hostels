@@ -61,11 +61,40 @@ export async function getOrderStatus(orderId: string) {
     status: "SUCCESS" | "PENDING" | "FAILED" | "UNKNOWN" | "TAMPERED";
     hdfc_status: string;
     amount: number;
+    currency?: string;
     txn_id: string | null;
+    txn_uuid?: string | null;
     payment_method: string | null;
     payment_method_type: string | null;
     refunded: boolean;
     amount_refunded: number;
+    gateway?: string | null;
+    gateway_id?: number | null;
+    gateway_reference_id?: string | null;
+    payment_gateway_response?: {
+      resp_code?: string | null;
+      resp_message?: string | null;
+      rrn?: string | null;
+      epg_txn_id?: string | null;
+      auth_id_code?: string | null;
+    } | null;
+    card?: {
+      card_brand?: string | null;
+      card_type?: string | null;
+      card_issuer?: string | null;
+      last_four_digits?: string | null;
+    } | null;
+    payer_vpa?: string | null;
+    refunds?: Array<{
+      id: string | null;
+      unique_request_id?: string | null;
+      amount: number;
+      status: string | null;
+      ref?: string | null;
+      created?: string | null;
+      refund_type?: string | null;
+      refund_source?: string | null;
+    }>;
     gateway_response: Record<string, unknown>;
   };
 }
