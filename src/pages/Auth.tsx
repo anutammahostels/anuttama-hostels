@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { HostyliaLogo } from '@/components/brand/HostyliaLogo';
 import heroBuilding from '@/assets/hero-building.jpg';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const enrollmentSchema = z.string().min(1, 'Please enter your enrollment number');
@@ -76,10 +77,19 @@ export default function Auth() {
     e.preventDefault();
     if (!validateForm()) return;
     setIsLoading(true);
-    // For students, convert enrollment number to the generated email format
-    const loginEmail = isStudent 
-      ? `${enrollmentNumber.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`
-      : email;
+    // For students, resolve their actual auth email from the roll_number via edge function
+    let loginEmail = email;
+    if (isStudent) {
+      try {
+        const { data, error: resolveError } = await supabase.functions.invoke("resolve-student-email", {
+          body: { roll_number: enrollmentNumber.trim() },
+        });
+        if (resolveError) throw resolveError;
+        loginEmail = (data as any)?.email || `${enrollmentNumber.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`;
+      } catch (err) {
+        loginEmail = `${enrollmentNumber.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`;
+      }
+    }
     const { error } = await signIn(loginEmail, password);
     setIsLoading(false);
     if (error) {
