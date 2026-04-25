@@ -53,6 +53,24 @@ export default function StudentInvoices() {
     const balance = invoice.total_amount - (invoice.paid_amount || 0);
     if (balance <= 0) return;
 
+    // Pre-flight: HDFC requires a valid email and 10-digit phone on the customer profile
+    const rawPhone = String(profile?.phone || "").replace(/[^0-9]/g, "");
+    const phone10 = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
+    const emailOk = !!profile?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email);
+    if (!emailOk || phone10.length !== 10) {
+      toast({
+        title: "Profile incomplete",
+        description: "Add a valid email and 10-digit mobile number on your profile to pay online.",
+        variant: "destructive",
+        action: (
+          <ToastAction altText="Update profile" onClick={() => navigate("/student/profile")}>
+            Update profile
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
     const checkoutWindow = window.self !== window.top ? window.open("", "_blank") : null;
     if (checkoutWindow) {
       checkoutWindow.document.title = "Redirecting to payment";
