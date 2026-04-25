@@ -20,6 +20,7 @@ type PaymentResult = {
   amount?: number | null;
   invoiceNumber?: string | null;
   transactionRef?: string | null;
+  paymentMethodLabel?: string | null;
 };
 
 export default function PaymentStatus() {
@@ -50,12 +51,30 @@ export default function PaymentStatus() {
         const v = await verifyPayment(orderId);
         if (v.status === "SUCCESS") {
           sessionStorage.removeItem("hdfc_pending_order_id");
+
+          // Fetch richer payment-method details (card brand / VPA) for display.
+          let paymentMethodLabel: string | null = null;
+          try {
+            const detail = await getOrderStatus(orderId);
+            if (detail.card?.last_four_digits) {
+              const brand = detail.card.card_brand || "Card";
+              paymentMethodLabel = `${brand} •••• ${detail.card.last_four_digits}`;
+            } else if (detail.payer_vpa) {
+              paymentMethodLabel = `UPI: ${detail.payer_vpa}`;
+            } else if (detail.payment_method) {
+              paymentMethodLabel = detail.payment_method;
+            }
+          } catch {
+            /* non-fatal */
+          }
+
           setResult({
             status: "completed",
             orderId: v.order_id,
             amount: v.amount,
             invoiceNumber: v.invoice_number,
             transactionRef: v.hdfc_txn_id,
+            paymentMethodLabel,
           });
           return true;
         }
@@ -203,6 +222,12 @@ export default function PaymentStatus() {
                   Status: <span className="font-medium text-green-600">SUCCESS</span>
                 </p>
                 {result.invoiceNumber && <p>Invoice: {result.invoiceNumber}</p>}
+                {result.paymentMethodLabel && (
+                  <p>
+                    Paid via:{" "}
+                    <span className="font-medium text-foreground">{result.paymentMethodLabel}</span>
+                  </p>
+                )}
                 {result.transactionRef && <p>Transaction Ref: {result.transactionRef}</p>}
               </div>
               <p className="text-xs text-muted-foreground">

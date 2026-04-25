@@ -117,8 +117,8 @@ Deno.serve(async (req) => {
     const ENVIRONMENT = Deno.env.get("HDFC_ENVIRONMENT") || "sandbox";
     const BASE_URL =
       ENVIRONMENT === "production"
-        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfcbank.com"
-        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgatewayuat.hdfcbank.com";
+        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfc.bank.in"
+        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in";
     const PAYMENT_PAGE_CLIENT_ID =
       Deno.env.get("HDFC_PAYMENT_PAGE_CLIENT_ID") || Deno.env.get("HDFC_CLIENT_ID") || "hdfcmaster";
 
@@ -154,6 +154,23 @@ Deno.serve(async (req) => {
       propertyId = firstProp?.id || null;
     }
     if (!propertyId) return jsonResponse({ error: "No property found" }, 400);
+
+    // --- Validate customer email and phone per HDFC spec ---
+    const rawPhone = String(profile?.phone || "").replace(/[^0-9]/g, "");
+    const phone10 = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
+    const emailOk = !!profile?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email);
+    if (!emailOk || phone10.length !== 10) {
+      return jsonResponse(
+        { error: "Please update your profile with a valid 10-digit phone number and email before paying." },
+        400
+      );
+    }
+
+    // --- Split name into first / last ---
+    const fullName = String(profile?.full_name || "").trim();
+    const nameParts = fullName.split(/\s+/).filter(Boolean);
+    const firstName = (nameParts[0] || "Student").replace(/[^A-Za-z0-9().\-_]/g, "").slice(0, 50) || "Student";
+    const lastName = (nameParts.slice(1).join(" ") || "User").replace(/[^A-Za-z0-9().\-_ ]/g, "").slice(0, 50) || "User";
 
     // --- customer_id derived from auth.uid (no hardcoding) ---
     const customerId = userId.replace(/-/g, "").substring(0, 30);
@@ -210,12 +227,20 @@ Deno.serve(async (req) => {
       order_id: orderId,
       amount: String(balance.toFixed(2)),
       customer_id: customerId,
-      customer_email: profile?.email || `student_${student.id}@hostylia.com`,
-      customer_phone: profile?.phone || "9999999999",
+      customer_email: profile!.email,
+      customer_phone: phone10,
       payment_page_client_id: PAYMENT_PAGE_CLIENT_ID,
       action: "paymentPage",
       return_url: enrichedReturnUrl,
       currency: "INR",
+      description: `Hostel fee — invoice ${invoice.invoice_number}`.slice(0, 200),
+      first_name: firstName,
+      last_name: lastName,
+      // UDFs for reconciliation in HDFC dashboard & webhooks
+      udf1: invoice.id,
+      udf2: student.id,
+      udf3: propertyId,
+      udf6: invoice.invoice_number || "",
     };
 
     console.log("HDFC session payload:", JSON.stringify(sessionPayload));

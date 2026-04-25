@@ -44,8 +44,8 @@ Deno.serve(async (req) => {
     const ENVIRONMENT = Deno.env.get("HDFC_ENVIRONMENT") || "sandbox";
     const BASE_URL =
       ENVIRONMENT === "production"
-        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfcbank.com"
-        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgatewayuat.hdfcbank.com";
+        ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfc.bank.in"
+        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in";
 
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
