@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Receipt, Download, IndianRupee, Loader2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { createPaymentSession, openPaymentCheckout } from "@/lib/hdfc";
 import { PaymentOrderDetails } from "@/components/student/PaymentOrderDetails";
 
 export default function StudentInvoices() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
   const { data: student } = useQuery({
@@ -50,6 +53,24 @@ export default function StudentInvoices() {
     const balance = invoice.total_amount - (invoice.paid_amount || 0);
     if (balance <= 0) return;
 
+    // Pre-flight: HDFC requires a valid email and 10-digit phone on the customer profile
+    const rawPhone = String(profile?.phone || "").replace(/[^0-9]/g, "");
+    const phone10 = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
+    const emailOk = !!profile?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email);
+    if (!emailOk || phone10.length !== 10) {
+      toast({
+        title: "Profile incomplete",
+        description: "Add a valid email and 10-digit mobile number on your profile to pay online.",
+        variant: "destructive",
+        action: (
+          <ToastAction altText="Update profile" onClick={() => navigate("/student/profile")}>
+            Update profile
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
     const checkoutWindow = window.self !== window.top ? window.open("", "_blank") : null;
     if (checkoutWindow) {
       checkoutWindow.document.title = "Redirecting to payment";
@@ -73,10 +94,17 @@ export default function StudentInvoices() {
     } catch (err: any) {
       if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
       console.error("Payment initiation failed:", err);
+      const msg: string = err?.message || "";
+      const isProfileIssue = /profile|phone|email/i.test(msg);
       toast({
-        title: "Payment Failed",
-        description: err.message || "Could not initiate payment. Please try again.",
+        title: isProfileIssue ? "Profile incomplete" : "Payment Failed",
+        description: msg || "Could not initiate payment. Please try again.",
         variant: "destructive",
+        action: isProfileIssue ? (
+          <ToastAction altText="Update profile" onClick={() => navigate("/student/profile")}>
+            Update profile
+          </ToastAction>
+        ) : undefined,
       });
     } finally {
       setPayingInvoiceId(null);
