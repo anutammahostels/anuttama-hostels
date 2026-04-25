@@ -90,15 +90,39 @@ Deno.serve(async (req) => {
     }
 
     const basicAuth = btoa(API_KEY + ":");
+    const RESELLER_ID = Deno.env.get("HDFC_RESELLER_ID") || "hdfc_reseller";
+
+    // Customer ID must match what was sent at session creation.
+    // Stored on payment_transactions; fall back to a deterministic anonymous id.
+    const customerId =
+      (existingTxn?.customer_id as string | undefined) || `${MERCHANT_ID}_anon`;
 
     const res = await fetch(`${BASE_URL}/orders/${order_id}`, {
       method: "GET",
       headers: {
         Authorization: `Basic ${basicAuth}`,
         "Content-Type": "application/json",
+        version: "2023-06-30",
         "x-merchantid": MERCHANT_ID,
+        "x-customerid": customerId,
+        "x-resellerid": RESELLER_ID,
       },
     });
+
+    // Per spec: 400 / 401 / 500 are explicit error envelopes
+    if (res.status === 401 || res.status === 400 || res.status >= 500) {
+      const errBody = await res.text();
+      console.error("HDFC order status non-2xx:", res.status, errBody);
+      await logPayment(adminClient, order_id, "status_api", { order_id, customer_id: customerId }, { http: res.status, raw: errBody });
+      return jsonResponse(
+        {
+          error: "Gateway returned an error",
+          http_status: res.status,
+          gateway_error: (() => { try { return JSON.parse(errBody); } catch { return errBody; } })(),
+        },
+        res.status === 401 ? 502 : 502
+      );
+    }
 
     const body = await res.text();
     console.log("HDFC order status response:", res.status, body);
@@ -238,16 +262,58 @@ Deno.serve(async (req) => {
       await adminClient.from("payment_transactions").update({ status: "PENDING" }).eq("order_id", order_id);
     }
 
+    // Normalize the rich subset of the spec response
+    const card = data.card
+      ? {
+          card_brand: data.card.card_brand || null,
+          card_type: data.card.card_type || null,
+          card_issuer: data.card.card_issuer || null,
+          last_four_digits: data.card.last_four_digits || null,
+        }
+      : null;
+
+    const pgr = data.payment_gateway_response
+      ? {
+          resp_code: data.payment_gateway_response.resp_code ?? null,
+          resp_message: data.payment_gateway_response.resp_message ?? null,
+          rrn: data.payment_gateway_response.rrn ?? null,
+          epg_txn_id: data.payment_gateway_response.epg_txn_id ?? null,
+          auth_id_code: data.payment_gateway_response.auth_id_code ?? null,
+        }
+      : null;
+
+    const refunds = Array.isArray(data.refunds)
+      ? data.refunds.map((r: any) => ({
+          id: r.id ?? r.unique_request_id ?? null,
+          unique_request_id: r.unique_request_id ?? null,
+          amount: Number(r.amount ?? 0),
+          status: r.status ?? null,
+          ref: r.ref ?? null,
+          created: r.created ?? null,
+          refund_type: r.refund_type ?? null,
+          refund_source: r.refund_source ?? null,
+        }))
+      : [];
+
     return jsonResponse({
       order_id: data.order_id || order_id,
       status: mappedStatus,
       hdfc_status: hdfcStatus,
       amount: data.amount,
+      currency: data.currency || "INR",
       txn_id: data.txn_id || null,
+      txn_uuid: data.txn_uuid || null,
       payment_method: data.payment_method || null,
       payment_method_type: data.payment_method_type || null,
       refunded: data.refunded || false,
       amount_refunded: data.amount_refunded || 0,
+      gateway: data.txn_detail?.gateway || null,
+      gateway_id: data.gateway_id ?? null,
+      gateway_reference_id: data.gateway_reference_id ?? null,
+      payment_gateway_response: pgr,
+      card,
+      payer_vpa: data.payer_vpa || data.upi?.payer_vpa || null,
+      refunds,
       gateway_response: data,
     });
   } catch (err) {
