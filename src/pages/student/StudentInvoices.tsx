@@ -9,6 +9,7 @@ import { Receipt, Download, IndianRupee, Loader2, CreditCard } from "lucide-reac
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { createPaymentSession, openPaymentCheckout } from "@/lib/hdfc";
+import { PaymentOrderDetails } from "@/components/student/PaymentOrderDetails";
 
 export default function StudentInvoices() {
   const { user } = useAuth();
@@ -260,6 +261,7 @@ export default function StudentInvoices() {
                       )}
                     </div>
                   </div>
+                  <PaymentOrderDetails invoiceId={inv.id} />
                 </CardContent>
               </Card>
             );
