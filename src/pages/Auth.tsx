@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { HostyliaLogo } from '@/components/brand/HostyliaLogo';
 import heroBuilding from '@/assets/hero-building.jpg';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const enrollmentSchema = z.string().min(1, 'Please enter your enrollment number');
