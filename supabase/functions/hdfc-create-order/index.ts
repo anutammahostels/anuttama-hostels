@@ -133,7 +133,7 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
   const pkcs8Der = pkcs1ToPkcs8(pem);
   return crypto.subtle.importKey(
     "pkcs8",
-    pkcs8Der,
+    pkcs8Der as BufferSource,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"],
@@ -144,7 +144,7 @@ async function importPrivateKeyForDecrypt(pem: string): Promise<CryptoKey> {
   const pkcs8Der = pkcs1ToPkcs8(pem);
   return crypto.subtle.importKey(
     "pkcs8",
-    pkcs8Der,
+    pkcs8Der as BufferSource,
     { name: "RSA-OAEP", hash: "SHA-256" },
     false,
     ["decrypt"],
@@ -155,7 +155,7 @@ async function importPublicKeyForEncrypt(pem: string): Promise<CryptoKey> {
   const der = pemToDer(pem);
   return crypto.subtle.importKey(
     "spki",
-    der,
+    der as BufferSource,
     { name: "RSA-OAEP", hash: "SHA-256" },
     false,
     ["encrypt"],
@@ -166,7 +166,7 @@ async function importPublicKeyForVerify(pem: string): Promise<CryptoKey> {
   const der = pemToDer(pem);
   return crypto.subtle.importKey(
     "spki",
-    der,
+    der as BufferSource,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["verify"],
@@ -256,10 +256,10 @@ async function decryptJwe(
 ) {
   // Unwrap CEK
   const cek = new Uint8Array(
-    await crypto.subtle.decrypt({ name: "RSA-OAEP" }, merchantDecryptKey, b64urlDecode(jwe.encryptedKey)),
+    await crypto.subtle.decrypt({ name: "RSA-OAEP" }, merchantDecryptKey, b64urlDecode(jwe.encryptedKey) as BufferSource),
   );
 
-  const aesKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, ["decrypt"]);
+  const aesKey = await crypto.subtle.importKey("raw", cek as BufferSource, { name: "AES-GCM" }, false, ["decrypt"]);
   const iv = b64urlDecode(jwe.iv);
   const ct = b64urlDecode(jwe.encryptedPayload);
   const tag = b64urlDecode(jwe.tag);
@@ -271,7 +271,7 @@ async function decryptJwe(
   combined.set(tag, ct.length);
 
   const decryptedBytes = new Uint8Array(
-    await crypto.subtle.decrypt({ name: "AES-GCM", iv, additionalData: aad, tagLength: 128 }, aesKey, combined),
+    await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv as BufferSource, additionalData: aad as BufferSource, tagLength: 128 }, aesKey, combined as BufferSource),
   );
 
   const inner = JSON.parse(new TextDecoder().decode(decryptedBytes));
@@ -279,7 +279,7 @@ async function decryptJwe(
   // Inner should be JWS
   if (isJwsPayload(inner)) {
     const sigInput = new TextEncoder().encode(`${inner.header}.${inner.payload}`);
-    const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", bankVerifyKey, b64urlDecode(inner.signature), sigInput);
+    const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", bankVerifyKey, b64urlDecode(inner.signature) as BufferSource, sigInput as BufferSource);
     if (!valid) throw new Error("JWS signature verification failed");
     return JSON.parse(new TextDecoder().decode(b64urlDecode(inner.payload))) as Record<string, unknown>;
   }

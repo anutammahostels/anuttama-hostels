@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ message: 'Warden created', userId: newUser.user.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error?.message ?? String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
