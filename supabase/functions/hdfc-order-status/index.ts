@@ -262,16 +262,58 @@ Deno.serve(async (req) => {
       await adminClient.from("payment_transactions").update({ status: "PENDING" }).eq("order_id", order_id);
     }
 
+    // Normalize the rich subset of the spec response
+    const card = data.card
+      ? {
+          card_brand: data.card.card_brand || null,
+          card_type: data.card.card_type || null,
+          card_issuer: data.card.card_issuer || null,
+          last_four_digits: data.card.last_four_digits || null,
+        }
+      : null;
+
+    const pgr = data.payment_gateway_response
+      ? {
+          resp_code: data.payment_gateway_response.resp_code ?? null,
+          resp_message: data.payment_gateway_response.resp_message ?? null,
+          rrn: data.payment_gateway_response.rrn ?? null,
+          epg_txn_id: data.payment_gateway_response.epg_txn_id ?? null,
+          auth_id_code: data.payment_gateway_response.auth_id_code ?? null,
+        }
+      : null;
+
+    const refunds = Array.isArray(data.refunds)
+      ? data.refunds.map((r: any) => ({
+          id: r.id ?? r.unique_request_id ?? null,
+          unique_request_id: r.unique_request_id ?? null,
+          amount: Number(r.amount ?? 0),
+          status: r.status ?? null,
+          ref: r.ref ?? null,
+          created: r.created ?? null,
+          refund_type: r.refund_type ?? null,
+          refund_source: r.refund_source ?? null,
+        }))
+      : [];
+
     return jsonResponse({
       order_id: data.order_id || order_id,
       status: mappedStatus,
       hdfc_status: hdfcStatus,
       amount: data.amount,
+      currency: data.currency || "INR",
       txn_id: data.txn_id || null,
+      txn_uuid: data.txn_uuid || null,
       payment_method: data.payment_method || null,
       payment_method_type: data.payment_method_type || null,
       refunded: data.refunded || false,
       amount_refunded: data.amount_refunded || 0,
+      gateway: data.txn_detail?.gateway || null,
+      gateway_id: data.gateway_id ?? null,
+      gateway_reference_id: data.gateway_reference_id ?? null,
+      payment_gateway_response: pgr,
+      card,
+      payer_vpa: data.payer_vpa || data.upi?.payer_vpa || null,
+      refunds,
       gateway_response: data,
     });
   } catch (err) {
