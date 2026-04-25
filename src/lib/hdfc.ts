@@ -116,10 +116,23 @@ export async function verifyPayment(orderId: string) {
   };
 }
 
-export async function initiateRefund(orderId: string, amount: number, uniqueRequestId?: string) {
+export async function initiateRefund(
+  orderId: string,
+  amount: number,
+  uniqueRequestId?: string,
+  reason?: string
+) {
   const { data, error } = await supabase.functions.invoke("hdfc-refund", {
-    body: { order_id: orderId, amount, unique_request_id: uniqueRequestId },
+    body: { order_id: orderId, amount, unique_request_id: uniqueRequestId, reason },
   });
   if (error) throw error;
-  return data;
+  return data as {
+    status: "SUCCESS" | "PENDING" | "FAILURE" | "MANUAL_REVIEW";
+    refund_id: string;
+    unique_request_id: string;
+    amount: number;
+    refund_type: string | null;
+    refund_source: string | null;
+    gateway_response: Record<string, unknown>;
+  };
 }
