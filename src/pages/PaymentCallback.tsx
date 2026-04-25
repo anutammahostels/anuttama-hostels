@@ -31,36 +31,51 @@ export default function PaymentCallback() {
 
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    const applyVerified = async (): Promise<boolean> => {
+    // Trusts hdfc-order-status (server-verified + DB-synced) and uses
+    // hdfc-verify-payment only for invoice metadata. Verify failures are
+    // non-fatal so transient auth issues never block a known-good status.
+    const tryResolve = async (): Promise<boolean> => {
+      let detail: Awaited<ReturnType<typeof getOrderStatus>> | null = null;
       try {
-        const v = await verifyPayment(orderId);
-        if (v.status === "SUCCESS") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setStatus("SUCCESS");
-          setDetails({
-            amount: v.amount,
-            txn_id: v.hdfc_txn_id,
-            invoice_number: v.invoice_number,
-          });
-          return true;
-        }
-        if (v.status === "FAILED") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setStatus("FAILED");
-          setDetails({ amount: v.amount });
-          return true;
-        }
-        if (v.status === "TAMPERED") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setStatus("TAMPERED");
-          setDetails({ amount: v.amount });
-          return true;
-        }
-        return false;
-      } catch (e) {
-        console.error("verifyPayment failed:", e);
-        return false;
+        detail = await getOrderStatus(orderId);
+      } catch (err) {
+        console.error("hdfc-order-status check failed:", err);
       }
+
+      let verified: Awaited<ReturnType<typeof verifyPayment>> | null = null;
+      try {
+        verified = await verifyPayment(orderId);
+      } catch (err) {
+        console.error("verifyPayment failed (non-fatal):", err);
+      }
+
+      const finalStatus = detail?.status || verified?.status || null;
+      if (!finalStatus) return false;
+
+      const amount =
+        detail?.amount != null ? Number(detail.amount) : verified?.amount ?? null;
+      const txn_id = detail?.txn_id ?? verified?.hdfc_txn_id ?? null;
+      const invoice_number = verified?.invoice_number ?? null;
+
+      if (finalStatus === "SUCCESS") {
+        sessionStorage.removeItem("hdfc_pending_order_id");
+        setStatus("SUCCESS");
+        setDetails({ amount, txn_id, invoice_number });
+        return true;
+      }
+      if (finalStatus === "FAILED") {
+        sessionStorage.removeItem("hdfc_pending_order_id");
+        setStatus("FAILED");
+        setDetails({ amount });
+        return true;
+      }
+      if (finalStatus === "TAMPERED") {
+        sessionStorage.removeItem("hdfc_pending_order_id");
+        setStatus("TAMPERED");
+        setDetails({ amount });
+        return true;
+      }
+      return false;
     };
 
     const run = async () => {
@@ -68,36 +83,31 @@ export default function PaymentCallback() {
 
       const maxAttempts = 15;
       for (let i = 0; i < maxAttempts; i++) {
-        try {
-          await getOrderStatus(orderId);
-        } catch {
-          /* ignore — keep polling */
-        }
-        if (await applyVerified()) return;
+        if (await tryResolve()) return;
         if (i < maxAttempts - 1) await sleep(3000);
       }
 
       // Final attempt — show processing if still pending
       try {
-        const v = await verifyPayment(orderId);
-        if (v.status === "SUCCESS") {
+        const detail = await getOrderStatus(orderId);
+        if (detail.status === "SUCCESS") {
           setStatus("SUCCESS");
-          setDetails({ amount: v.amount, txn_id: v.hdfc_txn_id, invoice_number: v.invoice_number });
+          setDetails({ amount: Number(detail.amount), txn_id: detail.txn_id });
           return;
         }
-        if (v.status === "FAILED") {
+        if (detail.status === "FAILED") {
           setStatus("FAILED");
-          setDetails({ amount: v.amount });
+          setDetails({ amount: Number(detail.amount) });
           return;
         }
-        if (v.status === "TAMPERED") {
+        if (detail.status === "TAMPERED") {
           setStatus("TAMPERED");
-          setDetails({ amount: v.amount });
+          setDetails({ amount: Number(detail.amount) });
           return;
         }
-        if (v.status === "PENDING" || v.status === "INITIATED") {
+        if (detail.status === "PENDING") {
           setStatus("PROCESSING");
-          setDetails({ amount: v.amount });
+          setDetails({ amount: Number(detail.amount) });
           return;
         }
       } catch {

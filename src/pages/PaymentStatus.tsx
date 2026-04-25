@@ -45,81 +45,86 @@ export default function PaymentStatus() {
 
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Server-trusted result mapper. We render UI ONLY from this verified response.
-    const applyVerified = async (): Promise<boolean> => {
-      try {
-        const v = await verifyPayment(orderId);
-        if (v.status === "SUCCESS") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-
-          // Fetch richer payment-method details (card brand / VPA) for display.
-          let paymentMethodLabel: string | null = null;
-          try {
-            const detail = await getOrderStatus(orderId);
-            if (detail.card?.last_four_digits) {
-              const brand = detail.card.card_brand || "Card";
-              paymentMethodLabel = `${brand} •••• ${detail.card.last_four_digits}`;
-            } else if (detail.payer_vpa) {
-              paymentMethodLabel = `UPI: ${detail.payer_vpa}`;
-            } else if (detail.payment_method) {
-              paymentMethodLabel = detail.payment_method;
-            }
-          } catch {
-            /* non-fatal */
-          }
-
-          setResult({
-            status: "completed",
-            orderId: v.order_id,
-            amount: v.amount,
-            invoiceNumber: v.invoice_number,
-            transactionRef: v.hdfc_txn_id,
-            paymentMethodLabel,
-          });
-          return true;
-        }
-        if (v.status === "FAILED") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setResult({ status: "failed", orderId: v.order_id, amount: v.amount });
-          return true;
-        }
-        if (v.status === "TAMPERED") {
-          sessionStorage.removeItem("hdfc_pending_order_id");
-          setResult({ status: "tampered", orderId: v.order_id, amount: v.amount });
-          return true;
-        }
-        return false; // INITIATED / PENDING / NOT_FOUND — keep polling
-      } catch (e) {
-        console.error("verifyPayment failed:", e);
-        return false;
+    // Build a payment-method label from rich order-status detail.
+    const buildMethodLabel = (detail: Awaited<ReturnType<typeof getOrderStatus>>) => {
+      if (detail.card?.last_four_digits) {
+        const brand = detail.card.card_brand || "Card";
+        return `${brand} •••• ${detail.card.last_four_digits}`;
       }
+      if (detail.payer_vpa) return `UPI: ${detail.payer_vpa}`;
+      if (detail.payment_method_type) return detail.payment_method_type;
+      if (detail.payment_method) return detail.payment_method;
+      return null;
+    };
+
+    // Try to resolve a final UI status. Trusts hdfc-order-status (server-verified
+    // + DB-synced) and falls back to hdfc-verify-payment for invoice metadata.
+    const tryResolve = async (): Promise<boolean> => {
+      let detail: Awaited<ReturnType<typeof getOrderStatus>> | null = null;
+      try {
+        detail = await getOrderStatus(orderId);
+      } catch (err) {
+        console.error("hdfc-order-status check failed:", err);
+      }
+
+      // verifyPayment is best-effort — it gives us the invoice number, but if
+      // it fails (auth/network), we still proceed with the order-status result.
+      let verified: Awaited<ReturnType<typeof verifyPayment>> | null = null;
+      try {
+        verified = await verifyPayment(orderId);
+      } catch (err) {
+        console.error("verifyPayment failed (non-fatal):", err);
+      }
+
+      const finalStatus = detail?.status || verified?.status || null;
+      if (!finalStatus) return false;
+
+      const amount =
+        detail?.amount != null ? Number(detail.amount) : verified?.amount ?? null;
+      const invoiceNumber = verified?.invoice_number ?? null;
+      const transactionRef = detail?.txn_id ?? verified?.hdfc_txn_id ?? null;
+
+      if (finalStatus === "SUCCESS") {
+        sessionStorage.removeItem("hdfc_pending_order_id");
+        setResult({
+          status: "completed",
+          orderId,
+          amount,
+          invoiceNumber,
+          transactionRef,
+          paymentMethodLabel: detail ? buildMethodLabel(detail) : null,
+        });
+        return true;
+      }
+      if (finalStatus === "FAILED") {
+        sessionStorage.removeItem("hdfc_pending_order_id");
+        setResult({ status: "failed", orderId, amount });
+        return true;
+      }
+      if (finalStatus === "TAMPERED") {
+        sessionStorage.removeItem("hdfc_pending_order_id");
+        setResult({ status: "tampered", orderId, amount });
+        return true;
+      }
+      // PENDING / INITIATED / NOT_FOUND / UNKNOWN — keep polling
+      return false;
     };
 
     const run = async () => {
-      // Phase 1: 5s initial delay, then poll HDFC 15× at 3s (~50s)
+      // Phase 1: 5s initial delay, then poll up to 15× at 3s (~50s)
       await sleep(5000);
 
       const maxAttempts = 15;
       for (let i = 0; i < maxAttempts; i++) {
-        try {
-          // Drives the server-side status sync into payment_transactions
-          await getOrderStatus(orderId);
-        } catch (err) {
-          console.error("hdfc-order-status check failed:", err);
-        }
-
-        // Read trusted view
-        if (await applyVerified()) return;
-
+        if (await tryResolve()) return;
         if (i < maxAttempts - 1) await sleep(3000);
       }
 
-      // Phase 2: DB polling 5× at 5s (~25s)
+      // Phase 2: slower polling 5× at 5s (~25s)
       const dbMaxAttempts = 5;
       for (let i = 0; i < dbMaxAttempts; i++) {
-        if (await applyVerified()) return;
+        if (await tryResolve()) return;
 
-        // Optional: peek payments table to decide whether to keep waiting
         try {
           const { data: payment } = await supabase
             .from("payments")
@@ -134,29 +139,30 @@ export default function PaymentStatus() {
         if (i < dbMaxAttempts - 1) await sleep(5000);
       }
 
-      // One last verified check, else processing/not_found
+      // Final attempt — show "processing" rather than "unknown" if anything
+      // hints the payment is still in-flight.
       try {
-        const v = await verifyPayment(orderId);
-        if (v.status === "PENDING" || v.status === "INITIATED") {
-          setResult({ status: "processing", orderId: v.order_id, amount: v.amount });
+        const detail = await getOrderStatus(orderId);
+        if (detail.status === "PENDING") {
+          setResult({ status: "processing", orderId, amount: Number(detail.amount) });
           return;
         }
-        if (v.status === "SUCCESS") {
+        if (detail.status === "SUCCESS") {
           setResult({
             status: "completed",
-            orderId: v.order_id,
-            amount: v.amount,
-            invoiceNumber: v.invoice_number,
-            transactionRef: v.hdfc_txn_id,
+            orderId,
+            amount: Number(detail.amount),
+            transactionRef: detail.txn_id,
+            paymentMethodLabel: buildMethodLabel(detail),
           });
           return;
         }
-        if (v.status === "FAILED") {
-          setResult({ status: "failed", orderId: v.order_id, amount: v.amount });
+        if (detail.status === "FAILED") {
+          setResult({ status: "failed", orderId, amount: Number(detail.amount) });
           return;
         }
-        if (v.status === "TAMPERED") {
-          setResult({ status: "tampered", orderId: v.order_id, amount: v.amount });
+        if (detail.status === "TAMPERED") {
+          setResult({ status: "tampered", orderId, amount: Number(detail.amount) });
           return;
         }
       } catch {
