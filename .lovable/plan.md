@@ -1,82 +1,77 @@
-## Goal
+## Audit: Current HDFC integration vs Official Spec
 
-Make the `hdfc-order-status` Edge Function fully compliant with HDFC SmartGateway's **Order Status API** (`GET /orders/{order_id}`), and propagate the additional details (txn_uuid, gateway info, refunds, payer_vpa, card brand, etc.) up to the client.
+I reviewed the uploaded HDFC SmartGateway API reference against our 3 edge functions (`hdfc-create-session`, `hdfc-order-status`, `hdfc-refund`) and the frontend (`src/lib/hdfc.ts`, `PaymentStatus.tsx`, `PaymentOrderDetails.tsx`).
 
-## Why changes are needed
+### What is already correct ✅
+- `/session` request: all required fields are sent (`order_id`, `amount`, `customer_id`, `customer_email`, `customer_phone`, `payment_page_client_id`, `action`, `return_url`, `currency`).
+- `/orders/{order_id}` GET: sends `version: 2023-06-30`, `x-merchantid`, `x-customerid`, `x-resellerid`.
+- Order ID: 15 chars, alphanumeric, non-sequential — within the <21 char rule.
+- Status mapping covers `CHARGED`, `NEW`, `PENDING_VBV`, `AUTHORIZATION_FAILED`, `NOT_FOUND`, etc.
+- Tamper check on amount + order_id.
+- Rich response normalization: `txn_uuid`, `card`, `payer_vpa`, `payment_gateway_response`, `refunds[]`.
 
-The current implementation is functionally working but does **not** match the official spec on three points:
+### Gaps to fix ❌
 
-1. **Missing required headers**: spec requires `x-customerid`, `x-resellerid`, and `version`. We currently send only `x-merchantid` + Basic auth. HDFC may reject or rate-limit non-compliant calls in production.
-2. **Customer ID lookup**: the call is fired without the customer the order was created for. We already store `customer_id` in `payment_transactions` (set by `hdfc-create-session`) — we just aren't using it on the status call.
-3. **Thin response surface**: we only return `status`, `txn_id`, `payment_method`. The spec returns refunds, txn_uuid, gateway, gateway response codes, card metadata, payer VPA, etc. — useful for the success page, refund flow, and audit.
+**1. Base URL mismatch (HIGH)**
+Spec says:
+- Sandbox: `https://smartgateway.hdfcuat.bank.in`
+- Production: `https://smartgateway.hdfc.bank.in`
 
-## Scope of changes
+Our `hdfc-create-session` and `hdfc-order-status` default fallbacks use `smartgatewayuat.hdfcbank.com` / `smartgateway.hdfcbank.com` (legacy). The actual values come from `HDFC_BASE_URL_SANDBOX` / `HDFC_BASE_URL_PRODUCTION` secrets, but if those ever go missing the fallback hits a wrong host. Update the hardcoded fallbacks to match the spec.
 
-### 1. `supabase/functions/hdfc-order-status/index.ts`
+**2. Refund function missing required headers (HIGH)**
+Spec requires `x-customerid` and `x-resellerid` on the refund call. Our `hdfc-refund` only sends `Authorization`, `Content-Type`, `x-merchantid`. HDFC will reject this in production. We must:
+- Look up `customer_id` from `payment_transactions` for the order.
+- Add `x-customerid` and `x-resellerid` headers.
+- Log to `payment_logs` (currently no logging — inconsistent with the other functions).
+- Surface specific HDFC refund error codes (`duplicate.call`, `invalid.amount.exceeded`, `request.exceeded`, `invalid.order.not_successful`) as user-friendly messages.
 
-- Read `customer_id` from the existing `payment_transactions` row for this `order_id` (fallback to `MERCHANT_ID + "_anon"` only if absent — keeps the call alive for legacy rows).
-- Add the missing HDFC headers to the GET call:
-  - `version: 2023-06-30`
-  - `x-customerid: <customer_id>`
-  - `x-resellerid: <HDFC_RESELLER_ID env, default "hdfc_reseller">`
-- Keep Basic auth + `x-merchantid` exactly as today.
-- Handle non-200 responses explicitly per spec: 400 → bad request; 401 → access_denied; 500 → upstream error. Log + return a normalized error envelope so the frontend stays predictable.
-- Expand the JSON we return to the client to include:
-  - `txn_uuid`
-  - `gateway` + `gateway_id` + `gateway_reference_id`
-  - `payment_gateway_response` (resp_code, rrn, epg_txn_id, auth_id_code, resp_message)
-  - `card` summary (brand, type, issuer, last_four_digits) when present
-  - `payer_vpa` for UPI
-  - `refunds[]` (id, amount, status, ref, created)
-- Persist the new useful fields onto `payment_transactions` when conclusive: `hdfc_txn_id` (already done), plus `gateway_response` JSON snapshot already captured via `payments.gateway_response`. No schema change needed — existing `payment_logs.response_payload` JSON already holds the full body.
-- Keep the existing tamper check, idempotency short-circuit, accounting entries, and student notification logic untouched.
+**3. Customer email/phone fallbacks are spec-violating (MEDIUM)**
+- Phone fallback `"9999999999"` and email fallback `student_<id>@hostylia.com` go through to HDFC. Phone must be 10-digit (OK) but the synthetic email may be flagged. We should:
+  - Validate phone is exactly 10 digits (strip `+91`, spaces, dashes).
+  - If profile has no valid phone/email, return a 400 telling the user to update their profile rather than sending fake data to the gateway.
 
-### 2. `src/lib/hdfc.ts`
+**4. Missing optional fields that improve UX (LOW)**
+The spec supports `description`, `first_name`, `last_name`, and `udf1..udf10`. We send none. Recommended additions:
+- `description: "Hostel fee — invoice <invoice_number>"`
+- `first_name` / `last_name` derived from `profile.full_name`.
+- `udf1 = invoice_id`, `udf2 = student_id`, `udf3 = property_id` — extremely useful for reconciliation in HDFC dashboard and for webhook lookups.
 
-Extend the `getOrderStatus` return type to include the new fields (all optional) so callers can read them without `as any`:
+**5. UI doesn't surface card brand / VPA on the post-payment success screen (LOW)**
+`PaymentStatus.tsx` currently shows only `hdfc_txn_id`. The richer `PaymentOrderDetails` panel exists but is only shown on `StudentInvoices`. Add a compact "Payment Method" line on the success card showing `VISA •••• 1234` for cards or `payer_vpa` for UPI, fetched via `getOrderStatus`.
 
-```ts
-txn_uuid?: string | null;
-gateway?: string | null;
-gateway_id?: number | null;
-gateway_reference_id?: string | null;
-payment_gateway_response?: {
-  resp_code?: string; rrn?: string; epg_txn_id?: string;
-  auth_id_code?: string; resp_message?: string;
-} | null;
-card?: {
-  card_brand?: string; card_type?: string;
-  card_issuer?: string; last_four_digits?: string;
-} | null;
-payer_vpa?: string | null;
-refunds?: Array<{
-  id: string; amount: number; status: string;
-  ref?: string; created?: string;
-}>;
-```
+**6. Refund return type & frontend (LOW)**
+`initiateRefund` returns untyped data. Add a typed return matching the new fields (`refund_id`, `unique_request_id`, `status`, `amount`, `gateway_error_code` if any).
 
-No change to function signature — purely additive.
+---
 
-### 3. `src/pages/PaymentStatus.tsx`
+## Proposed Changes
 
-No behavioural change required (we already trust `verifyPayment` for UI). We will just surface one extra friendly line on the success card when `transactionRef` is missing but `txn_uuid` is available — fallback display only. Tiny, no layout shift.
+**`supabase/functions/hdfc-create-session/index.ts`**
+- Update sandbox/production fallback URLs to spec values.
+- Validate `profile.phone` (10 digits) and `profile.email` (basic regex). On failure return `{ error: "Please update your profile with a valid phone and email before paying" }`.
+- Add to `sessionPayload`: `description`, `first_name`, `last_name`, `udf1` (invoice_id), `udf2` (student_id), `udf3` (property_id), `udf6` (invoice_number).
 
-## Out of scope
+**`supabase/functions/hdfc-order-status/index.ts`**
+- Update fallback URLs to spec values.
 
-- No DB migration. Existing tables (`payment_transactions`, `payment_logs`, `payments`) already capture everything needed.
-- No change to `hdfc-create-session`, webhook, refund, or callback functions.
-- No change to env vars (`HDFC_RESELLER_ID` is already present in secrets).
+**`supabase/functions/hdfc-refund/index.ts`**
+- Look up `payment_transactions` row to get `customer_id`.
+- Add `x-customerid` + `x-resellerid` headers.
+- Add `payment_logs` entry (`log_type: "refund"`).
+- Map HDFC error codes to friendly messages (duplicate, exceeded, not-successful, limit-exceeded).
+- Persist refund in `refunds` table on success (currently only returns to client without DB write).
 
-## Technical notes
+**`src/lib/hdfc.ts`**
+- Type `initiateRefund` return value.
 
-- The HDFC `version` header is documented as `2023-06-30` in the curl sample; we'll send the same value.
-- `x-customerid` will be the same `customer_id` we send during session creation (auth user's UID), guaranteeing consistency.
-- Auth header stays `Basic base64(API_KEY + ":")` — matches the spec's "API key + colon" Basic Auth pattern used for the session API.
-- After editing, the function will be auto-deployed by the platform; we'll confirm with a curl ping against an existing order id.
+**`src/pages/PaymentStatus.tsx`**
+- On SUCCESS, lazy-call `getOrderStatus(order_id)` once and display payment method line: `card.card_brand •••• card.last_four_digits` or `UPI: payer_vpa`.
 
-## Acceptance
+No DB schema changes are needed — `refunds` table already exists with the right columns.
 
-- A `getOrderStatus(orderId)` call returns the new fields populated for any CHARGED order (verified against logs).
-- Server logs show the GET request includes `version`, `x-customerid`, `x-resellerid` headers.
-- Existing success / failed / tampered / processing UI flows on `/payment/status` continue to work unchanged.
-- No regressions in the webhook-driven path (the webhook already writes to the same tables).
+### Out of scope (not requested)
+- The webhook function (`hdfc-webhook`) — its existing config is fine for spec compliance of the 3 listed APIs.
+- New UI for triggering refunds from the admin panel (refund function exists; admin UI can be added later if you want).
+
+Approve and I'll implement these changes and redeploy the affected edge functions.
