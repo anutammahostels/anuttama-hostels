@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Receipt, Download, IndianRupee, Loader2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { createPaymentSession, openPaymentCheckout } from "@/lib/hdfc";
 import { PaymentOrderDetails } from "@/components/student/PaymentOrderDetails";
 
