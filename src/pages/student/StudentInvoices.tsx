@@ -16,6 +16,7 @@ import { PaymentOrderDetails } from "@/components/student/PaymentOrderDetails";
 export default function StudentInvoices() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
   const { data: student } = useQuery({
