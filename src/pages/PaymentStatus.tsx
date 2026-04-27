@@ -310,9 +310,6 @@ export default function PaymentStatus() {
                 We couldn't determine the payment status. If money was deducted, it will be
                 reflected within 24 hours.
               </p>
-              <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
-              </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
