@@ -117,28 +117,19 @@ Deno.serve(async (req) => {
         })
         .eq("id", payment.id);
 
-      // Update invoice
+      // Keep payment_transactions in sync
+      await adminClient
+        .from("payment_transactions")
+        .update({ status: "SUCCESS", hdfc_txn_id: txnId })
+        .eq("order_id", orderId);
+
+      // Idempotent invoice reconciliation (recompute from completed payments)
+      await reconcileInvoice(adminClient, payment.invoice_id);
+
       const { data: invoice } = await adminClient
-        .from("invoices")
-        .select("*")
-        .eq("id", payment.invoice_id)
-        .single();
-
+        .from("invoices").select("*").eq("id", payment.invoice_id).single();
       if (invoice) {
-        const newPaidAmount = (invoice.paid_amount || 0) + payment.amount;
-        const newStatus = newPaidAmount >= invoice.total_amount ? "paid" : "partial";
-
-        await adminClient.from("invoices").update({
-          paid_amount: newPaidAmount,
-          status: newStatus,
-          payment_date: new Date().toISOString(),
-          payment_method: "online",
-        }).eq("id", invoice.id);
-
-        // Accounting entries
         await createAccountingEntries(adminClient, payment, invoice, orderId, txnId);
-
-        // Notification
         await notifyStudent(adminClient, payment, invoice, "success");
       }
     } else if (isFailed && payment.status === "pending") {
@@ -146,6 +137,11 @@ Deno.serve(async (req) => {
         .from("payments")
         .update({ status: "failed", gateway_response: data })
         .eq("id", payment.id);
+
+      await adminClient
+        .from("payment_transactions")
+        .update({ status: "FAILED", hdfc_txn_id: txnId })
+        .eq("order_id", orderId);
 
       const { data: invoice } = await adminClient
         .from("invoices")
