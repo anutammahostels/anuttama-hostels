@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ type UiStatus =
   | "loading"
   | "completed"
   | "failed"
-  | "not_found"
   | "processing"
   | "tampered";
 
@@ -23,6 +22,18 @@ type PaymentResult = {
   paymentMethodLabel?: string | null;
 };
 
+// A status is "terminal" once we've shown it to the user; later polling
+// must NEVER downgrade it (e.g. from completed back to processing).
+const TERMINAL: UiStatus[] = ["completed", "failed", "tampered"];
+
+const REDIRECT_DELAYS: Record<UiStatus, number> = {
+  loading: 0,
+  completed: 5,
+  failed: 6,
+  tampered: 10,
+  processing: 8,
+};
+
 export default function PaymentStatus() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -33,10 +44,42 @@ export default function PaymentStatus() {
     localStorage.getItem("hdfc_pending_order_id") ||
     "";
 
+  // URL-supplied hint from the backend callback redirect:
+  // success | failed | pending | tampered
+  const hint = (searchParams.get("payment_result") || "").toLowerCase();
+  const initialFromHint: UiStatus | null =
+    hint === "success" ? "completed" :
+    hint === "failed" ? "failed" :
+    hint === "tampered" ? "tampered" :
+    hint === "pending" ? "processing" :
+    null;
+
   const [result, setResult] = useState<PaymentResult>({
-    status: "loading",
+    status: initialFromHint ?? "loading",
     orderId: initialOrderId,
   });
+
+  // Keep a ref so polling callbacks always see the latest status without
+  // causing re-renders or downgrade races.
+  const resultRef = useRef(result);
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
+
+  const safeSetStatus = (next: PaymentResult | ((p: PaymentResult) => PaymentResult)) => {
+    setResult((prev) => {
+      const candidate = typeof next === "function" ? (next as any)(prev) : next;
+      // Never downgrade a terminal state.
+      if (TERMINAL.includes(prev.status) && !TERMINAL.includes(candidate.status)) {
+        return prev;
+      }
+      // Once in "processing" with an order id, never fall back to "loading".
+      if (prev.status === "processing" && candidate.status === "loading") {
+        return prev;
+      }
+      return candidate;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -81,7 +124,7 @@ export default function PaymentStatus() {
       if (finalStatus === "SUCCESS") {
         sessionStorage.removeItem("hdfc_pending_order_id");
         localStorage.removeItem("hdfc_pending_order_id");
-        setResult({
+        safeSetStatus({
           status: "completed",
           orderId,
           amount,
@@ -94,16 +137,20 @@ export default function PaymentStatus() {
       if (finalStatus === "FAILED") {
         sessionStorage.removeItem("hdfc_pending_order_id");
         localStorage.removeItem("hdfc_pending_order_id");
-        setResult({ status: "failed", orderId, amount });
+        safeSetStatus({ status: "failed", orderId, amount });
         return true;
       }
       if (finalStatus === "TAMPERED") {
         sessionStorage.removeItem("hdfc_pending_order_id");
         localStorage.removeItem("hdfc_pending_order_id");
-        setResult({ status: "tampered", orderId, amount });
+        safeSetStatus({ status: "tampered", orderId, amount });
         return true;
       }
-      // PENDING / INITIATED / NOT_FOUND / UNKNOWN — keep polling
+      // PENDING / INITIATED / NOT_FOUND / UNKNOWN — keep polling but make
+      // sure the UI doesn't sit on "loading" indefinitely.
+      safeSetStatus((prev) =>
+        prev.status === "loading" ? { ...prev, status: "processing", orderId } : prev
+      );
       return false;
     };
 
@@ -112,7 +159,7 @@ export default function PaymentStatus() {
 
       // Wait briefly for the user's auth/session to hydrate before
       // calling the recovery endpoint.
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         const { data } = await supabase.auth.getSession();
         if (data.session) break;
         await sleep(800);
@@ -134,21 +181,19 @@ export default function PaymentStatus() {
       const orderId = await resolveOrderId();
 
       if (!orderId) {
-        // No context anywhere — show a soft "processing" state instead of
-        // a misleading "no payment found" so users who just paid are not
-        // told their payment is missing. Keep retrying recovery in the
-        // background in case the auth session hydrates later.
-        if (!cancelled) setResult({ status: "processing", orderId: "" });
+        // No context anywhere — show "processing" (never "no payment found")
+        // and keep retrying recovery in the background.
+        if (!cancelled) safeSetStatus({ status: "processing", orderId: "" });
 
-        for (let i = 0; i < 6; i++) {
-          await sleep(5000);
+        for (let i = 0; i < 8; i++) {
+          await sleep(4000);
           if (cancelled) return;
+          if (TERMINAL.includes(resultRef.current.status)) return;
           try {
             const recovered = await recoverLatestOrder();
             if (recovered?.order_id) {
               if (cancelled) return;
-              setResult((prev) => ({ ...prev, orderId: recovered.order_id! }));
-              // Continue with normal polling using the recovered id below
+              safeSetStatus((prev) => ({ ...prev, orderId: recovered.order_id! }));
               return runWithOrderId(recovered.order_id);
             }
           } catch (err) {
@@ -156,8 +201,9 @@ export default function PaymentStatus() {
           }
         }
 
-        // After ~30s with nothing recoverable, only NOW show "not_found".
-        if (!cancelled) setResult({ status: "not_found", orderId: "" });
+        // After ~32s with nothing recoverable, stay on "processing" — we
+        // never want to tell the user there is no payment when they just
+        // completed a checkout.
         return;
       }
 
@@ -166,14 +212,15 @@ export default function PaymentStatus() {
 
     const runWithOrderId = async (orderId: string) => {
       if (!cancelled) {
-        setResult((prev) => ({ ...prev, orderId }));
+        safeSetStatus((prev) => ({ ...prev, orderId }));
       }
 
       // Phase 1: short delay then aggressive polling
-      await sleep(3000);
+      await sleep(2000);
       const maxAttempts = 15;
       for (let i = 0; i < maxAttempts; i++) {
         if (cancelled) return;
+        if (TERMINAL.includes(resultRef.current.status)) return;
         if (await tryResolve(orderId)) return;
         if (i < maxAttempts - 1) await sleep(3000);
       }
@@ -182,20 +229,22 @@ export default function PaymentStatus() {
       const dbMaxAttempts = 5;
       for (let i = 0; i < dbMaxAttempts; i++) {
         if (cancelled) return;
+        if (TERMINAL.includes(resultRef.current.status)) return;
         if (await tryResolve(orderId)) return;
         if (i < dbMaxAttempts - 1) await sleep(5000);
       }
 
       // Final attempt — show "processing" rather than "unknown"
       if (cancelled) return;
+      if (TERMINAL.includes(resultRef.current.status)) return;
       try {
         const detail = await getOrderStatus(orderId);
         if (detail.status === "PENDING") {
-          setResult({ status: "processing", orderId, amount: Number(detail.amount) });
+          safeSetStatus({ status: "processing", orderId, amount: Number(detail.amount) });
           return;
         }
         if (detail.status === "SUCCESS") {
-          setResult({
+          safeSetStatus({
             status: "completed",
             orderId,
             amount: Number(detail.amount),
@@ -205,19 +254,21 @@ export default function PaymentStatus() {
           return;
         }
         if (detail.status === "FAILED") {
-          setResult({ status: "failed", orderId, amount: Number(detail.amount) });
+          safeSetStatus({ status: "failed", orderId, amount: Number(detail.amount) });
           return;
         }
         if (detail.status === "TAMPERED") {
-          setResult({ status: "tampered", orderId, amount: Number(detail.amount) });
+          safeSetStatus({ status: "tampered", orderId, amount: Number(detail.amount) });
           return;
         }
       } catch {
         /* ignore */
       }
 
-      // We have an order_id, so prefer "processing" over "unknown".
-      setResult({ status: "processing", orderId });
+      // We have an order_id, so prefer "processing" over anything else.
+      safeSetStatus((prev) =>
+        TERMINAL.includes(prev.status) ? prev : { status: "processing", orderId }
+      );
     };
 
     run();
@@ -226,11 +277,48 @@ export default function PaymentStatus() {
     };
   }, [initialOrderId]);
 
-  // Note: we intentionally do NOT auto-redirect after success. After
-  // returning from a cross-domain HDFC redirect, the auth session can be
-  // briefly unstable, and auto-pushing the user into a protected route
-  // bounces them to /auth. Keep them on the success screen and let them
-  // click "Back to Invoices" themselves once they're ready.
+  // Auto-redirect to invoices once we are in any non-loading state.
+  // We wait briefly to give the user time to see the result, and to let
+  // the auth session hydrate so we don't get bounced to /auth.
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (result.status === "loading") {
+      setCountdown(null);
+      return;
+    }
+    setCountdown(REDIRECT_DELAYS[result.status]);
+  }, [result.status]);
+
+  useEffect(() => {
+    if (countdown == null) return;
+    if (countdown <= 0) {
+      // Wait briefly for auth session before navigating to a protected route
+      (async () => {
+        for (let i = 0; i < 8; i++) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) break;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        navigate("/student/invoices");
+      })();
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => (c == null ? null : c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [countdown, navigate]);
+
+  const goToInvoicesNow = () => {
+    setCountdown(null);
+    navigate("/student/invoices");
+  };
+
+  const RedirectNote = () =>
+    countdown != null && countdown > 0 ? (
+      <p className="text-xs text-muted-foreground">
+        Redirecting to invoices in {countdown}s…
+      </p>
+    ) : null;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -277,10 +365,8 @@ export default function PaymentStatus() {
                 )}
                 {result.transactionRef && <p>Transaction Ref: {result.transactionRef}</p>}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Your invoice has been updated. Click below to return.
-              </p>
-              <Button onClick={() => navigate("/student/invoices")} className="w-full">
+              <RedirectNote />
+              <Button onClick={goToInvoicesNow} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
               </Button>
@@ -292,10 +378,13 @@ export default function PaymentStatus() {
               <XCircle className="h-16 w-16 text-destructive mx-auto" />
               <h2 className="text-xl font-semibold text-foreground">Payment Failed</h2>
               <p className="text-muted-foreground">
-                Your payment could not be processed. Please try again.
+                Your payment could not be processed. Please try again from your invoices.
               </p>
-              <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <Button onClick={() => navigate("/student/invoices")} className="w-full">
+              {result.orderId && (
+                <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
+              )}
+              <RedirectNote />
+              <Button onClick={goToInvoicesNow} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
               </Button>
@@ -312,8 +401,11 @@ export default function PaymentStatus() {
                 Your payment has been received and is being processed by the bank. It will be
                 reflected in your invoices shortly.
               </p>
-              <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <Button onClick={() => navigate("/student/invoices")} className="w-full">
+              {result.orderId && (
+                <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
+              )}
+              <RedirectNote />
+              <Button onClick={goToInvoicesNow} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
               </Button>
@@ -330,23 +422,11 @@ export default function PaymentStatus() {
                 We detected a mismatch while verifying this payment. Please contact support — do
                 not retry without confirmation.
               </p>
-              <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <Button onClick={() => navigate("/student/invoices")} className="w-full">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Invoices
-              </Button>
-            </>
-          )}
-
-          {result.status === "not_found" && (
-            <>
-              <XCircle className="h-16 w-16 text-muted-foreground mx-auto" />
-              <h2 className="text-xl font-semibold text-foreground">No Recent Payment Found</h2>
-              <p className="text-muted-foreground">
-                We couldn't find a recent payment for your account. If you just paid and money was
-                deducted, it will be reflected within 24 hours.
-              </p>
-              <Button onClick={() => navigate("/student/invoices")} className="w-full">
+              {result.orderId && (
+                <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
+              )}
+              <RedirectNote />
+              <Button onClick={goToInvoicesNow} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
               </Button>
