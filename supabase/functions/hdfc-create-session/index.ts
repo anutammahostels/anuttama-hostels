@@ -217,11 +217,20 @@ Deno.serve(async (req) => {
       .eq("order_id", orderId);
 
     // --- Call HDFC /session ---
-    const callbackUrl =
-      return_url || `${Deno.env.get("SUPABASE_URL")}/functions/v1/hdfc-payment-callback`;
+    // Always send HDFC to the backend callback bridge first. The bridge
+    // verifies the order server-side, then redirects the user back to the
+    // original frontend status page on the SAME origin they started from.
+    // This keeps the auth session intact (no cross-domain bouncing) and
+    // makes the success/processing/failed states deterministic.
+    const appReturnTo =
+      return_url || `${new URL(req.url).origin}/student/payment/status`;
 
-    const separator = callbackUrl.includes("?") ? "&" : "?";
-    const enrichedReturnUrl = `${callbackUrl}${separator}order_id=${encodeURIComponent(orderId)}&customer_id=${encodeURIComponent(customerId)}`;
+    const backendCallbackBase = `${Deno.env.get("SUPABASE_URL")}/functions/v1/hdfc-payment-callback`;
+    const enrichedReturnUrl =
+      `${backendCallbackBase}` +
+      `?order_id=${encodeURIComponent(orderId)}` +
+      `&customer_id=${encodeURIComponent(customerId)}` +
+      `&app_return_to=${encodeURIComponent(appReturnTo)}`;
 
     const sessionPayload: Record<string, unknown> = {
       order_id: orderId,
