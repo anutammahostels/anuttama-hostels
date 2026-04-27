@@ -169,15 +169,20 @@ export default function PaymentStatus() {
         /* ignore */
       }
 
-      setResult({ status: "not_found", orderId });
+      // If we have an order_id we know about a transaction was started — never
+      // fall all the way back to "Unknown" in that case. Show "processing"
+      // so the user understands their payment may still be in-flight.
+      setResult({ status: "processing", orderId });
     };
 
     run();
   }, [resolvedOrderId]);
 
-  // Auto-redirect countdown once status is resolved
+  // Auto-redirect countdown only for SUCCESS — failed/processing/tampered
+  // stay on this page so an unauthenticated student is never bounced into
+  // /auth via a protected route navigation.
   useEffect(() => {
-    if (result.status === "loading") return;
+    if (result.status !== "completed") return;
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
