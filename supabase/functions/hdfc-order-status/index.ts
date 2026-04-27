@@ -109,18 +109,43 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Per spec: 400 / 401 / 500 are explicit error envelopes
-    if (res.status === 401 || res.status === 400 || res.status >= 500) {
+    // Per spec: 400 / 401 / 429 / 500 are explicit error envelopes.
+    // For ANY non-2xx (esp. 429 rate-limit), if we already have a local
+    // transaction we surface it as PENDING instead of UNKNOWN so the UI
+    // never shows the scary "Payment Status Unknown" purely due to a
+    // gateway hiccup or rate limit.
+    if (!res.ok) {
       const errBody = await res.text();
       console.error("HDFC order status non-2xx:", res.status, errBody);
       await logPayment(adminClient, order_id, "status_api", { order_id, customer_id: customerId }, { http: res.status, raw: errBody });
+
+      if (existingTxn) {
+        const fallbackStatus =
+          existingTxn.status === "SUCCESS" ? "SUCCESS" :
+          existingTxn.status === "FAILED" ? "FAILED" :
+          existingTxn.status === "TAMPERED" ? "TAMPERED" :
+          "PENDING";
+        return jsonResponse({
+          order_id,
+          status: fallbackStatus,
+          hdfc_status: fallbackStatus,
+          amount: Number(existingTxn.amount),
+          txn_id: existingTxn.hdfc_txn_id,
+          payment_method: existingTxn.payment_method,
+          payment_method_type: existingTxn.payment_method,
+          refunded: false,
+          amount_refunded: 0,
+          gateway_response: { transient: true, http_status: res.status },
+        });
+      }
+
       return jsonResponse(
         {
           error: "Gateway returned an error",
           http_status: res.status,
           gateway_error: (() => { try { return JSON.parse(errBody); } catch { return errBody; } })(),
         },
-        res.status === 401 ? 502 : 502
+        502
       );
     }
 
