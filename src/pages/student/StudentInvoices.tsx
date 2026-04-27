@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Receipt, Download, IndianRupee, Loader2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +17,15 @@ export default function StudentInvoices() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
+
+  // When the user lands here from the payment status page, force-refresh
+  // invoices so the latest paid_amount/status is reflected immediately.
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["student-all-invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["student-record"] });
+  }, [queryClient]);
 
   const { data: student } = useQuery({
     queryKey: ["student-record", user?.id],
