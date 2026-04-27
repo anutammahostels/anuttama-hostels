@@ -226,30 +226,20 @@ Deno.serve(async (req) => {
               payment_mode_label: data.payment_method_type || data.payment_method || "online",
             }).eq("id", payment.id);
 
-            // Update payment_transactions to SUCCESS (verified)
             await adminClient.from("payment_transactions").update({
               status: "SUCCESS",
               hdfc_txn_id: txnId,
               payment_method: data.payment_method_type || data.payment_method || null,
             }).eq("order_id", order_id);
 
+            // Idempotent invoice reconciliation — recompute paid_amount from
+            // completed payments rather than additive update so retries/webhooks
+            // never double-count.
+            await reconcileInvoice(adminClient, payment.invoice_id);
+
             const { data: invoice } = await adminClient
-              .from("invoices")
-              .select("*")
-              .eq("id", payment.invoice_id)
-              .single();
-
+              .from("invoices").select("*").eq("id", payment.invoice_id).single();
             if (invoice) {
-              const newPaidAmount = (invoice.paid_amount || 0) + payment.amount;
-              const newStatus = newPaidAmount >= invoice.total_amount ? "paid" : "partial";
-
-              await adminClient.from("invoices").update({
-                paid_amount: newPaidAmount,
-                status: newStatus,
-                payment_date: new Date().toISOString(),
-                payment_method: "online",
-              }).eq("id", invoice.id);
-
               await createAccountingEntries(adminClient, payment, invoice, order_id, txnId);
               await notifyStudent(adminClient, payment, invoice, "success");
             }
@@ -279,6 +269,11 @@ Deno.serve(async (req) => {
             hdfc_txn_id: data.txn_id || null,
             payment_method: data.payment_method_type || data.payment_method || null,
           }).eq("order_id", order_id);
+
+          // Even if payment row already completed, ensure invoice is reconciled.
+          if (mappedStatus === "SUCCESS" && existingTxn.invoice_id) {
+            await reconcileInvoice(adminClient, existingTxn.invoice_id);
+          }
         }
       } catch (syncErr) {
         console.error("Error syncing payment status:", syncErr);
