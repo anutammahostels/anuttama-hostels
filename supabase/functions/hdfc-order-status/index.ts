@@ -407,3 +407,41 @@ async function notifyStudent(client: any, payment: any, invoice: any, type: "suc
     user_id: student.user_id, title, message, type: "billing", link: "/student/invoices",
   });
 }
+
+// Idempotent invoice reconciliation: recompute paid_amount strictly from
+// completed payments and update status accordingly. Safe to call from
+// callbacks, polling, and webhooks without double-counting.
+async function reconcileInvoice(client: any, invoiceId: string) {
+  if (!invoiceId) return;
+
+  const { data: invoice } = await client
+    .from("invoices")
+    .select("id, total_amount, paid_amount, status")
+    .eq("id", invoiceId)
+    .single();
+  if (!invoice) return;
+
+  const { data: completed } = await client
+    .from("payments")
+    .select("amount")
+    .eq("invoice_id", invoiceId)
+    .eq("status", "completed");
+
+  const computedPaid = (completed || []).reduce(
+    (s: number, p: any) => s + Number(p.amount || 0),
+    0
+  );
+
+  const total = Number(invoice.total_amount || 0);
+  const newStatus =
+    computedPaid >= total && total > 0 ? "paid" :
+    computedPaid > 0 ? "partial" :
+    "pending";
+
+  await client.from("invoices").update({
+    paid_amount: computedPaid,
+    status: newStatus,
+    payment_date: computedPaid > 0 ? new Date().toISOString() : null,
+    payment_method: computedPaid > 0 ? "online" : null,
+  }).eq("id", invoiceId);
+}
