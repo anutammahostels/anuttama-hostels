@@ -80,9 +80,11 @@ export default function StudentInvoices() {
     setPayingInvoiceId(invoice.id);
 
     try {
+      // Always return to the same origin where the student started — keeps
+      // their auth session intact (hostylia.com would log them out).
       const session = await createPaymentSession(
         invoice.id,
-        `${(window.location.origin.includes('lovableproject.com') || window.location.origin.includes('lovable.app')) ? 'https://hostylia.com' : window.location.origin}/student/payment/status`
+        `${window.location.origin}/student/payment/status`
       );
 
       // Save order_id to sessionStorage as fallback in case HDFC strips query params
