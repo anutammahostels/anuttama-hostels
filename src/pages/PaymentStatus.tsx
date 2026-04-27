@@ -39,6 +39,9 @@ export default function PaymentStatus() {
     orderId: initialOrderId,
   });
 
+  // If we have an order_id from any source, NEVER show "not_found".
+  const hasOrderContext = !!initialOrderId;
+
   useEffect(() => {
     let cancelled = false;
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
