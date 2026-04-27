@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { getOrderStatus, verifyPayment } from "@/lib/hdfc";
+import { getOrderStatus, verifyPayment, recoverLatestOrder } from "@/lib/hdfc";
 import { CheckCircle, XCircle, Loader2, ArrowLeft, Clock, ShieldAlert } from "lucide-react";
 
 type UiStatus =
@@ -28,24 +28,21 @@ export default function PaymentStatus() {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
 
-  const resolvedOrderId =
-    searchParams.get("order_id") || sessionStorage.getItem("hdfc_pending_order_id") || "";
+  const initialOrderId =
+    searchParams.get("order_id") ||
+    sessionStorage.getItem("hdfc_pending_order_id") ||
+    localStorage.getItem("hdfc_pending_order_id") ||
+    "";
 
   const [result, setResult] = useState<PaymentResult>({
     status: "loading",
-    orderId: resolvedOrderId,
+    orderId: initialOrderId,
   });
 
   useEffect(() => {
-    const orderId = resolvedOrderId;
-    if (!orderId) {
-      setResult({ status: "not_found", orderId: "" });
-      return;
-    }
-
+    let cancelled = false;
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Build a payment-method label from rich order-status detail.
     const buildMethodLabel = (detail: Awaited<ReturnType<typeof getOrderStatus>>) => {
       if (detail.card?.last_four_digits) {
         const brand = detail.card.card_brand || "Card";
@@ -57,9 +54,7 @@ export default function PaymentStatus() {
       return null;
     };
 
-    // Try to resolve a final UI status. Trusts hdfc-order-status (server-verified
-    // + DB-synced) and falls back to hdfc-verify-payment for invoice metadata.
-    const tryResolve = async (): Promise<boolean> => {
+    const tryResolve = async (orderId: string): Promise<boolean> => {
       let detail: Awaited<ReturnType<typeof getOrderStatus>> | null = null;
       try {
         detail = await getOrderStatus(orderId);
@@ -67,8 +62,6 @@ export default function PaymentStatus() {
         console.error("hdfc-order-status check failed:", err);
       }
 
-      // verifyPayment is best-effort — it gives us the invoice number, but if
-      // it fails (auth/network), we still proceed with the order-status result.
       let verified: Awaited<ReturnType<typeof verifyPayment>> | null = null;
       try {
         verified = await verifyPayment(orderId);
@@ -84,8 +77,11 @@ export default function PaymentStatus() {
       const invoiceNumber = verified?.invoice_number ?? null;
       const transactionRef = detail?.txn_id ?? verified?.hdfc_txn_id ?? null;
 
+      if (cancelled) return true;
+
       if (finalStatus === "SUCCESS") {
         sessionStorage.removeItem("hdfc_pending_order_id");
+        localStorage.removeItem("hdfc_pending_order_id");
         setResult({
           status: "completed",
           orderId,
@@ -98,11 +94,13 @@ export default function PaymentStatus() {
       }
       if (finalStatus === "FAILED") {
         sessionStorage.removeItem("hdfc_pending_order_id");
+        localStorage.removeItem("hdfc_pending_order_id");
         setResult({ status: "failed", orderId, amount });
         return true;
       }
       if (finalStatus === "TAMPERED") {
         sessionStorage.removeItem("hdfc_pending_order_id");
+        localStorage.removeItem("hdfc_pending_order_id");
         setResult({ status: "tampered", orderId, amount });
         return true;
       }
@@ -110,37 +108,60 @@ export default function PaymentStatus() {
       return false;
     };
 
-    const run = async () => {
-      // Phase 1: 5s initial delay, then poll up to 15× at 3s (~50s)
-      await sleep(5000);
+    const resolveOrderId = async (): Promise<string> => {
+      if (initialOrderId) return initialOrderId;
 
+      // Wait briefly for the user's auth/session to hydrate before
+      // calling the recovery endpoint.
+      for (let i = 0; i < 5; i++) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) break;
+        await sleep(800);
+      }
+
+      try {
+        const recovered = await recoverLatestOrder();
+        if (recovered?.order_id) {
+          sessionStorage.setItem("hdfc_pending_order_id", recovered.order_id);
+          return recovered.order_id;
+        }
+      } catch (err) {
+        console.error("recoverLatestOrder failed:", err);
+      }
+      return "";
+    };
+
+    const run = async () => {
+      const orderId = await resolveOrderId();
+
+      if (!orderId) {
+        if (!cancelled) setResult({ status: "not_found", orderId: "" });
+        return;
+      }
+
+      if (!cancelled) {
+        setResult((prev) => ({ ...prev, orderId }));
+      }
+
+      // Phase 1: short delay then aggressive polling
+      await sleep(3000);
       const maxAttempts = 15;
       for (let i = 0; i < maxAttempts; i++) {
-        if (await tryResolve()) return;
+        if (cancelled) return;
+        if (await tryResolve(orderId)) return;
         if (i < maxAttempts - 1) await sleep(3000);
       }
 
-      // Phase 2: slower polling 5× at 5s (~25s)
+      // Phase 2: slower polling
       const dbMaxAttempts = 5;
       for (let i = 0; i < dbMaxAttempts; i++) {
-        if (await tryResolve()) return;
-
-        try {
-          const { data: payment } = await supabase
-            .from("payments")
-            .select("status")
-            .eq("transaction_id", orderId)
-            .maybeSingle();
-          if (!payment && i >= dbMaxAttempts - 1) break;
-        } catch {
-          /* ignore */
-        }
-
+        if (cancelled) return;
+        if (await tryResolve(orderId)) return;
         if (i < dbMaxAttempts - 1) await sleep(5000);
       }
 
-      // Final attempt — show "processing" rather than "unknown" if anything
-      // hints the payment is still in-flight.
+      // Final attempt — show "processing" rather than "unknown"
+      if (cancelled) return;
       try {
         const detail = await getOrderStatus(orderId);
         if (detail.status === "PENDING") {
@@ -169,18 +190,17 @@ export default function PaymentStatus() {
         /* ignore */
       }
 
-      // If we have an order_id we know about a transaction was started — never
-      // fall all the way back to "Unknown" in that case. Show "processing"
-      // so the user understands their payment may still be in-flight.
+      // We have an order_id, so prefer "processing" over "unknown".
       setResult({ status: "processing", orderId });
     };
 
     run();
-  }, [resolvedOrderId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialOrderId]);
 
-  // Auto-redirect countdown only for SUCCESS — failed/processing/tampered
-  // stay on this page so an unauthenticated student is never bounced into
-  // /auth via a protected route navigation.
+  // Auto-redirect only on success.
   useEffect(() => {
     if (result.status !== "completed") return;
 
@@ -209,7 +229,9 @@ export default function PaymentStatus() {
               <p className="text-muted-foreground">
                 Verifying your payment securely… this may take up to a minute
               </p>
-              <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
+              {result.orderId && (
+                <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
+              )}
             </>
           )}
 
@@ -305,10 +327,10 @@ export default function PaymentStatus() {
           {result.status === "not_found" && (
             <>
               <XCircle className="h-16 w-16 text-muted-foreground mx-auto" />
-              <h2 className="text-xl font-semibold text-foreground">Payment Status Unknown</h2>
+              <h2 className="text-xl font-semibold text-foreground">No Recent Payment Found</h2>
               <p className="text-muted-foreground">
-                We couldn't determine the payment status. If money was deducted, it will be
-                reflected within 24 hours.
+                We couldn't find a recent payment for your account. If you just paid and money was
+                deducted, it will be reflected within 24 hours.
               </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
