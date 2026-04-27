@@ -1,56 +1,47 @@
-I found several likely causes behind the current outcome:
+I checked the latest payment records and HDFC function logs.
 
-1. The latest payment attempt `ANT6kXhzZoq2464` only has a session-create log and is still `INITIATED`; no status-sync log ran after the redirect.
-2. The preview payment flow is sending HDFC back to `https://hostylia.com/student/payment/status` instead of the same origin where the student started payment. That explains why the user can land on the status page without the original login session and then gets redirected to `/auth` when the page auto-navigates to `/student/invoices`.
-3. The status polling can hit HDFC rate limits (`429`) and the current function can collapse that into `UNKNOWN`, which causes the “Payment Status Unknown” page.
-4. Invoice dues are only updated when the payment sync reaches the exact successful path. If the redirect/polling/webhook misses or partially syncs, the payment can be successful at HDFC while the local invoice still shows dues.
-5. The webhook updates `payments`/`invoices` but does not consistently update `payment_transactions`, so the latest payment status shown in the student invoice card can remain stale.
+Findings:
+- For order `ANTFnUhjo377929`, HDFC did return a successful response: `status: CHARGED`, `resp_code: 00`, `resp_message: SUCCESSFUL`, `txn_id: SG4845-ANTFnUhjo377929-1`. That order was updated to `SUCCESS`.
+- For the later order `ANTyHxb1mGY3738`, the database still shows `INITIATED`, and there are no `hdfc-order-status`, `hdfc-verify-payment`, webhook, or callback logs for it after session creation. This means the app did not successfully check HDFC after returning to the status page for that order.
+- The screenshot shows `/student/payment/status` without an `order_id` in the URL. Since the route depends on `order_id` or browser `sessionStorage`, the page falls into “Payment Status Unknown” when that value is missing.
+- No HDFC callback/webhook logs were received, so the system currently depends on frontend polling. If polling is not triggered because `order_id` is missing, the successful/pending/failed state is never fetched from HDFC.
 
-Plan to fix and test:
+Plan to fix:
 
-1. Make the return flow domain-safe
-   - Stop forcing preview payments to return to `hostylia.com`.
-   - Use a backend callback bridge for HDFC return URLs, carrying the original app origin safely.
-   - The callback will verify/sync the payment server-side, then redirect the browser back to the same app origin:
+1. Make payment status work even when HDFC strips query parameters
+   - Store enough pending payment context locally before redirecting to HDFC: `order_id`, `invoice_id`, and a timestamp.
+   - On `/student/payment/status`, if `order_id` is missing from the URL, recover it from saved pending payment context.
+   - If multiple recent pending orders exist, use the most recent one instead of showing “Unknown”.
 
-```text
-Student app -> HDFC checkout -> backend callback -> /student/payment/status?order_id=...
-```
+2. Add a backend recovery lookup for recent pending payments
+   - Update `hdfc-verify-payment` or add a safe mode to return the student’s most recent `INITIATED`/`PENDING` transaction when the status page has no `order_id`.
+   - Keep authorization checks so a student can only recover their own transaction.
 
-2. Harden the HDFC callback
-   - Support both GET/query-param and POST/form callback formats.
-   - Extract `order_id` from query string, form body, JSON body, or saved transaction data.
-   - Call the order-status sync before redirecting to the UI.
-   - Return a browser redirect instead of JSON so the student always lands on the status page.
+3. Force server-side HDFC verification after redirect
+   - Ensure `PaymentStatus.tsx` calls `hdfc-order-status` once an order is recovered.
+   - If HDFC returns `CHARGED`, immediately mark `payment_transactions` as `SUCCESS`, mark the matching `payments` row as `completed`, and reconcile the invoice paid amount.
+   - If HDFC returns bank pending states, show “Payment is Being Processed”, not “Unknown”.
+   - If HDFC returns failure states, show “Payment Failed”.
 
-3. Fix status syncing and rate-limit handling
-   - Update `hdfc-order-status` so all non-2xx gateway responses, especially `429`, are handled as transient/processing when a local transaction exists.
-   - Never show `UNKNOWN` just because HDFC rate-limited a polling request.
-   - Reduce frontend polling pressure and use safer backoff to avoid repeated HDFC `429` responses.
+4. Fix the public callback/webhook gap
+   - Update `hdfc-payment-callback` so it accepts HDFC GET and POST redirects, reads `order_id` from query string or body, calls `hdfc-order-status`, then redirects the browser to `/student/payment/status?order_id=...`.
+   - Add raw callback logging for both GET and POST so we can prove whether HDFC is calling us.
+   - Ensure the HDFC session return URL points to this backend callback bridge when appropriate, so the server gets first chance to verify the payment before the user sees the status page.
 
-4. Make invoice reconciliation idempotent
-   - Add a shared reconciliation flow inside the payment functions:
-     - Mark payment row `completed` on success or `failed` on failure.
-     - Recompute invoice paid amount from completed payment rows instead of blindly adding again.
-     - Set invoice status to `paid`, `partial`, or `pending` based on the recomputed paid amount.
-   - This prevents duplicate counting and also fixes cases where a successful gateway transaction did not update dues.
+5. Improve the status page UX
+   - Remove the final “Payment Status Unknown” fallback when a payment was recently initiated.
+   - Show the exact current state: Successful, Processing/Pending, Failed, or Verification Failed.
+   - Display the order ID clearly for support/debugging.
+   - Prevent redirecting to `/auth` while the payment status page is still resolving.
 
-5. Keep transaction status consistent
-   - Update `hdfc-webhook` to also update `payment_transactions` on success/failure.
-   - Ensure `payment_transactions`, `payments`, and `invoices` remain in sync regardless of whether the success is detected by redirect polling, callback, or webhook.
+6. Re-test with the latest orders
+   - Call the payment status function directly for `ANTyHxb1mGY3738` to see what HDFC currently returns.
+   - Verify that successful responses update all three places consistently: `payment_transactions`, `payments`, and `invoices`.
+   - Then perform a fresh end-to-end test and confirm the page no longer lands on “Payment Status Unknown”.
 
-6. Improve the payment status UI behavior
-   - If the user is not logged in on the status page, still show the payment result using the public server-verified status.
-   - Do not auto-redirect an unauthenticated user into `/student/invoices`, which currently causes `/auth` immediately.
-   - If authenticated, redirect back to invoices after success and refresh invoice/payment queries.
-   - Replace final “Payment Status Unknown” with a safer “Still Processing” state when a local transaction exists but HDFC has not returned a final status yet.
-
-7. Manual end-to-end test after implementation
-   - Start from the student invoices page.
-   - Initiate payment for an unpaid/partially paid invoice.
-   - Complete payment on the HDFC UAT checkout manually.
-   - Confirm redirect lands on the correct app origin.
-   - Confirm the status page shows one of: Successful, Pending/Processing, or Failed, not Unknown for a valid transaction.
-   - Confirm it does not redirect to `/auth` when the original student session is valid.
-   - Confirm invoice dues, paid amount, payment row, transaction row, and payment details card all update consistently.
-   - Also test an abandoned payment path to ensure it remains pending/initiated without incorrectly increasing paid amount.
+Technical files to update:
+- `src/pages/student/StudentInvoices.tsx`
+- `src/pages/PaymentStatus.tsx`
+- `supabase/functions/hdfc-payment-callback/index.ts`
+- `supabase/functions/hdfc-verify-payment/index.ts`
+- Possibly `supabase/functions/hdfc-order-status/index.ts` if recovery/reconciliation needs one more hardening pass.
