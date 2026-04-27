@@ -116,6 +116,24 @@ export async function verifyPayment(orderId: string) {
   };
 }
 
+// Recover the most recent in-flight order_id for the current student when
+// HDFC strips query parameters on the return redirect.
+export async function recoverLatestOrder() {
+  const { data, error } = await supabase.functions.invoke("hdfc-verify-payment", {
+    body: { recover_latest: true },
+  });
+  if (error) throw error;
+  return data as {
+    status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "TAMPERED" | "NOT_FOUND";
+    order_id: string | null;
+    amount?: number | null;
+    currency?: string;
+    hdfc_txn_id?: string | null;
+    payment_method?: string | null;
+    invoice_number?: string | null;
+  };
+}
+
 export async function initiateRefund(
   orderId: string,
   amount: number,

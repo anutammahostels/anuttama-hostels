@@ -87,9 +87,12 @@ export default function StudentInvoices() {
         `${window.location.origin}/student/payment/status`
       );
 
-      // Save order_id to sessionStorage as fallback in case HDFC strips query params
+      // Save order_id locally so the status page can recover it even if
+      // HDFC strips query parameters or the session reloads.
       if (session.order_id) {
         sessionStorage.setItem("hdfc_pending_order_id", session.order_id);
+        localStorage.setItem("hdfc_pending_order_id", session.order_id);
+        localStorage.setItem("hdfc_pending_order_started_at", String(Date.now()));
       }
 
       openPaymentCheckout(session, checkoutWindow);
