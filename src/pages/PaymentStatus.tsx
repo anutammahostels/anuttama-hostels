@@ -230,23 +230,11 @@ export default function PaymentStatus() {
     };
   }, [initialOrderId]);
 
-  // Auto-redirect only on success.
-  useEffect(() => {
-    if (result.status !== "completed") return;
-
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigate("/student/invoices");
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [result.status, navigate]);
+  // Note: we intentionally do NOT auto-redirect after success. After
+  // returning from a cross-domain HDFC redirect, the auth session can be
+  // briefly unstable, and auto-pushing the user into a protected route
+  // bounces them to /auth. Keep them on the success screen and let them
+  // click "Back to Invoices" themselves once they're ready.
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
