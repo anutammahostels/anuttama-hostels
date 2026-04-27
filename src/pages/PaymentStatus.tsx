@@ -295,9 +295,6 @@ export default function PaymentStatus() {
                 not retry without confirmation.
               </p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
-              </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
