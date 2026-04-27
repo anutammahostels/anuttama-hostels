@@ -278,7 +278,7 @@ export default function PaymentStatus() {
                 {result.transactionRef && <p>Transaction Ref: {result.transactionRef}</p>}
               </div>
               <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
+                Your invoice has been updated. Click below to return.
               </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
