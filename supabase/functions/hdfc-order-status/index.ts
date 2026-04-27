@@ -109,18 +109,43 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Per spec: 400 / 401 / 500 are explicit error envelopes
-    if (res.status === 401 || res.status === 400 || res.status >= 500) {
+    // Per spec: 400 / 401 / 429 / 500 are explicit error envelopes.
+    // For ANY non-2xx (esp. 429 rate-limit), if we already have a local
+    // transaction we surface it as PENDING instead of UNKNOWN so the UI
+    // never shows the scary "Payment Status Unknown" purely due to a
+    // gateway hiccup or rate limit.
+    if (!res.ok) {
       const errBody = await res.text();
       console.error("HDFC order status non-2xx:", res.status, errBody);
       await logPayment(adminClient, order_id, "status_api", { order_id, customer_id: customerId }, { http: res.status, raw: errBody });
+
+      if (existingTxn) {
+        const fallbackStatus =
+          existingTxn.status === "SUCCESS" ? "SUCCESS" :
+          existingTxn.status === "FAILED" ? "FAILED" :
+          existingTxn.status === "TAMPERED" ? "TAMPERED" :
+          "PENDING";
+        return jsonResponse({
+          order_id,
+          status: fallbackStatus,
+          hdfc_status: fallbackStatus,
+          amount: Number(existingTxn.amount),
+          txn_id: existingTxn.hdfc_txn_id,
+          payment_method: existingTxn.payment_method,
+          payment_method_type: existingTxn.payment_method,
+          refunded: false,
+          amount_refunded: 0,
+          gateway_response: { transient: true, http_status: res.status },
+        });
+      }
+
       return jsonResponse(
         {
           error: "Gateway returned an error",
           http_status: res.status,
           gateway_error: (() => { try { return JSON.parse(errBody); } catch { return errBody; } })(),
         },
-        res.status === 401 ? 502 : 502
+        502
       );
     }
 
@@ -201,30 +226,20 @@ Deno.serve(async (req) => {
               payment_mode_label: data.payment_method_type || data.payment_method || "online",
             }).eq("id", payment.id);
 
-            // Update payment_transactions to SUCCESS (verified)
             await adminClient.from("payment_transactions").update({
               status: "SUCCESS",
               hdfc_txn_id: txnId,
               payment_method: data.payment_method_type || data.payment_method || null,
             }).eq("order_id", order_id);
 
+            // Idempotent invoice reconciliation — recompute paid_amount from
+            // completed payments rather than additive update so retries/webhooks
+            // never double-count.
+            await reconcileInvoice(adminClient, payment.invoice_id);
+
             const { data: invoice } = await adminClient
-              .from("invoices")
-              .select("*")
-              .eq("id", payment.invoice_id)
-              .single();
-
+              .from("invoices").select("*").eq("id", payment.invoice_id).single();
             if (invoice) {
-              const newPaidAmount = (invoice.paid_amount || 0) + payment.amount;
-              const newStatus = newPaidAmount >= invoice.total_amount ? "paid" : "partial";
-
-              await adminClient.from("invoices").update({
-                paid_amount: newPaidAmount,
-                status: newStatus,
-                payment_date: new Date().toISOString(),
-                payment_method: "online",
-              }).eq("id", invoice.id);
-
               await createAccountingEntries(adminClient, payment, invoice, order_id, txnId);
               await notifyStudent(adminClient, payment, invoice, "success");
             }
@@ -254,6 +269,11 @@ Deno.serve(async (req) => {
             hdfc_txn_id: data.txn_id || null,
             payment_method: data.payment_method_type || data.payment_method || null,
           }).eq("order_id", order_id);
+
+          // Even if payment row already completed, ensure invoice is reconciled.
+          if (mappedStatus === "SUCCESS" && existingTxn.invoice_id) {
+            await reconcileInvoice(adminClient, existingTxn.invoice_id);
+          }
         }
       } catch (syncErr) {
         console.error("Error syncing payment status:", syncErr);
@@ -386,4 +406,42 @@ async function notifyStudent(client: any, payment: any, invoice: any, type: "suc
   await client.from("notifications").insert({
     user_id: student.user_id, title, message, type: "billing", link: "/student/invoices",
   });
+}
+
+// Idempotent invoice reconciliation: recompute paid_amount strictly from
+// completed payments and update status accordingly. Safe to call from
+// callbacks, polling, and webhooks without double-counting.
+async function reconcileInvoice(client: any, invoiceId: string) {
+  if (!invoiceId) return;
+
+  const { data: invoice } = await client
+    .from("invoices")
+    .select("id, total_amount, paid_amount, status")
+    .eq("id", invoiceId)
+    .single();
+  if (!invoice) return;
+
+  const { data: completed } = await client
+    .from("payments")
+    .select("amount")
+    .eq("invoice_id", invoiceId)
+    .eq("status", "completed");
+
+  const computedPaid = (completed || []).reduce(
+    (s: number, p: any) => s + Number(p.amount || 0),
+    0
+  );
+
+  const total = Number(invoice.total_amount || 0);
+  const newStatus =
+    computedPaid >= total && total > 0 ? "paid" :
+    computedPaid > 0 ? "partial" :
+    "pending";
+
+  await client.from("invoices").update({
+    paid_amount: computedPaid,
+    status: newStatus,
+    payment_date: computedPaid > 0 ? new Date().toISOString() : null,
+    payment_method: computedPaid > 0 ? "online" : null,
+  }).eq("id", invoiceId);
 }

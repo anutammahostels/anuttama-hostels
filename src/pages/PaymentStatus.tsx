@@ -169,15 +169,20 @@ export default function PaymentStatus() {
         /* ignore */
       }
 
-      setResult({ status: "not_found", orderId });
+      // If we have an order_id we know about a transaction was started — never
+      // fall all the way back to "Unknown" in that case. Show "processing"
+      // so the user understands their payment may still be in-flight.
+      setResult({ status: "processing", orderId });
     };
 
     run();
   }, [resolvedOrderId]);
 
-  // Auto-redirect countdown once status is resolved
+  // Auto-redirect countdown only for SUCCESS — failed/processing/tampered
+  // stay on this page so an unauthenticated student is never bounced into
+  // /auth via a protected route navigation.
   useEffect(() => {
-    if (result.status === "loading") return;
+    if (result.status !== "completed") return;
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -254,9 +259,6 @@ export default function PaymentStatus() {
                 Your payment could not be processed. Please try again.
               </p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
-              </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
@@ -275,9 +277,6 @@ export default function PaymentStatus() {
                 reflected in your invoices shortly.
               </p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
-              </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
@@ -296,9 +295,6 @@ export default function PaymentStatus() {
                 not retry without confirmation.
               </p>
               <p className="text-xs text-muted-foreground">Order ID: {result.orderId}</p>
-              <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
-              </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Invoices
@@ -313,9 +309,6 @@ export default function PaymentStatus() {
               <p className="text-muted-foreground">
                 We couldn't determine the payment status. If money was deducted, it will be
                 reflected within 24 hours.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
               </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />

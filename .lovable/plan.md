@@ -1,71 +1,56 @@
-# Fix: Payment status always shows "Unknown"
+I found several likely causes behind the current outcome:
 
-## Root cause
+1. The latest payment attempt `ANT6kXhzZoq2464` only has a session-create log and is still `INITIATED`; no status-sync log ran after the redirect.
+2. The preview payment flow is sending HDFC back to `https://hostylia.com/student/payment/status` instead of the same origin where the student started payment. That explains why the user can land on the status page without the original login session and then gets redirected to `/auth` when the page auto-navigates to `/student/invoices`.
+3. The status polling can hit HDFC rate limits (`429`) and the current function can collapse that into `UNKNOWN`, which causes the “Payment Status Unknown” page.
+4. Invoice dues are only updated when the payment sync reaches the exact successful path. If the redirect/polling/webhook misses or partially syncs, the payment can be successful at HDFC while the local invoice still shows dues.
+5. The webhook updates `payments`/`invoices` but does not consistently update `payment_transactions`, so the latest payment status shown in the student invoice card can remain stale.
 
-The post-payment polling on `/student/payment/status` (and `/payment/callback`) calls **two** edge functions in a loop:
+Plan to fix and test:
 
-1. `hdfc-order-status` → returns 200 with the real status (works fine).
-2. `hdfc-verify-payment` → **returns 401 every single time**.
+1. Make the return flow domain-safe
+   - Stop forcing preview payments to return to `hostylia.com`.
+   - Use a backend callback bridge for HDFC return URLs, carrying the original app origin safely.
+   - The callback will verify/sync the payment server-side, then redirect the browser back to the same app origin:
 
-Confirmed from the live edge logs for the most recent payment session: every `hdfc-order-status` POST = `200`, every `hdfc-verify-payment` POST = `401`. The page only renders UI from `hdfc-verify-payment`'s response (it's the "server-trusted" mapper), so even though the database has the real `SUCCESS` status, the page never reads it → falls through to the final `setResult({ status: "not_found" })` branch → user sees **"Payment Status Unknown"**.
-
-### Why `hdfc-verify-payment` returns 401
-
-The function reads the JWT like this:
-```ts
-const token = authHeader.replace("Bearer ", "");
-const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-if (userErr || !userData?.user) return jsonResponse({ error: "Unauthorized" }, 401);
+```text
+Student app -> HDFC checkout -> backend callback -> /student/payment/status?order_id=...
 ```
 
-Two things break it:
+2. Harden the HDFC callback
+   - Support both GET/query-param and POST/form callback formats.
+   - Extract `order_id` from query string, form body, JSON body, or saved transaction data.
+   - Call the order-status sync before redirecting to the UI.
+   - Return a browser redirect instead of JSON so the student always lands on the status page.
 
-- **JWKS / signing-keys flow.** This project uses Supabase signing keys (the `SUPABASE_JWKS` secret exists). On Lovable Cloud edge functions, `supabase.auth.getUser(token)` doesn't reliably validate signing-key JWTs from the anon-key client used here, so it returns `userErr` → 401.
-- **`hdfc-order-status` doesn't have this problem** because it doesn't call `auth.getUser` at all — it uses the service-role admin client and reads `order_id` directly from the body.
+3. Fix status syncing and rate-limit handling
+   - Update `hdfc-order-status` so all non-2xx gateway responses, especially `429`, are handled as transient/processing when a local transaction exists.
+   - Never show `UNKNOWN` just because HDFC rate-limited a polling request.
+   - Reduce frontend polling pressure and use safer backoff to avoid repeated HDFC `429` responses.
 
-So the symptom is 100% an auth-validation bug in `hdfc-verify-payment`, not anything wrong with HDFC, the polling loop, or the DB sync. (DB shows the latest order `ANTe5ny0FgY2849` correctly stored as `SUCCESS` with `hdfc_txn_id`, `payment_method=NB`, etc.)
+4. Make invoice reconciliation idempotent
+   - Add a shared reconciliation flow inside the payment functions:
+     - Mark payment row `completed` on success or `failed` on failure.
+     - Recompute invoice paid amount from completed payment rows instead of blindly adding again.
+     - Set invoice status to `paid`, `partial`, or `pending` based on the recomputed paid amount.
+   - This prevents duplicate counting and also fixes cases where a successful gateway transaction did not update dues.
 
-### Secondary issue
+5. Keep transaction status consistent
+   - Update `hdfc-webhook` to also update `payment_transactions` on success/failure.
+   - Ensure `payment_transactions`, `payments`, and `invoices` remain in sync regardless of whether the success is detected by redirect polling, callback, or webhook.
 
-Even after the auth fix, both pages currently *only* trust `verifyPayment`. If verify ever fails transiently, the user gets "Unknown" even though `getOrderStatus` already returned a definitive `SUCCESS/FAILED`. We should fall back to the order-status response when verify can't be reached.
+6. Improve the payment status UI behavior
+   - If the user is not logged in on the status page, still show the payment result using the public server-verified status.
+   - Do not auto-redirect an unauthenticated user into `/student/invoices`, which currently causes `/auth` immediately.
+   - If authenticated, redirect back to invoices after success and refresh invoice/payment queries.
+   - Replace final “Payment Status Unknown” with a safer “Still Processing” state when a local transaction exists but HDFC has not returned a final status yet.
 
-## What I'll change
-
-### 1. `supabase/functions/hdfc-verify-payment/index.ts` — fix the 401
-
-Replace the brittle `auth.getUser(token)` call with the same pattern used elsewhere in the project:
-
-- Build the supabase client with `global.headers.Authorization = authHeader` (so the request is identified by the user's JWT via PostgREST), then call `supabase.auth.getUser()` **without** passing the token explicitly. This is the variant that works with the signing-keys flow.
-- If that still fails, fall back to decoding the JWT's `sub` claim directly (the JWT is already trusted because edge function deploy is gated by Supabase ingress) and use that as `userId`.
-- Authorization (student owns invoice OR is staff) stays exactly as-is — security model is unchanged.
-
-### 2. `src/pages/PaymentStatus.tsx` and `src/pages/PaymentCallback.tsx` — robust fallback
-
-Right now, only `verifyPayment` drives the UI. Change the polling loop to also accept `getOrderStatus`'s definitive results:
-
-- After each `getOrderStatus(orderId)` call, if it returns `status === "SUCCESS" | "FAILED" | "TAMPERED"`, render that immediately (it is already server-validated and DB-synced inside the edge function).
-- Keep the `verifyPayment` call as a secondary confirmation path, but never let a verify failure override a known-good order-status result.
-- This means even if `hdfc-verify-payment` has any future hiccup, the user still sees the correct success/failure page.
-
-### 3. Cleanup of stuck `INITIATED` rows (optional, low priority)
-
-The DB has a few orders left in `INITIATED` because users closed the HDFC tab before completing payment. Not causing the current bug — leaving as-is unless you want a sweeper.
-
-## Files touched
-
-- `supabase/functions/hdfc-verify-payment/index.ts` — fix JWT validation so it stops returning 401
-- `src/pages/PaymentStatus.tsx` — fall back to order-status when verify is unavailable
-- `src/pages/PaymentCallback.tsx` — same fallback (the page HDFC redirects to in production)
-
-## How I'll verify
-
-1. Deploy both edge functions and reload the preview.
-2. Trigger a fresh payment from `/student/invoices` for the test student.
-3. Watch the network panel for `hdfc-verify-payment` → expect `200` with `{status:"SUCCESS",...}`.
-4. Confirm `/student/payment/status` now shows the green "Payment Successful" panel with amount, invoice number, and txn ref (instead of "Payment Status Unknown").
-5. Cross-check `payment_transactions` and `payments` tables show the same `SUCCESS` / `completed` state for the new order.
-
-## Out of scope
-
-- The two `PaymentStatus.tsx` and `PaymentCallback.tsx` files are ~95% duplicates — I will not consolidate them in this fix. Happy to do that as a follow-up.
-- HDFC sandbox is in use (`smartgateway.hdfcuat.bank.in`); switching to production is a separate request.
+7. Manual end-to-end test after implementation
+   - Start from the student invoices page.
+   - Initiate payment for an unpaid/partially paid invoice.
+   - Complete payment on the HDFC UAT checkout manually.
+   - Confirm redirect lands on the correct app origin.
+   - Confirm the status page shows one of: Successful, Pending/Processing, or Failed, not Unknown for a valid transaction.
+   - Confirm it does not redirect to `/auth` when the original student session is valid.
+   - Confirm invoice dues, paid amount, payment row, transaction row, and payment details card all update consistently.
+   - Also test an abandoned payment path to ensure it remains pending/initiated without incorrectly increasing paid amount.

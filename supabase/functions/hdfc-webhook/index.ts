@@ -117,28 +117,19 @@ Deno.serve(async (req) => {
         })
         .eq("id", payment.id);
 
-      // Update invoice
+      // Keep payment_transactions in sync
+      await adminClient
+        .from("payment_transactions")
+        .update({ status: "SUCCESS", hdfc_txn_id: txnId })
+        .eq("order_id", orderId);
+
+      // Idempotent invoice reconciliation (recompute from completed payments)
+      await reconcileInvoice(adminClient, payment.invoice_id);
+
       const { data: invoice } = await adminClient
-        .from("invoices")
-        .select("*")
-        .eq("id", payment.invoice_id)
-        .single();
-
+        .from("invoices").select("*").eq("id", payment.invoice_id).single();
       if (invoice) {
-        const newPaidAmount = (invoice.paid_amount || 0) + payment.amount;
-        const newStatus = newPaidAmount >= invoice.total_amount ? "paid" : "partial";
-
-        await adminClient.from("invoices").update({
-          paid_amount: newPaidAmount,
-          status: newStatus,
-          payment_date: new Date().toISOString(),
-          payment_method: "online",
-        }).eq("id", invoice.id);
-
-        // Accounting entries
         await createAccountingEntries(adminClient, payment, invoice, orderId, txnId);
-
-        // Notification
         await notifyStudent(adminClient, payment, invoice, "success");
       }
     } else if (isFailed && payment.status === "pending") {
@@ -146,6 +137,11 @@ Deno.serve(async (req) => {
         .from("payments")
         .update({ status: "failed", gateway_response: data })
         .eq("id", payment.id);
+
+      await adminClient
+        .from("payment_transactions")
+        .update({ status: "FAILED", hdfc_txn_id: txnId })
+        .eq("order_id", orderId);
 
       const { data: invoice } = await adminClient
         .from("invoices")
@@ -241,4 +237,39 @@ async function notifyStudent(client: any, payment: any, invoice: any, type: "suc
   await client.from("notifications").insert({
     user_id: student.user_id, title, message, type: "billing", link: "/student/invoices",
   });
+}
+
+// Idempotent invoice reconciliation: recompute paid_amount strictly from
+// completed payments. Safe across webhook retries and concurrent callbacks.
+async function reconcileInvoice(client: any, invoiceId: string) {
+  if (!invoiceId) return;
+  const { data: invoice } = await client
+    .from("invoices")
+    .select("id, total_amount")
+    .eq("id", invoiceId)
+    .single();
+  if (!invoice) return;
+
+  const { data: completed } = await client
+    .from("payments")
+    .select("amount")
+    .eq("invoice_id", invoiceId)
+    .eq("status", "completed");
+
+  const computedPaid = (completed || []).reduce(
+    (s: number, p: any) => s + Number(p.amount || 0),
+    0
+  );
+  const total = Number(invoice.total_amount || 0);
+  const newStatus =
+    computedPaid >= total && total > 0 ? "paid" :
+    computedPaid > 0 ? "partial" :
+    "pending";
+
+  await client.from("invoices").update({
+    paid_amount: computedPaid,
+    status: newStatus,
+    payment_date: computedPaid > 0 ? new Date().toISOString() : null,
+    payment_method: computedPaid > 0 ? "online" : null,
+  }).eq("id", invoiceId);
 }
