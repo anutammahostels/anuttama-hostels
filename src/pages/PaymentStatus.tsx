@@ -138,10 +138,37 @@ export default function PaymentStatus() {
       const orderId = await resolveOrderId();
 
       if (!orderId) {
+        // No context anywhere — show a soft "processing" state instead of
+        // a misleading "no payment found" so users who just paid are not
+        // told their payment is missing. Keep retrying recovery in the
+        // background in case the auth session hydrates later.
+        if (!cancelled) setResult({ status: "processing", orderId: "" });
+
+        for (let i = 0; i < 6; i++) {
+          await sleep(5000);
+          if (cancelled) return;
+          try {
+            const recovered = await recoverLatestOrder();
+            if (recovered?.order_id) {
+              if (cancelled) return;
+              setResult((prev) => ({ ...prev, orderId: recovered.order_id! }));
+              // Continue with normal polling using the recovered id below
+              return runWithOrderId(recovered.order_id);
+            }
+          } catch (err) {
+            console.error("recoverLatestOrder retry failed:", err);
+          }
+        }
+
+        // After ~30s with nothing recoverable, only NOW show "not_found".
         if (!cancelled) setResult({ status: "not_found", orderId: "" });
         return;
       }
 
+      return runWithOrderId(orderId);
+    };
+
+    const runWithOrderId = async (orderId: string) => {
       if (!cancelled) {
         setResult((prev) => ({ ...prev, orderId }));
       }
