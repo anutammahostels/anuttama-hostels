@@ -61,6 +61,28 @@ function htmlRedirect(targetUrl: string) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=${safe}"><title>Redirecting…</title></head><body><script>window.location.replace(${JSON.stringify(targetUrl)});</script><p>Redirecting to your payment status…</p></body></html>`;
 }
 
+// Map HDFC raw status → simple UI hint passed in the redirect URL.
+function mapPaymentResult(rawStatus: string | null | undefined): string {
+  const s = String(rawStatus || "").toUpperCase();
+  if (["CHARGED", "AUTO_REFUNDED", "SUCCESS"].includes(s)) return "success";
+  if (["AUTHORIZATION_FAILED", "JUSPAY_DECLINED", "VOIDED", "FAILED", "NOT_FOUND"].includes(s)) return "failed";
+  if (s === "TAMPERED") return "tampered";
+  if (["NEW", "PENDING_VBV", "AUTHORIZING", "COD_INITIATED", "STARTED", "AUTHENTICATION_FAILED", "PENDING", "INITIATED"].includes(s)) return "pending";
+  return "pending";
+}
+
+function buildAppRedirect(appReturnTo: string, orderId: string, paymentResult: string): string {
+  let target: URL;
+  try {
+    target = new URL(appReturnTo);
+  } catch {
+    target = new URL("https://anuttamahostels.com/student/payment/status");
+  }
+  if (orderId) target.searchParams.set("order_id", orderId);
+  target.searchParams.set("payment_result", paymentResult);
+  return target.toString();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -73,7 +95,7 @@ Deno.serve(async (req) => {
     // Pull from query string (HDFC sometimes uses GET redirect)
     for (const [k, v] of url.searchParams.entries()) data[k] = v;
 
-    // Merge body if present
+    // Merge body if present (HDFC uses POST form-encoded redirect for some flows)
     if (req.method === "POST") {
       const body = await req.text();
       const contentType = req.headers.get("content-type") || "";
@@ -90,28 +112,39 @@ Deno.serve(async (req) => {
 
     console.log("HDFC callback received:", req.method, JSON.stringify(data));
 
-    const orderId = data.order_id || data.orderId || "";
-    const signature = data.signature || data.resp_hash || "";
-    const returnTo =
+    const orderId: string = data.order_id || data.orderId || "";
+    const signature: string = data.signature || data.resp_hash || "";
+    const appReturnTo: string =
       data.app_return_to ||
-      `https://anuttamahostels.com/student/payment/status${orderId ? `?order_id=${encodeURIComponent(orderId)}` : ""}`;
+      `https://anuttamahostels.com/student/payment/status`;
 
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Always audit-log the raw callback (including GET) so we can prove
-    // whether HDFC actually called us.
-    await logPayment(adminClient, orderId || "UNKNOWN", "callback", { method: req.method, ...data }, null);
+    // Always audit-log the raw callback so we can prove what HDFC sent.
+    await logPayment(
+      adminClient,
+      orderId || "UNKNOWN",
+      "callback",
+      { method: req.method, ...data },
+      null
+    );
+
+    // Tentative result from HDFC's redirect query string (status / status_id)
+    const hintedResultFromHdfc = mapPaymentResult(data.status);
 
     if (!orderId) {
-      // Browser flow: still redirect the user to the status page so they
-      // are not stuck on a JSON error.
-      return new Response(htmlRedirect(returnTo), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
-      });
+      // No order context — still redirect the user to the status page so they
+      // are not stuck. The status page will recover the latest order itself.
+      return new Response(
+        htmlRedirect(buildAppRedirect(appReturnTo, "", "pending")),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
+        }
+      );
     }
 
     if (signature) {
@@ -123,7 +156,7 @@ Deno.serve(async (req) => {
       if (!isValid) console.warn("Signature verification failed for order:", orderId);
     }
 
-    // Server-to-server re-verify against HDFC and sync DB.
+    // Server-to-server re-verify against HDFC and sync DB BEFORE redirecting.
     let verifiedResult: any = null;
     try {
       const verifyUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/hdfc-order-status`;
@@ -142,23 +175,36 @@ Deno.serve(async (req) => {
       console.error("Server-side re-verify failed:", e);
     }
 
-    // If the request looks like a browser redirect, send the user to the
-    // status page. Otherwise return JSON for programmatic callers.
+    // Final result: prefer the server-verified status, fall back to HDFC's
+    // hinted result, fall back to "pending".
+    const verifiedStatus =
+      verifiedResult?.status ||
+      verifiedResult?.hdfc_status ||
+      null;
+    let finalResult = mapPaymentResult(verifiedStatus);
+    if (finalResult === "pending" && hintedResultFromHdfc !== "pending") {
+      finalResult = hintedResultFromHdfc;
+    }
+
     const accept = req.headers.get("accept") || "";
-    const isBrowser = accept.includes("text/html") || req.method === "GET";
+    const isBrowser = accept.includes("text/html") || req.method === "GET" || req.method === "POST";
 
     if (isBrowser) {
-      return new Response(htmlRedirect(returnTo), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
-      });
+      return new Response(
+        htmlRedirect(buildAppRedirect(appReturnTo, orderId, finalResult)),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
+        }
+      );
     }
 
     return new Response(
       JSON.stringify({
         status: "ok",
         order_id: orderId,
-        verified_status: verifiedResult?.status || "UNKNOWN",
+        verified_status: verifiedStatus || "UNKNOWN",
+        payment_result: finalResult,
       }),
       {
         status: 200,
