@@ -26,7 +26,6 @@ type PaymentResult = {
 export default function PaymentStatus() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [countdown, setCountdown] = useState(5);
 
   const initialOrderId =
     searchParams.get("order_id") ||
@@ -38,9 +37,6 @@ export default function PaymentStatus() {
     status: "loading",
     orderId: initialOrderId,
   });
-
-  // If we have an order_id from any source, NEVER show "not_found".
-  const hasOrderContext = !!initialOrderId;
 
   useEffect(() => {
     let cancelled = false;
