@@ -26,7 +26,6 @@ type PaymentResult = {
 export default function PaymentStatus() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [countdown, setCountdown] = useState(5);
 
   const initialOrderId =
     searchParams.get("order_id") ||
@@ -135,10 +134,37 @@ export default function PaymentStatus() {
       const orderId = await resolveOrderId();
 
       if (!orderId) {
+        // No context anywhere — show a soft "processing" state instead of
+        // a misleading "no payment found" so users who just paid are not
+        // told their payment is missing. Keep retrying recovery in the
+        // background in case the auth session hydrates later.
+        if (!cancelled) setResult({ status: "processing", orderId: "" });
+
+        for (let i = 0; i < 6; i++) {
+          await sleep(5000);
+          if (cancelled) return;
+          try {
+            const recovered = await recoverLatestOrder();
+            if (recovered?.order_id) {
+              if (cancelled) return;
+              setResult((prev) => ({ ...prev, orderId: recovered.order_id! }));
+              // Continue with normal polling using the recovered id below
+              return runWithOrderId(recovered.order_id);
+            }
+          } catch (err) {
+            console.error("recoverLatestOrder retry failed:", err);
+          }
+        }
+
+        // After ~30s with nothing recoverable, only NOW show "not_found".
         if (!cancelled) setResult({ status: "not_found", orderId: "" });
         return;
       }
 
+      return runWithOrderId(orderId);
+    };
+
+    const runWithOrderId = async (orderId: string) => {
       if (!cancelled) {
         setResult((prev) => ({ ...prev, orderId }));
       }
@@ -200,23 +226,11 @@ export default function PaymentStatus() {
     };
   }, [initialOrderId]);
 
-  // Auto-redirect only on success.
-  useEffect(() => {
-    if (result.status !== "completed") return;
-
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigate("/student/invoices");
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [result.status, navigate]);
+  // Note: we intentionally do NOT auto-redirect after success. After
+  // returning from a cross-domain HDFC redirect, the auth session can be
+  // briefly unstable, and auto-pushing the user into a protected route
+  // bounces them to /auth. Keep them on the success screen and let them
+  // click "Back to Invoices" themselves once they're ready.
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -264,7 +278,7 @@ export default function PaymentStatus() {
                 {result.transactionRef && <p>Transaction Ref: {result.transactionRef}</p>}
               </div>
               <p className="text-xs text-muted-foreground">
-                Redirecting to invoices in {countdown}s...
+                Your invoice has been updated. Click below to return.
               </p>
               <Button onClick={() => navigate("/student/invoices")} className="w-full">
                 <ArrowLeft className="h-4 w-4 mr-2" />
