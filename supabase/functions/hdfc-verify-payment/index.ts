@@ -100,7 +100,6 @@ Deno.serve(async (req) => {
         .from("payment_transactions")
         .select("*, invoices(invoice_number)")
         .in("invoice_id", ids)
-        .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
