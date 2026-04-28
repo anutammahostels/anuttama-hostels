@@ -81,17 +81,6 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
-        // Landing-page brand palette (Anuttama logo)
-        brand: {
-          DEFAULT: "hsl(var(--brand))",
-          foreground: "hsl(var(--brand-foreground))",
-          deep: "hsl(var(--brand-deep))",
-          cream: "hsl(var(--brand-cream))",
-          "cream-soft": "hsl(var(--brand-cream-soft))",
-          ink: "hsl(var(--brand-ink))",
-          "ink-muted": "hsl(var(--brand-ink-muted))",
-          line: "hsl(var(--brand-line))",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",

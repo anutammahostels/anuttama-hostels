@@ -1,103 +1,75 @@
-# Landing Page Refresh — Professional & Minimal
+# HDFC Security Audit — Compliance Review & Proof Generation
 
-## Why redo it (honest assessment)
+## Part 1 — Compliance Audit (current state)
 
-The current landing page is **visually busy** and **off-brand**:
+### Bank Testing Checklist (Security Audit)
 
-- Hero uses a near-black navy (`hsl(222,47%,6%)`) plus a blue→cyan→green text gradient. The Anuttama logo is warm/earthy (orange-saffron + cream), so the page and logo currently look like they belong to two different products.
-- Heavy effects: 3 big blur orbs, floating icon chips, 3 floating stat cards, grid overlay, gradient buttons, gradient text, gradient feature tiles in 10 different colors. This reads "template-y," not "professional SaaS."
-- 10 feature cards each with a unique vibrant gradient (violet, pink, cyan, amber, rose…) fragment the brand.
+| # | Requirement | Status | Evidence in code |
+|---|---|---|---|
+| 1 | Unique Order ID generation | PASS | `hdfc-create-session` → `generateUniqueOrderId()` produces `ANT` + 8 random alphanumeric + 4 timestamp chars = **15 chars**, alphanumeric only, non-sequential, with DB uniqueness check (5 retries). |
+| 2 | Request Tampering prevention | PASS | Amount is **never** taken from the client. `hdfc-create-session` ignores any client-supplied amount and computes `balance = invoice.total_amount − invoice.paid_amount` directly from the DB before sending to HDFC. |
+| 3 | Response Tampering prevention | PASS (with 1 fix) | `hdfc-payment-callback` validates the RSA signature using `HDFC_PUBLIC_KEY`, then **independently re-verifies** the order status server-to-server via `/orders/{id}` before marking the DB. UI never trusts URL params — it reads from `payment_transactions` via `hdfc-verify-payment`. **Fix needed:** strip duplicate `order_id` (HDFC appended `,ANTbt3IfpuH8629` in last test, breaking signature check). |
+| 4 | URL redirection validation | PASS | Final state is determined by `hdfc-order-status` (server→HDFC API), not by which URL the user landed on. `success` / `failed` / `processing` UIs all read the same server-verified record. |
+| 5 | Duplicate entry validation | PASS | `payment_transactions.order_id` is unique; `hdfc-order-status` short-circuits if status is already `SUCCESS` (idempotent replay-safe). `payments` table is keyed off `order_id` via `transaction_id`. |
+| 6 | Receipt Generation | PASS | `StudentInvoices` shows order details + downloadable invoice (`handleDownloadInvoice`) and `PaymentOrderDetails` panel shows amount, order id, txn ref, payment method, RRN. Receipt is generated only when `payment_transactions.status='SUCCESS'`. |
+| 7 | Valid SSL | PASS | All custom domains (anuttamahostels.com, hostylia.com) and the Lovable Cloud preview are served over HTTPS via the Lovable/Cloudflare edge. |
 
-A minimal, logo-aligned redesign **will work better** than the current UI for a B2B residential-management product. Buyers (hostel admins, school operators) trust calm, structured interfaces.
+### Integration Checklist (HDFC PDF)
 
-Only landing-page surfaces change. Dashboards, student portal, super-admin panel, and auth flows stay exactly as they are.
+| Requirement | Status | Notes |
+|---|---|---|
+| Unique `customer_id` per customer | PASS | Derived from `auth.uid()` (UUID, hyphens stripped, 30 chars). One-to-one with each user. |
+| Don't use `udf2` for extra info | PASS | `udf2` carries the internal `student.id` only (used for reconciliation, not tokenization-blocked content). **Note:** HDFC says UDF2 is *blocked for tokenization*. Since we are not tokenizing cards, this is fine — but to be 100% audit-clean we should move `student_id` to `udf4` and leave `udf2` empty. |
+| Order number & amount visible on response page | PASS | Success card shows Order ID, Amount, Status, Invoice #, Payment Method, Txn Ref. |
+| Real-time response shows order #, amount, success message | PASS | All four fields rendered on `/student/payment/status` immediately after server verification. |
+| Order ID format: <21 chars, no special chars, alphanumeric, non-sequential | PASS | 15 chars, `[A-Za-z0-9]` only, random alphanumeric component. |
 
----
+### Issues found (2 small fixes needed)
 
-## New visual direction
-
-**Palette (anchored to logo)**
-- Background: warm off-white `#FAF7F2` (cream, matches logo backdrop)
-- Surface: pure white with `1px` neutral border `#ECE7DE`
-- Ink (text): near-black `#0F1419`
-- Muted text: `#5C6470`
-- **Brand primary: saffron/terracotta** `hsl(22 88% 52%)` — pulled from the logo's dominant orange. Used sparingly (CTAs, single accent line, key numbers).
-- Brand deep: `hsl(28 45% 22%)` (logo's dark brown) — for hover/pressed states and the footer.
-- No multi-color gradients. One single brand-tint gradient reserved for the primary CTA only.
-
-**Typography**
-- Keep Plus Jakarta Sans, but tighten: hero h1 drops from `7xl` to `5xl/6xl`, weight `600` not `700`, tracking `-0.03em`. Body stays Inter at `text-base` with `text-muted-foreground`.
-- Remove the rainbow `.text-gradient` from headings. Replace with plain ink color and a single saffron underline-accent on the key word.
-
-**Layout principles**
-- Generous whitespace, max content width `1200px`.
-- Sections separated by space, not by colored backgrounds. Every section sits on the cream background.
-- One visual element per section — no stacked floating chips + orbs + grid + glow simultaneously.
-- Subtle motion only: fade-up on scroll, no float/bounce/pulse.
+1. **Duplicated `order_id` in callback** — From the last live log: HDFC POSTed `order_id=ANTbt3IfpuH8629,ANTbt3IfpuH8629`. This caused signature verification to fail and the subsequent `/orders/{id}` lookup to return `RESOURCE_NOT_FOUND` (cleared only on retry). Root cause: `hdfc-create-session` puts `order_id` in the `return_url` querystring **and** HDFC also appends it on redirect, producing a comma-joined value. Fix: in `hdfc-payment-callback`, normalize `order_id` by taking the first value if comma-separated; also remove `order_id` from the `return_url` we send to HDFC (HDFC adds it automatically).
+2. **UDF hygiene** — Move `student_id` from `udf2` → `udf4` to fully comply with HDFC's "do not use UDF2" rule.
 
 ---
 
-## Section-by-section changes
+## Part 2 — Fixes
 
-### 1. Navbar (`Navbar.tsx`)
-- Light cream background with `backdrop-blur` + `1px` bottom border (instead of dark navy).
-- Logo at `size="md"`, `variant="light"`, `rounded="full"` — sits naturally on cream.
-- Nav links: muted ink, hover = saffron underline (no pill backgrounds).
-- "Get Started" button: solid saffron, no gradient. "Log in" stays ghost.
+**`supabase/functions/hdfc-payment-callback/index.ts`**
+- After parsing `data.order_id`, normalize: `orderId = orderId.split(",")[0].trim()`.
+- Same normalization for the `signature` and any other potentially duplicated field.
 
-### 2. Hero (`Hero.tsx`) — biggest cleanup
-- Remove: hero building image, all 3 blur orbs, grid pattern, 3 floating icon chips, 3 floating stat cards, glow behind dashboard.
-- Keep: heading, subtitle, 2 CTAs, dashboard mockup, trust indicators.
-- New structure:
-  - Small pill above heading: "Smart Residential Management" in saffron-tinted chip.
-  - Heading: `"Run your hostel like a modern operation."` — black ink, one saffron-underlined word ("modern").
-  - Subtitle: shorter, single sentence, muted.
-  - Two buttons: primary saffron solid, secondary ghost with thin border.
-  - Trust row: 4 simple `icon + label` items in muted ink, no hover color shift.
-  - Dashboard mockup centered in a soft `1px` bordered frame with a faint shadow — no floating cards around it.
+**`supabase/functions/hdfc-create-session/index.ts`**
+- Build `enrichedReturnUrl` without `order_id` and `customer_id` query params (HDFC appends them itself). Keep only `app_return_to`.
+- Move `udf2: student.id` → `udf4: student.id`; set `udf2: ""`.
 
-### 3. Features (`Features.tsx`)
-- Drop the 10 different per-card gradients. All cards use the same neutral surface; icon sits in a small saffron-tinted square (`bg-primary/8`, `text-primary`).
-- Grid: `grid-cols-2 lg:grid-cols-3` (instead of 5) so each card breathes — show top 6 features here with a "View all 25+" link.
-- Remove the two large room/mess images block (decorative, not informative). Keep them only on the dedicated `/features` page.
-- Roles section: 3 simple bordered cards in a row, no hover gradient swap.
-
-### 4. Benefits, PolicyEngine, Testimonials, CTA
-- Same desaturation pass: replace gradient backgrounds with cream/white, replace multi-color icons with single saffron accents, simplify cards to `1px` border + tiny shadow.
-- CTA section: one centered block, saffron primary button, no background gradient — just a thin top divider.
-
-### 5. Footer
-- Switch background to logo's deep brown `hsl(28 45% 22%)` with cream text. This is the only dark surface on the page and acts as a natural "ground."
-
-### 6. Tokens (`src/index.css`)
-- Update `--primary` to saffron `22 88% 52%` (light theme only — dashboards rely on this token but the saffron still reads as a confident brand color in admin UI; existing blue/green semantic statuses stay untouched via `--info`, `--success`).
-- Add `--brand-cream: 36 38% 96%` and `--brand-deep: 28 45% 22%`.
-- Tone down `.text-gradient` to a single saffron→deep-brown gradient (used rarely, not in the new hero).
-- Remove unused `glow`, `glow-primary`, `animate-glow-pulse`, `animate-float` references from landing components (keep utilities defined for other pages).
-
-> ⚠️ Trade-off to confirm: changing `--primary` recolors primary buttons across the **admin dashboard** too (currently navy blue). If you want dashboards to stay blue and only the landing page to be saffron, I'll instead introduce a **landing-only** `--brand` token and leave `--primary` alone. Default in this plan = single saffron primary everywhere; tell me if you'd rather scope it.
+Deploy both edge functions.
 
 ---
 
-## Files I'll edit
+## Part 3 — Generate proof package for HDFC
 
-- `src/index.css` — palette tokens, simplify gradient utility
-- `src/components/landing/Navbar.tsx` — light theme
-- `src/components/landing/Hero.tsx` — strip effects, restructure
-- `src/components/landing/Features.tsx` — unify cards, drop image block
-- `src/components/landing/Benefits.tsx` — desaturate
-- `src/components/landing/PolicyEngine.tsx` — desaturate
-- `src/components/landing/Testimonials.tsx` — neutral cards
-- `src/components/landing/CTA.tsx` — minimal block
-- `src/components/landing/Footer.tsx` — deep brown surface
-- `src/components/brand/HostyliaLogo.tsx` — no change needed; already supports `variant="light"`
+Produce a single PDF (`/mnt/documents/HDFC_Integration_Proof.pdf`) containing the filled checklist + technical evidence. The PDF will include:
 
-No DB, no edge functions, no auth changes.
+1. **Filled "Bank Testing Checklist"** — all 7 rows marked **Yes** with a one-line justification each and a code/file reference.
+2. **Filled "Integration Checklist"** — confirmation of customer_id, UDF usage, receipt fields, order ID format, with a sample order ID generated live.
+3. **Live evidence section** — pulled from the database for the 3 most recent successful test transactions:
+   - Order ID, Amount, Status, HDFC Txn ID, Payment Method, Created/Updated timestamps.
+   - The matching `payment_logs` entries (session_create request, callback received, server re-verify response) showing request/response symmetry.
+4. **Code excerpts** — short snippets proving each control:
+   - Order ID generator (uniqueness loop).
+   - Server-side amount computation (the line that ignores client amount).
+   - Signature verification (`crypto.subtle.verify` with `HDFC_PUBLIC_KEY`).
+   - Server-to-server re-verification call.
+   - Idempotency short-circuit in `hdfc-order-status`.
+5. **Architecture diagram (ASCII)** — Browser → HDFC → `hdfc-payment-callback` (signature verify + status re-fetch) → DB → Browser polls `hdfc-verify-payment`.
+6. **SSL note** — domains served over HTTPS via Cloudflare/Lovable edge; user can run SSLLABS scan on `anuttamahostels.com` and attach the report.
+
+The PDF will be QA'd page-by-page (rendered to images and visually inspected) before delivery.
 
 ---
 
 ## What you'll get
 
-A landing page that looks like it was built for **Anuttama Hostels** specifically: warm, calm, confident; logo and page share the same visual language; CTAs pop because the rest of the page is quiet. Roughly 40% less DOM and animation on the hero alone, so it'll also feel snappier.
+- 2 small edge-function fixes (deployed).
+- `HDFC_Integration_Proof.pdf` in `/mnt/documents/` ready to send to the HDFC security team along with the screenshots they asked for (success page, failure page, response page — you can capture these from the live flow once the fixes are deployed).
 
-Approve and I'll implement, then you can review in the preview.
+Approve to proceed.

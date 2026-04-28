@@ -3,7 +3,7 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 
 export const LandingLayout = () => (
-  <div className="min-h-screen bg-brand-cream text-brand-ink">
+  <div className="min-h-screen bg-background">
     <Navbar />
     <Outlet />
     <Footer />
