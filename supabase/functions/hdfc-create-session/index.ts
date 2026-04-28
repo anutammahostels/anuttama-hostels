@@ -225,12 +225,15 @@ Deno.serve(async (req) => {
     const appReturnTo =
       return_url || `${new URL(req.url).origin}/student/payment/status`;
 
+    // IMPORTANT: HDFC automatically appends order_id and customer_id to the
+    // return_url on redirect. If we ALSO put them in the URL ourselves, HDFC
+    // joins them with a comma (e.g. "ANT123,ANT123"), which breaks signature
+    // verification and the subsequent /orders/{id} lookup. So we only pass
+    // app_return_to here and let HDFC append the rest.
     const backendCallbackBase = `${Deno.env.get("SUPABASE_URL")}/functions/v1/hdfc-payment-callback`;
     const enrichedReturnUrl =
       `${backendCallbackBase}` +
-      `?order_id=${encodeURIComponent(orderId)}` +
-      `&customer_id=${encodeURIComponent(customerId)}` +
-      `&app_return_to=${encodeURIComponent(appReturnTo)}`;
+      `?app_return_to=${encodeURIComponent(appReturnTo)}`;
 
     const sessionPayload: Record<string, unknown> = {
       order_id: orderId,
@@ -245,10 +248,14 @@ Deno.serve(async (req) => {
       description: `Hostel fee — invoice ${invoice.invoice_number}`.slice(0, 200),
       first_name: firstName,
       last_name: lastName,
-      // UDFs for reconciliation in HDFC dashboard & webhooks
+      // UDFs for reconciliation in HDFC dashboard & webhooks.
+      // NOTE: Per HDFC integration checklist, udf2 is reserved/blocked for
+      // tokenization and MUST NOT be used for additional info. We leave it
+      // empty and put the student id in udf4 instead.
       udf1: invoice.id,
-      udf2: student.id,
+      udf2: "",
       udf3: propertyId,
+      udf4: student.id,
       udf6: invoice.invoice_number || "",
     };
 

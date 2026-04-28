@@ -112,11 +112,23 @@ Deno.serve(async (req) => {
 
     console.log("HDFC callback received:", req.method, JSON.stringify(data));
 
-    const orderId: string = data.order_id || data.orderId || "";
-    const signature: string = data.signature || data.resp_hash || "";
+    // HDFC sometimes appends order_id to a return_url that already contains
+    // it, producing comma-joined duplicates like "ANT123,ANT123". Normalise
+    // every potentially-duplicated value to its first comma-separated token.
+    const firstToken = (v: unknown): string =>
+      String(v ?? "").split(",")[0].trim();
+
+    const orderId: string = firstToken(data.order_id || data.orderId);
+    const signature: string = firstToken(data.signature || data.resp_hash);
     const appReturnTo: string =
-      data.app_return_to ||
+      firstToken(data.app_return_to) ||
       `https://anuttamahostels.com/student/payment/status`;
+
+    // Normalise back into `data` so downstream signature verify sees clean values.
+    if (data.order_id) data.order_id = orderId;
+    if (data.orderId) data.orderId = orderId;
+    if (data.signature) data.signature = signature;
+    if (data.resp_hash) data.resp_hash = signature;
 
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
