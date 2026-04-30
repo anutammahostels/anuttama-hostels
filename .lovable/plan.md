@@ -1,36 +1,44 @@
-# Repeat Operational Data Wipe
+## HDFC Bank Testing Submission Package
 
-Same scope as the previous reset. Current state shows new data has been added since the last wipe.
+Goal: produce everything HDFC needs to verify the integration and move the merchant account (SG4845, ANUTTAMA ENTERPRISES LLP) to the live environment.
 
-## Current Data (to be deleted)
+### Deliverables
 
-| Entity | Count |
-|---|---|
-| students | 649 |
-| invoices | 115 |
-| payments | 145 |
-| notifications | 1 |
-| user_roles (student) | 649 |
-| All other operational tables | 0 |
+**1. Order Status API logs export** (PDF + Excel)
+- Pull recent `payment_logs` rows where `log_type` includes order-status / verify calls plus their request/response payloads.
+- Pull matching `payment_transactions` rows (order_id, hdfc_txn_id, status, amount, customer_id, payment_method, timestamps).
+- Generate two files in `/mnt/documents/`:
+  - `hdfc-order-status-logs.xlsx` — sheets: Transactions, OrderStatus_Requests, OrderStatus_Responses
+  - `hdfc-order-status-logs.pdf` — formatted log report with sample SUCCESS, FAILED, and PENDING transactions, including full JSON payloads
+- QA each PDF page visually before delivery.
 
-## To be DELETED
-- **Financials**: `payments`, `invoices`, `payment_transactions`, `payment_logs`, `refunds`, `journal_entries`, `transactions`, `payroll_records`
-- **Student data**: `students` (649), `admissions`, student rows in `user_roles` (649) and `profiles`
-- **Operational logs**: `attendance`, `gate_passes`, `complaints`, `maintenance_tickets`, `mess_subscriptions`, `audit_logs`, `notifications`
-- **Beds**: reset `student_id = NULL`, `status = 'vacant'`
+**2. PaymentStatus.tsx UI audit**
+- Read `src/pages/PaymentStatus.tsx` and `src/components/student/PaymentOrderDetails.tsx`.
+- Confirm the success page visibly shows: Order ID, Amount, Currency, Status (SUCCESS message), Invoice number, HDFC transaction ID, payment method.
+- If anything is missing, list precise edits (component + lines) needed so HDFC testers see all required fields. No code changes happen during plan mode — they will be applied after approval if needed.
 
-## To be PRESERVED
-- 11 Organizations
-- 2 Properties + all blocks/floors/rooms/beds (structure only)
-- All policy_settings, accounts, mess_plans, employees
-- 11 non-student user_roles (super_admin, tenant_admin, warden, accountant) and their auth accounts
+**3. Drafted email reply to HDFC**
+- A ready-to-send reply filling every field in their template:
+  - Merchant name, Account ID (SG4845)
+  - Website URL: https://anuttamahostels.com (publicly accessible: Yes)
+  - Test login credentials (a tester student account — you'll need to provide or I'll create one)
+  - Response/Return URL: production callback endpoint
+  - Webhook URL
+  - Programming language / stack (React + Vite frontend, Deno edge functions on Lovable Cloud)
+  - Confirmation that Order Status API is called server-to-server
+  - Confirmation that all transaction states (SUCCESS / FAILED / PENDING / TAMPERED) are stored
+  - Multiple test amount values
+  - Note that mobile SDK is N/A (web-only)
+- Saved as `/mnt/documents/hdfc-bank-testing-reply.pdf` and shown inline so you can copy-paste into email.
 
-## Execution
-1. **SQL migration** — single batch DELETE across the tables above + bed reset.
-2. **Auth cleanup** — invoke existing `bulk-delete-students` edge function (already deployed) to purge ~649 orphaned `@anuttama.student` auth accounts. You'll run this from the browser console as super_admin, same as last time:
-   ```js
-   const { data, error } = await window.supabase.functions.invoke('bulk-delete-students');
-   console.log(data, error);
-   ```
+### Technical notes
 
-No schema changes. No structural data touched. Reply **approve** to proceed.
+- Logs come from `payment_logs` (request_payload, response_payload, log_type, order_id) joined to `payment_transactions` on order_id.
+- Use Python (pandas + openpyxl for Excel, reportlab for PDF). JSON payloads pretty-printed with monospace font in PDF.
+- Need a tester credential for HDFC. Options:
+  - You provide an existing student Form Number + password, OR
+  - I create a dedicated `hdfctester` student account via the create-student edge function (after approval)
+
+### One thing to confirm
+
+Do you want me to **also include a Security Audit reminder** in the email (HDFC noted it's mandatory before going live), and do you want the tester credentials created fresh by me, or will you supply them?
