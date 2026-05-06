@@ -1,0 +1,1 @@
+DELETE FROM public.invoices WHERE student_id IS NULL;
