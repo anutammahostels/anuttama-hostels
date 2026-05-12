@@ -65,6 +65,8 @@ const Receivables = () => {
     received: acc.received + r.received, refunds: acc.refunds + r.refunds, net: acc.net + r.net,
   }), { gross: 0, discounts: 0, received: 0, refunds: 0, net: 0 });
 
+  const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
+
   const handleExportExcel = () => {
     exportToExcel(rows.map(r => ({
       "Student Name": r.name,
