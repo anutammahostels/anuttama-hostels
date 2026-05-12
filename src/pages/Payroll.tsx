@@ -1654,7 +1654,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                       <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : payrollRecords.length === 0 ? (
                       <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No payroll records yet</TableCell></TableRow>
-                    ) : payrollRecords.map(record => (
+                    ) : pagedPayroll.map(record => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</TableCell>
                         <TableCell>
