@@ -339,7 +339,7 @@ export default function Admissions() {
             <TableBody>
               {filteredAdmissions.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No applications found</TableCell></TableRow>
-              ) : filteredAdmissions.map(a => (
+              ) : pagedAdmissions.map(a => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.full_name}</TableCell>
                   <TableCell className="text-sm">{a.course ? `${a.course}${a.year ? ` - Year ${a.year}` : ""}` : "—"}</TableCell>
