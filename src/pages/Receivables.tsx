@@ -199,6 +199,7 @@ const Receivables = () => {
               </TableBody>
             </Table>
           </div>
+          <TablePagination page={page} pageSize={pageSize} totalItems={rows.length} onPageChange={setPage} itemLabel="students" />
         </CardContent>
       </Card>
     </div>
