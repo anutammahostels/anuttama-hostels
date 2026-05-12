@@ -518,7 +518,7 @@ const Billing = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredInvoices.map((invoice) => {
+                        {pagedInvoices.map((invoice) => {
                           const balance = invoice.total_amount - (invoice.paid_amount || 0);
                           return (
                             <TableRow key={invoice.id}>
