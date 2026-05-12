@@ -602,7 +602,7 @@ export default function Accounting() {
                 <TableBody>
                   {transactions.length === 0 ? (
                     <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No transactions recorded yet</TableCell></TableRow>
-                  ) : transactions.map(t => (
+                  ) : pagedTransactions.map(t => (
                     <TableRow key={t.id}>
                       <TableCell className="text-sm">{format(new Date(t.date), "dd MMM yyyy")}</TableCell>
                       <TableCell><Badge variant={t.transaction_type === "income" ? "default" : "destructive"} className="text-xs">{t.transaction_type === "income" ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}{t.transaction_type}</Badge></TableCell>
