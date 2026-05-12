@@ -1168,7 +1168,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <div className="p-8 text-center text-muted-foreground">Loading...</div>
                 ) : employees.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">No employees added yet</div>
-                ) : employees.map(emp => (
+                ) : pagedEmployees.map(emp => (
                   <div key={emp.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
