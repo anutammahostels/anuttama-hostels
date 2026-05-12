@@ -1209,7 +1209,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                       <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : employees.length === 0 ? (
                       <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No employees added yet</TableCell></TableRow>
-                    ) : employees.map(emp => (
+                    ) : pagedEmployees.map(emp => (
                       <TableRow key={emp.id}>
                         <TableCell className="font-medium">{emp.full_name}</TableCell>
                         <TableCell>{emp.employee_number || "-"}</TableCell>
