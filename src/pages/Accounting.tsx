@@ -634,7 +634,7 @@ export default function Accounting() {
                 <TableBody>
                   {journalEntries.length === 0 ? (
                     <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No journal entries yet</TableCell></TableRow>
-                  ) : journalEntries.map(j => (
+                  ) : pagedJournal.map(j => (
                     <TableRow key={j.id}>
                       <TableCell className="text-sm">{format(new Date(j.date), "dd MMM yyyy")}</TableCell>
                       <TableCell className="font-mono text-sm">{j.entry_number}</TableCell>
