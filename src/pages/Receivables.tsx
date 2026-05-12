@@ -173,7 +173,7 @@ const Receivables = () => {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
-                ) : rows.map(r => (
+                ) : pagedRows.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell>{r.rollNo}</TableCell>
