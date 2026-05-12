@@ -731,6 +731,11 @@ const Students = () => {
     return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
   });
 
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterCourse, filterYear, filterRoom]);
+  const pagedStudents = useMemo(() => filteredStudents.slice((page - 1) * pageSize, page * pageSize), [filteredStudents, page]);
+
   // Bulk selection helpers
   const toggleStudent = useCallback((id: string) => {
     setSelectedStudents(prev => {
