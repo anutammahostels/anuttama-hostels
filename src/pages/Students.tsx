@@ -1211,6 +1211,7 @@ const Students = () => {
                     </TableBody>
                   </Table>
                 </div>
+                <TablePagination page={page} pageSize={pageSize} totalItems={filteredStudents.length} onPageChange={setPage} itemLabel="students" />
               </>
             )}
           </CardContent>
