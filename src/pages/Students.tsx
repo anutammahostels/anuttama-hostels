@@ -1106,7 +1106,7 @@ const Students = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredStudents.map((student) => (
+                      {pagedStudents.map((student) => (
                         <TableRow key={student.id} data-state={selectedStudents.has(student.id) ? "selected" : undefined}>
                           <TableCell>
                             <Checkbox
