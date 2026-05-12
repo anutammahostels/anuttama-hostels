@@ -299,7 +299,7 @@ export default function Admissions() {
           <div className="sm:hidden divide-y divide-border">
             {filteredAdmissions.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">No applications found</div>
-            ) : filteredAdmissions.map(a => (
+            ) : pagedAdmissions.map(a => (
               <div key={a.id} className="p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
