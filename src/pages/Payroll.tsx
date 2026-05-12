@@ -1616,7 +1616,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <div className="p-8 text-center text-muted-foreground">Loading...</div>
                 ) : payrollRecords.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">No payroll records yet</div>
-                ) : payrollRecords.map(record => (
+                ) : pagedPayroll.map(record => (
                   <div key={record.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
