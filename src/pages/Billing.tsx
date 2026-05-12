@@ -142,6 +142,11 @@ const Billing = () => {
     return matchesSearch;
   });
 
+  const [invoicePage, setInvoicePage] = useState(1);
+  const invoicePageSize = 25;
+  useEffect(() => { setInvoicePage(1); }, [searchQuery]);
+  const pagedInvoices = filteredInvoices.slice((invoicePage - 1) * invoicePageSize, invoicePage * invoicePageSize);
+
   const handleRecordPayment = async () => {
     if (!paymentDialog.invoice || !paymentAmount) return;
     await recordPayment.mutateAsync({
