@@ -8,6 +8,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToExcel } from "@/lib/exportExcel";
 import { format } from "date-fns";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
