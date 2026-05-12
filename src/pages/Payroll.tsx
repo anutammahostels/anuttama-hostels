@@ -1681,6 +1681,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   </TableBody>
                 </Table>
               </div>
+              <TablePagination page={payrollPage} pageSize={pageSize} totalItems={payrollRecords.length} onPageChange={setPayrollPage} itemLabel="records" />
             </CardContent>
           </Card>
         </TabsContent>
