@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Lock, ArrowRight, Sparkles, Building2, Users, Clock, Shield, Star, GraduationCap, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Sparkles, Building2, Users, Clock, Shield, Star, GraduationCap, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { HostyliaLogo } from '@/components/brand/HostyliaLogo';
