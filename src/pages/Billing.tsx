@@ -472,7 +472,7 @@ const Billing = () => {
                   <>
                     {/* Mobile card view */}
                     <div className="sm:hidden divide-y divide-border">
-                      {filteredInvoices.map((invoice) => {
+                      {pagedInvoices.map((invoice) => {
                         const balance = invoice.total_amount - (invoice.paid_amount || 0);
                         return (
                           <div key={invoice.id} className="p-4 space-y-2">
