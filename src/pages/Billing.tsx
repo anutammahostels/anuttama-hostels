@@ -579,6 +579,7 @@ const Billing = () => {
                       </TableBody>
                     </Table>
                     </div>
+                    <TablePagination page={invoicePage} pageSize={invoicePageSize} totalItems={filteredInvoices.length} onPageChange={setInvoicePage} itemLabel="invoices" />
                   </>
                 )}
               </CardContent>
