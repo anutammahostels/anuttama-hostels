@@ -51,6 +51,9 @@ export default function Admissions() {
   const [viewAdmission, setViewAdmission] = useState<Admission | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  useEffect(() => { setPage(1); }, [filterStatus, propertyId]);
 
   const propertyId = selectedProperty || properties[0]?.id || "";
 
