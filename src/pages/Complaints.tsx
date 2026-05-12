@@ -30,6 +30,10 @@ export default function Complaints() {
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  useEffect(() => { setPage(1); }, [statusFilter]);
+  const pagedComplaints = useMemo(() => complaints.slice((page - 1) * pageSize, page * pageSize), [complaints, page]);
 
   const { data: complaints = [], isLoading } = useQuery({
     queryKey: ["admin-complaints", statusFilter],
