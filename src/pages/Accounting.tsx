@@ -677,6 +677,7 @@ export default function Accounting() {
                   ))}
                 </TableBody>
               </Table>
+              <TablePagination page={acctPage} pageSize={pageSize} totalItems={accounts.length} onPageChange={setAcctPage} itemLabel="accounts" />
             </CardContent>
           </Card>
         </TabsContent>
