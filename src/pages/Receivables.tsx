@@ -15,6 +15,8 @@ const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 const Receivables = () => {
   const { invoices, isLoading } = useInvoices();
   const [refundsMap, setRefundsMap] = useState<Map<string, number>>(new Map());
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
   useEffect(() => {
     const fetchRefunds = async () => {
