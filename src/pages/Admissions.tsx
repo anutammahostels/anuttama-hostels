@@ -368,6 +368,7 @@ export default function Admissions() {
             </TableBody>
           </Table>
           </div>
+          <TablePagination page={page} pageSize={pageSize} totalItems={filteredAdmissions.length} onPageChange={setPage} itemLabel="applications" />
         </CardContent>
       </Card>
 
