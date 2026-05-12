@@ -1006,7 +1006,7 @@ const Students = () => {
               <>
                 {/* Mobile cards */}
                 <div className="sm:hidden space-y-2 p-3">
-                  {filteredStudents.map((student) => (
+                  {pagedStudents.map((student) => (
                     <Card key={student.id} className="border-border/50">
                       <CardContent className="p-3">
                         <div className="flex items-center gap-3">
