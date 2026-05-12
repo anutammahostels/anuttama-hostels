@@ -576,7 +576,7 @@ export default function Accounting() {
               <div className="sm:hidden divide-y divide-border">
                 {transactions.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">No transactions recorded yet</div>
-                ) : transactions.map(t => (
+                ) : pagedTransactions.map(t => (
                   <div key={t.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <Badge variant={t.transaction_type === "income" ? "default" : "destructive"} className="text-xs">{t.transaction_type}</Badge>
