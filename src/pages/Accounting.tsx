@@ -134,6 +134,20 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
+  // Pagination
+  const pageSize = 20;
+  const [txnPage, setTxnPage] = useState(1);
+  const [journalPage, setJournalPage] = useState(1);
+  const [acctPage, setAcctPage] = useState(1);
+  const [collPage, setCollPage] = useState(1);
+  const pagedTransactions = transactions.slice((txnPage - 1) * pageSize, txnPage * pageSize);
+  const pagedJournal = journalEntries.slice((journalPage - 1) * pageSize, journalPage * pageSize);
+  const pagedAccounts = accounts.slice((acctPage - 1) * pageSize, acctPage * pageSize);
+  const combinedCollections = [
+    ...feeCollections.map((p: any) => ({ kind: 'collection', ...p })),
+    ...refundsData.map((r: any) => ({ kind: 'refund', ...r })),
+  ];
+  const pagedCollections = combinedCollections.slice((collPage - 1) * pageSize, collPage * pageSize);
 
   // Mutations
   const createAccount = useMutation({
