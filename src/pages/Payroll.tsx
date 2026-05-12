@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProperties } from "@/hooks/useProperties";
@@ -977,6 +978,13 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
   // Check if a month has any locked records
   const isMonthLocked = (month: string) => payrollRecords.some(r => r.month === month && r.is_locked);
 
+  // Pagination
+  const [empPage, setEmpPage] = useState(1);
+  const [payrollPage, setPayrollPage] = useState(1);
+  const pageSize = 20;
+  const pagedEmployees = employees.slice((empPage - 1) * pageSize, empPage * pageSize);
+  const pagedPayroll = payrollRecords.slice((payrollPage - 1) * pageSize, payrollPage * pageSize);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1160,7 +1168,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <div className="p-8 text-center text-muted-foreground">Loading...</div>
                 ) : employees.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">No employees added yet</div>
-                ) : employees.map(emp => (
+                ) : pagedEmployees.map(emp => (
                   <div key={emp.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1201,7 +1209,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                       <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : employees.length === 0 ? (
                       <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No employees added yet</TableCell></TableRow>
-                    ) : employees.map(emp => (
+                    ) : pagedEmployees.map(emp => (
                       <TableRow key={emp.id}>
                         <TableCell className="font-medium">{emp.full_name}</TableCell>
                         <TableCell>{emp.employee_number || "-"}</TableCell>
@@ -1221,6 +1229,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   </TableBody>
                 </Table>
               </div>
+              <TablePagination page={empPage} pageSize={pageSize} totalItems={employees.length} onPageChange={setEmpPage} itemLabel="employees" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1607,7 +1616,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   <div className="p-8 text-center text-muted-foreground">Loading...</div>
                 ) : payrollRecords.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">No payroll records yet</div>
-                ) : payrollRecords.map(record => (
+                ) : pagedPayroll.map(record => (
                   <div key={record.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1645,7 +1654,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                       <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                     ) : payrollRecords.length === 0 ? (
                       <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No payroll records yet</TableCell></TableRow>
-                    ) : payrollRecords.map(record => (
+                    ) : pagedPayroll.map(record => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">{(record.employees as any)?.full_name || "Unknown"}</TableCell>
                         <TableCell>
@@ -1672,6 +1681,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   </TableBody>
                 </Table>
               </div>
+              <TablePagination page={payrollPage} pageSize={pageSize} totalItems={payrollRecords.length} onPageChange={setPayrollPage} itemLabel="records" />
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,6 +51,8 @@ export default function Admissions() {
   const [viewAdmission, setViewAdmission] = useState<Admission | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const propertyId = selectedProperty || properties[0]?.id || "";
 
@@ -142,6 +145,8 @@ export default function Admissions() {
   });
 
   const filteredAdmissions = filterStatus === "all" ? admissions : admissions.filter(a => a.status === filterStatus);
+  useEffect(() => { setPage(1); }, [filterStatus, propertyId]);
+  const pagedAdmissions = filteredAdmissions.slice((page - 1) * pageSize, page * pageSize);
   const counts = {
     all: admissions.length,
     pending: admissions.filter(a => a.status === "pending").length,
@@ -294,7 +299,7 @@ export default function Admissions() {
           <div className="sm:hidden divide-y divide-border">
             {filteredAdmissions.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">No applications found</div>
-            ) : filteredAdmissions.map(a => (
+            ) : pagedAdmissions.map(a => (
               <div key={a.id} className="p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -334,7 +339,7 @@ export default function Admissions() {
             <TableBody>
               {filteredAdmissions.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No applications found</TableCell></TableRow>
-              ) : filteredAdmissions.map(a => (
+              ) : pagedAdmissions.map(a => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.full_name}</TableCell>
                   <TableCell className="text-sm">{a.course ? `${a.course}${a.year ? ` - Year ${a.year}` : ""}` : "—"}</TableCell>
@@ -363,6 +368,7 @@ export default function Admissions() {
             </TableBody>
           </Table>
           </div>
+          <TablePagination page={page} pageSize={pageSize} totalItems={filteredAdmissions.length} onPageChange={setPage} itemLabel="applications" />
         </CardContent>
       </Card>
 

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,9 @@ export default function Complaints() {
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  useEffect(() => { setPage(1); }, [statusFilter]);
 
   const { data: complaints = [], isLoading } = useQuery({
     queryKey: ["admin-complaints", statusFilter],
@@ -59,6 +63,8 @@ export default function Complaints() {
       return (data || []).map((c: any) => ({ ...c, student_name: "Unknown", roll_number: "N/A" }));
     },
   });
+
+  const pagedComplaints = useMemo(() => complaints.slice((page - 1) * pageSize, page * pageSize), [complaints, page]);
 
   const handleUpdate = async () => {
     if (!selectedComplaint || !newStatus) return;
@@ -156,8 +162,9 @@ export default function Complaints() {
         ) : complaints.length === 0 ? (
           <Card><CardContent className="p-8 text-center text-muted-foreground">No complaints found</CardContent></Card>
         ) : (
+          <>
           <div className="space-y-3">
-            {complaints.map((c: any) => {
+            {pagedComplaints.map((c: any) => {
               const config = statusConfig[c.status] || statusConfig.pending;
               const StatusIcon = config.icon;
               return (
@@ -190,6 +197,8 @@ export default function Complaints() {
               );
             })}
           </div>
+          <TablePagination page={page} pageSize={pageSize} totalItems={complaints.length} onPageChange={setPage} itemLabel="complaints" />
+          </>
         )}
 
         {/* Detail / Update Dialog */}

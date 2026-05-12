@@ -1,4 +1,5 @@
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -730,6 +731,11 @@ const Students = () => {
     return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
   });
 
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterCourse, filterYear, filterRoom]);
+  const pagedStudents = useMemo(() => filteredStudents.slice((page - 1) * pageSize, page * pageSize), [filteredStudents, page]);
+
   // Bulk selection helpers
   const toggleStudent = useCallback((id: string) => {
     setSelectedStudents(prev => {
@@ -1000,7 +1006,7 @@ const Students = () => {
               <>
                 {/* Mobile cards */}
                 <div className="sm:hidden space-y-2 p-3">
-                  {filteredStudents.map((student) => (
+                  {pagedStudents.map((student) => (
                     <Card key={student.id} className="border-border/50">
                       <CardContent className="p-3">
                         <div className="flex items-center gap-3">
@@ -1100,7 +1106,7 @@ const Students = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredStudents.map((student) => (
+                      {pagedStudents.map((student) => (
                         <TableRow key={student.id} data-state={selectedStudents.has(student.id) ? "selected" : undefined}>
                           <TableCell>
                             <Checkbox
@@ -1205,6 +1211,7 @@ const Students = () => {
                     </TableBody>
                   </Table>
                 </div>
+                <TablePagination page={page} pageSize={pageSize} totalItems={filteredStudents.length} onPageChange={setPage} itemLabel="students" />
               </>
             )}
           </CardContent>

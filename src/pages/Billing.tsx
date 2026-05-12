@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,11 @@ const Billing = () => {
       invoice.student?.roll_number?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
+
+  const [invoicePage, setInvoicePage] = useState(1);
+  const invoicePageSize = 25;
+  useEffect(() => { setInvoicePage(1); }, [searchQuery]);
+  const pagedInvoices = filteredInvoices.slice((invoicePage - 1) * invoicePageSize, invoicePage * invoicePageSize);
 
   const handleRecordPayment = async () => {
     if (!paymentDialog.invoice || !paymentAmount) return;
@@ -466,7 +472,7 @@ const Billing = () => {
                   <>
                     {/* Mobile card view */}
                     <div className="sm:hidden divide-y divide-border">
-                      {filteredInvoices.map((invoice) => {
+                      {pagedInvoices.map((invoice) => {
                         const balance = invoice.total_amount - (invoice.paid_amount || 0);
                         return (
                           <div key={invoice.id} className="p-4 space-y-2">
@@ -512,7 +518,7 @@ const Billing = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredInvoices.map((invoice) => {
+                        {pagedInvoices.map((invoice) => {
                           const balance = invoice.total_amount - (invoice.paid_amount || 0);
                           return (
                             <TableRow key={invoice.id}>
@@ -573,6 +579,7 @@ const Billing = () => {
                       </TableBody>
                     </Table>
                     </div>
+                    <TablePagination page={invoicePage} pageSize={invoicePageSize} totalItems={filteredInvoices.length} onPageChange={setInvoicePage} itemLabel="invoices" />
                   </>
                 )}
               </CardContent>

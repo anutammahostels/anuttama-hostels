@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -133,6 +134,20 @@ export default function Accounting() {
     enabled: !!propertyId,
   });
 
+  // Pagination
+  const pageSize = 20;
+  const [txnPage, setTxnPage] = useState(1);
+  const [journalPage, setJournalPage] = useState(1);
+  const [acctPage, setAcctPage] = useState(1);
+  const [collPage, setCollPage] = useState(1);
+  const pagedTransactions = transactions.slice((txnPage - 1) * pageSize, txnPage * pageSize);
+  const pagedJournal = journalEntries.slice((journalPage - 1) * pageSize, journalPage * pageSize);
+  const pagedAccounts = accounts.slice((acctPage - 1) * pageSize, acctPage * pageSize);
+  const combinedCollections = [
+    ...feeCollections.map((p: any) => ({ kind: 'collection', ...p })),
+    ...refundsData.map((r: any) => ({ kind: 'refund', ...r })),
+  ];
+  const pagedCollections = combinedCollections.slice((collPage - 1) * pageSize, collPage * pageSize);
 
   // Mutations
   const createAccount = useMutation({
@@ -561,7 +576,7 @@ export default function Accounting() {
               <div className="sm:hidden divide-y divide-border">
                 {transactions.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">No transactions recorded yet</div>
-                ) : transactions.map(t => (
+                ) : pagedTransactions.map(t => (
                   <div key={t.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <Badge variant={t.transaction_type === "income" ? "default" : "destructive"} className="text-xs">{t.transaction_type}</Badge>
@@ -587,7 +602,7 @@ export default function Accounting() {
                 <TableBody>
                   {transactions.length === 0 ? (
                     <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No transactions recorded yet</TableCell></TableRow>
-                  ) : transactions.map(t => (
+                  ) : pagedTransactions.map(t => (
                     <TableRow key={t.id}>
                       <TableCell className="text-sm">{format(new Date(t.date), "dd MMM yyyy")}</TableCell>
                       <TableCell><Badge variant={t.transaction_type === "income" ? "default" : "destructive"} className="text-xs">{t.transaction_type === "income" ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}{t.transaction_type}</Badge></TableCell>
@@ -601,6 +616,7 @@ export default function Accounting() {
                 </TableBody>
               </Table>
               </div>
+              <TablePagination page={txnPage} pageSize={pageSize} totalItems={transactions.length} onPageChange={setTxnPage} itemLabel="transactions" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -619,7 +635,7 @@ export default function Accounting() {
                 <TableBody>
                   {journalEntries.length === 0 ? (
                     <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No journal entries yet</TableCell></TableRow>
-                  ) : journalEntries.map(j => (
+                  ) : pagedJournal.map(j => (
                     <TableRow key={j.id}>
                       <TableCell className="text-sm">{format(new Date(j.date), "dd MMM yyyy")}</TableCell>
                       <TableCell className="font-mono text-sm">{j.entry_number}</TableCell>
@@ -631,6 +647,7 @@ export default function Accounting() {
                   ))}
                 </TableBody>
               </Table>
+              <TablePagination page={journalPage} pageSize={pageSize} totalItems={journalEntries.length} onPageChange={setJournalPage} itemLabel="entries" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -649,7 +666,7 @@ export default function Accounting() {
                 <TableBody>
                   {accounts.length === 0 ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No accounts created yet. Add accounts to start tracking finances.</TableCell></TableRow>
-                  ) : accounts.map(a => (
+                  ) : pagedAccounts.map(a => (
                     <TableRow key={a.id}>
                       <TableCell className="font-mono text-sm">{a.code || "—"}</TableCell>
                       <TableCell className="font-medium">{a.name}</TableCell>
@@ -660,6 +677,7 @@ export default function Accounting() {
                   ))}
                 </TableBody>
               </Table>
+              <TablePagination page={acctPage} pageSize={pageSize} totalItems={accounts.length} onPageChange={setAcctPage} itemLabel="accounts" />
             </CardContent>
           </Card>
         </TabsContent>

@@ -8,12 +8,15 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToExcel } from "@/lib/exportExcel";
 import { format } from "date-fns";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 const Receivables = () => {
   const { invoices, isLoading } = useInvoices();
   const [refundsMap, setRefundsMap] = useState<Map<string, number>>(new Map());
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
   useEffect(() => {
     const fetchRefunds = async () => {
@@ -61,6 +64,8 @@ const Receivables = () => {
     gross: acc.gross + r.gross, discounts: acc.discounts + r.discounts,
     received: acc.received + r.received, refunds: acc.refunds + r.refunds, net: acc.net + r.net,
   }), { gross: 0, discounts: 0, received: 0, refunds: 0, net: 0 });
+
+  const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
   const handleExportExcel = () => {
     exportToExcel(rows.map(r => ({
@@ -123,7 +128,7 @@ const Receivables = () => {
               <div className="p-8 text-center text-muted-foreground">No receivables data</div>
             ) : (
               <>
-                {rows.map(r => (
+                {pagedRows.map(r => (
                   <div key={r.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
@@ -168,7 +173,7 @@ const Receivables = () => {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
-                ) : rows.map(r => (
+                ) : pagedRows.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell>{r.rollNo}</TableCell>
@@ -194,6 +199,7 @@ const Receivables = () => {
               </TableBody>
             </Table>
           </div>
+          <TablePagination page={page} pageSize={pageSize} totalItems={rows.length} onPageChange={setPage} itemLabel="students" />
         </CardContent>
       </Card>
     </div>
