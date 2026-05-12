@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Lock, ArrowRight, Sparkles, Building2, Users, Clock, Shield, Star, GraduationCap, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Sparkles, Building2, Users, Clock, Shield, Star, GraduationCap, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { HostyliaLogo } from '@/components/brand/HostyliaLogo';
@@ -39,6 +39,7 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; enrollment?: string; password?: string }>({});
   const [mode, setMode] = useState<LoginMode>('select');
+  const [showPassword, setShowPassword] = useState(false);
   
   const { signIn, user, role } = useAuth();
   const navigate = useNavigate();
@@ -315,13 +316,21 @@ export default function Auth() {
                     <div className="relative group">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
-                        type="password" 
+                        type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••" 
                         value={password} 
                         onChange={(e) => setPassword(e.target.value)} 
-                        className="pl-10 h-12 rounded-xl" 
+                        className="pl-10 pr-10 h-12 rounded-xl" 
                         required 
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                     {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                   </div>
