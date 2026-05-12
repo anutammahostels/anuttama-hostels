@@ -128,7 +128,7 @@ const Receivables = () => {
               <div className="p-8 text-center text-muted-foreground">No receivables data</div>
             ) : (
               <>
-                {rows.map(r => (
+                {pagedRows.map(r => (
                   <div key={r.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
