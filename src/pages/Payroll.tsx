@@ -1229,6 +1229,7 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
                   </TableBody>
                 </Table>
               </div>
+              <TablePagination page={empPage} pageSize={pageSize} totalItems={employees.length} onPageChange={setEmpPage} itemLabel="employees" />
             </CardContent>
           </Card>
         </TabsContent>
