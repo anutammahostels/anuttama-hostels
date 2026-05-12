@@ -664,7 +664,7 @@ export default function Accounting() {
                 <TableBody>
                   {accounts.length === 0 ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No accounts created yet. Add accounts to start tracking finances.</TableCell></TableRow>
-                  ) : accounts.map(a => (
+                  ) : pagedAccounts.map(a => (
                     <TableRow key={a.id}>
                       <TableCell className="font-mono text-sm">{a.code || "—"}</TableCell>
                       <TableCell className="font-medium">{a.name}</TableCell>
