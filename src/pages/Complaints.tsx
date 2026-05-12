@@ -64,6 +64,8 @@ export default function Complaints() {
     },
   });
 
+  const pagedComplaints = useMemo(() => complaints.slice((page - 1) * pageSize, page * pageSize), [complaints, page]);
+
   const handleUpdate = async () => {
     if (!selectedComplaint || !newStatus) return;
     setUpdating(true);
