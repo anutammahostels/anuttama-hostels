@@ -162,8 +162,9 @@ export default function Complaints() {
         ) : complaints.length === 0 ? (
           <Card><CardContent className="p-8 text-center text-muted-foreground">No complaints found</CardContent></Card>
         ) : (
+          <>
           <div className="space-y-3">
-            {complaints.map((c: any) => {
+            {pagedComplaints.map((c: any) => {
               const config = statusConfig[c.status] || statusConfig.pending;
               const StatusIcon = config.icon;
               return (
@@ -196,6 +197,8 @@ export default function Complaints() {
               );
             })}
           </div>
+          <TablePagination page={page} pageSize={pageSize} totalItems={complaints.length} onPageChange={setPage} itemLabel="complaints" />
+          </>
         )}
 
         {/* Detail / Update Dialog */}
