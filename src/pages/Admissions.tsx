@@ -145,6 +145,8 @@ export default function Admissions() {
   });
 
   const filteredAdmissions = filterStatus === "all" ? admissions : admissions.filter(a => a.status === filterStatus);
+  useEffect(() => { setPage(1); }, [filterStatus, propertyId]);
+  const pagedAdmissions = filteredAdmissions.slice((page - 1) * pageSize, page * pageSize);
   const counts = {
     all: admissions.length,
     pending: admissions.filter(a => a.status === "pending").length,
