@@ -978,6 +978,13 @@ ${record.notes ? `<p style="margin-bottom:10px;font-size:11px"><strong>Notes:</s
   // Check if a month has any locked records
   const isMonthLocked = (month: string) => payrollRecords.some(r => r.month === month && r.is_locked);
 
+  // Pagination
+  const [empPage, setEmpPage] = useState(1);
+  const [payrollPage, setPayrollPage] = useState(1);
+  const pageSize = 20;
+  const pagedEmployees = employees.slice((empPage - 1) * pageSize, empPage * pageSize);
+  const pagedPayroll = payrollRecords.slice((payrollPage - 1) * pageSize, payrollPage * pageSize);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
