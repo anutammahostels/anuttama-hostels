@@ -39,6 +39,7 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; enrollment?: string; password?: string }>({});
   const [mode, setMode] = useState<LoginMode>('select');
+  const [showPassword, setShowPassword] = useState(false);
   
   const { signIn, user, role } = useAuth();
   const navigate = useNavigate();
