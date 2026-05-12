@@ -647,6 +647,7 @@ export default function Accounting() {
                   ))}
                 </TableBody>
               </Table>
+              <TablePagination page={journalPage} pageSize={pageSize} totalItems={journalEntries.length} onPageChange={setJournalPage} itemLabel="entries" />
             </CardContent>
           </Card>
         </TabsContent>
