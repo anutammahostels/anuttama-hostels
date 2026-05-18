@@ -141,7 +141,15 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const errBody = await res.text();
       console.error("HDFC order status non-2xx:", res.status, errBody);
-      await logPayment(adminClient, order_id, "status_api", { order_id, customer_id: customerId }, { http: res.status, raw: errBody });
+      let parsedErr: unknown = errBody;
+      try { parsedErr = JSON.parse(errBody); } catch { /* keep raw */ }
+      await logPayment(
+        adminClient,
+        order_id,
+        "status_api",
+        buildStatusRequestLog(`${BASE_URL}/orders/${order_id}`, customerId, MERCHANT_ID, RESELLER_ID, res.status),
+        parsedErr,
+      );
 
       if (existingTxn) {
         const fallbackStatus =
