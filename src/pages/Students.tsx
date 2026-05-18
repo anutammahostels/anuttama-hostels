@@ -365,26 +365,47 @@ const Students = () => {
       };
 
       if (!formData.full_name || !formData.roll_number) {
-        results.errors.push({ row: i + 2, name: formData.full_name || "Unknown", error: "Student name (STUDENT NAME) and Form No (FORM NO) are required" });
-        setBulkProgress(((i + 1) / rows.length) * 100);
+        payloads.push({ rowNum: i + 2, error: { row: i + 2, name: formData.full_name || "Unknown", error: "Student name (STUDENT NAME) and Form No (FORM NO) are required" } });
         continue;
       }
-
-      try {
-        const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: formData });
-        if (fnError) throw fnError;
-        if (data?.existing) {
-          results.errors.push({ row: i + 2, name: formData.full_name, error: `Enrollment ${formData.roll_number} already exists (skipped)` });
-        } else if (data?.error) {
-          throw new Error(data.error);
-        } else {
-          results.success.push({ enrollmentNumber: formData.roll_number, password: data.tempPassword, name: formData.full_name });
-        }
-      } catch (err: any) {
-        results.errors.push({ row: i + 2, name: formData.full_name, error: err.message || "Failed" });
-      }
-      setBulkProgress(((i + 1) / rows.length) * 100);
+      payloads.push({ rowNum: i + 2, formData });
     }
+
+    // Process with concurrency pool — 6 parallel requests
+    const CONCURRENCY = 6;
+    let completed = 0;
+    let cursor = 0;
+    const total = payloads.length;
+
+    const worker = async () => {
+      while (true) {
+        const idx = cursor++;
+        if (idx >= payloads.length) return;
+        const item = payloads[idx];
+        if ("error" in item) {
+          results.errors.push(item.error);
+        } else {
+          const { rowNum, formData } = item;
+          try {
+            const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: formData });
+            if (fnError) throw fnError;
+            if (data?.existing) {
+              results.errors.push({ row: rowNum, name: formData.full_name, error: `Enrollment ${formData.roll_number} already exists (skipped)` });
+            } else if (data?.error) {
+              throw new Error(data.error);
+            } else {
+              results.success.push({ enrollmentNumber: formData.roll_number, password: data.tempPassword, name: formData.full_name });
+            }
+          } catch (err: any) {
+            results.errors.push({ row: rowNum, name: formData.full_name, error: err.message || "Failed" });
+          }
+        }
+        completed++;
+        setBulkProgress((completed / total) * 100);
+      }
+    };
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
 
     setBulkResults(results);
     setBulkUploading(false);
