@@ -275,6 +275,8 @@ const Students = () => {
     setBulkProgress(0);
     const results: { success: { enrollmentNumber: string; password: string; name: string }[]; errors: { row: number; name: string; error: string }[] } = { success: [], errors: [] };
 
+    // Build all row payloads first (pure CPU work — fast)
+    const payloads: Array<{ rowNum: number; formData: any } | { rowNum: number; error: { row: number; name: string; error: string } }> = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const map = row.map;
