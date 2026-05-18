@@ -32,6 +32,30 @@ async function logPayment(
   }
 }
 
+// Build a request envelope safe to persist (Authorization masked).
+function buildStatusRequestLog(
+  url: string,
+  customerId: string,
+  merchantId: string,
+  resellerId: string,
+  httpStatus?: number,
+) {
+  return {
+    method: "GET",
+    url,
+    headers: {
+      Authorization: "Basic ***",
+      "Content-Type": "application/json",
+      version: "2023-06-30",
+      "x-merchantid": merchantId,
+      "x-customerid": customerId,
+      "x-resellerid": resellerId,
+    },
+    customer_id: customerId,
+    http_status: httpStatus ?? null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
