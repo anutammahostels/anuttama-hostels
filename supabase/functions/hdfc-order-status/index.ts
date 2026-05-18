@@ -32,30 +32,6 @@ async function logPayment(
   }
 }
 
-// Build a request envelope safe to persist (Authorization masked).
-function buildStatusRequestLog(
-  url: string,
-  customerId: string,
-  merchantId: string,
-  resellerId: string,
-  httpStatus?: number,
-) {
-  return {
-    method: "GET",
-    url,
-    headers: {
-      Authorization: "Basic ***",
-      "Content-Type": "application/json",
-      version: "2023-06-30",
-      "x-merchantid": merchantId,
-      "x-customerid": customerId,
-      "x-resellerid": resellerId,
-    },
-    customer_id: customerId,
-    http_status: httpStatus ?? null,
-  };
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -141,15 +117,7 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const errBody = await res.text();
       console.error("HDFC order status non-2xx:", res.status, errBody);
-      let parsedErr: unknown = errBody;
-      try { parsedErr = JSON.parse(errBody); } catch { /* keep raw */ }
-      await logPayment(
-        adminClient,
-        order_id,
-        "status_api",
-        buildStatusRequestLog(`${BASE_URL}/orders/${order_id}`, customerId, MERCHANT_ID, RESELLER_ID, res.status),
-        parsedErr,
-      );
+      await logPayment(adminClient, order_id, "status_api", { order_id, customer_id: customerId }, { http: res.status, raw: errBody });
 
       if (existingTxn) {
         const fallbackStatus =
