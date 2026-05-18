@@ -51,36 +51,51 @@ export function useStudents(propertyId?: string) {
       if (studentsError) throw studentsError;
       if (!studentsData || studentsData.length === 0) return [] as StudentWithProfile[];
 
-      // Get profiles for these students
-      const userIds = studentsData.map(s => s.user_id);
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', userIds);
+      // Helper: chunk arrays to keep PostgREST URL length under limits
+      const chunk = <T,>(arr: T[], size: number): T[][] => {
+        const out: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+        return out;
+      };
 
-      // Get bed assignments
+      // Get profiles for these students (batched)
+      const userIds = studentsData.map(s => s.user_id).filter(Boolean);
+      const profileChunks = await Promise.all(
+        chunk(userIds, 200).map(ids =>
+          supabase.from('profiles').select('*').in('id', ids).then(r => r.data || [])
+        )
+      );
+      const profilesData = profileChunks.flat();
+
+      // Get bed assignments (batched)
       const studentIds = studentsData.map(s => s.id);
-      const { data: bedsData } = await supabase
-        .from('beds')
-        .select(`
-          id,
-          bed_number,
-          student_id,
-          room:rooms(
-            id,
-            room_number,
-            floor:floors(
+      const bedChunks = await Promise.all(
+        chunk(studentIds, 200).map(ids =>
+          supabase
+            .from('beds')
+            .select(`
               id,
-              floor_number,
-              block:blocks(id, name)
-            )
-          )
-        `)
-        .in('student_id', studentIds);
+              bed_number,
+              student_id,
+              room:rooms(
+                id,
+                room_number,
+                floor:floors(
+                  id,
+                  floor_number,
+                  block:blocks(id, name)
+                )
+              )
+            `)
+            .in('student_id', ids)
+            .then(r => r.data || [])
+        )
+      );
+      const bedsData = bedChunks.flat();
 
       // Map profiles and beds to students
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-      const bedsMap = new Map(bedsData?.map(b => [b.student_id, b]) || []);
+      const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+      const bedsMap = new Map(bedsData.map(b => [b.student_id, b]));
 
       const result = studentsData.map(student => ({
         ...student,
