@@ -1,11 +1,11 @@
-import { 
-  Clock, 
-  TrendingDown, 
-  Users, 
-  ShieldCheck, 
-  Smartphone, 
+import {
+  Clock,
+  TrendingDown,
+  Users,
+  ShieldCheck,
+  Smartphone,
   HeartHandshake,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import studentsImage from "@/assets/students-community.jpg";
 import propertyManagerImage from "@/assets/property-manager.jpg";
@@ -13,50 +13,50 @@ import propertyManagerImage from "@/assets/property-manager.jpg";
 const benefits = [
   {
     icon: Clock,
-    title: "Save 20+ Hours Weekly",
-    description: "Automate payroll, billing, attendance, gate passes, and Excel exports.",
-    stat: "20+",
-    statLabel: "Hours Saved",
+    title: "Faster Operations",
+    description: "Automated fee runs, payroll, attendance, gate passes and Excel exports reduce manual hostel admin time.",
+    stat: "Daily",
+    statLabel: "Automation",
     gradient: "from-blue-500 to-cyan-500",
   },
   {
     icon: TrendingDown,
-    title: "Reduce Costs by 40%",
-    description: "Digital workflows, automated payslips, and refund processing cut overhead.",
-    stat: "40%",
-    statLabel: "Cost Reduction",
+    title: "Lower Operational Overhead",
+    description: "Digital workflows, automated payslips and refund handling cut paperwork across Anuttama locations.",
+    stat: "Less",
+    statLabel: "Paperwork",
     gradient: "from-secondary to-emerald-500",
   },
   {
     icon: Users,
-    title: "100% Parent Visibility",
-    description: "Real-time updates on attendance, meals, and gate passes. Build trust with transparency.",
-    stat: "100%",
-    statLabel: "Transparency",
+    title: "Parent Visibility",
+    description: "Parents of Anuttama residents stay informed about attendance, meals and gate passes.",
+    stat: "Live",
+    statLabel: "Updates",
     gradient: "from-violet-500 to-purple-500",
   },
   {
     icon: ShieldCheck,
-    title: "Enterprise Security",
-    description: "Bank-grade encryption, role-based access, and complete audit trails.",
-    stat: "99.9%",
-    statLabel: "Uptime SLA",
+    title: "Internal Security",
+    description: "Role-based access for Anuttama staff and complete audit trails on every action.",
+    stat: "RBAC",
+    statLabel: "Controlled",
     gradient: "from-orange-500 to-amber-500",
   },
   {
     icon: Smartphone,
-    title: "Mobile-First Design",
-    description: "Full functionality on any device. Students, parents, and staff can access from anywhere.",
+    title: "Mobile Friendly",
+    description: "Wardens, accountants and residents can access their workspace from any device.",
     stat: "24/7",
     statLabel: "Access",
     gradient: "from-pink-500 to-rose-500",
   },
   {
     icon: HeartHandshake,
-    title: "Dedicated Support",
-    description: "Onboarding assistance, training, and priority support. We're with you every step.",
-    stat: "<2hr",
-    statLabel: "Response Time",
+    title: "Built In-House",
+    description: "Maintained by the Anuttama team to fit our own processes — no external software vendor lock-in.",
+    stat: "Internal",
+    statLabel: "Maintained",
     gradient: "from-primary to-blue-500",
   },
 ];
@@ -64,48 +64,39 @@ const benefits = [
 export const Benefits = () => {
   return (
     <section className="py-16 lg:py-24 bg-background relative overflow-hidden">
-      {/* Background decorations */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 right-0 w-64 lg:w-96 h-64 lg:h-96 bg-secondary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-1/4 w-48 lg:w-64 h-48 lg:h-64 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
-        {/* Header */}
         <div className="text-center mb-10 lg:mb-16">
           <span className="inline-flex items-center gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full bg-secondary/10 text-secondary text-xs lg:text-sm font-medium mb-3 lg:mb-4">
             <Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />
-            Why Choose Anuttama
+            Why we built this in-house
           </span>
           <h2 className="text-2xl lg:text-5xl font-bold text-foreground mb-3 lg:mb-4">
-            Real Results for
-            <span className="text-gradient"> Real Institutions</span>
+            Designed around
+            <span className="text-gradient"> Anuttama’s hostel operations</span>
           </h2>
           <p className="text-muted-foreground text-sm lg:text-lg max-w-xl mx-auto">
-            Join 500+ properties that have transformed their operations
+            A single workspace shared by every Anuttama-owned hostel.
           </p>
         </div>
 
-        {/* Benefits grid with images */}
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-center mb-10 lg:mb-16">
-          {/* Left - Image */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl lg:rounded-3xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
-            <img 
-              src={studentsImage} 
-              alt="Happy students in hostel common room" 
+            <img
+              src={studentsImage}
+              alt="Anuttama residents in a common room"
               className="relative rounded-xl lg:rounded-3xl shadow-2xl w-full h-56 lg:h-[400px] object-cover border border-border/50 group-hover:scale-[1.02] transition-transform duration-500"
             />
-            <div className="absolute -bottom-4 -right-2 lg:-bottom-6 lg:-right-6 p-3 lg:p-6 rounded-xl lg:rounded-2xl bg-card border border-border shadow-xl animate-float">
-              <p className="text-2xl lg:text-4xl font-bold text-gradient">94%</p>
-              <p className="text-xs lg:text-sm text-muted-foreground">Satisfaction</p>
-            </div>
           </div>
 
-          {/* Right - Benefits cards */}
           <div className="grid grid-cols-2 gap-2 lg:gap-4">
             {benefits.slice(0, 4).map((benefit) => (
-              <div 
+              <div
                 key={benefit.title}
                 className="group p-3 lg:p-6 rounded-lg lg:rounded-2xl bg-card border border-border hover:border-primary/20 hover:shadow-xl transition-all duration-500 hover:-translate-y-0.5 lg:hover:-translate-y-1"
               >
@@ -123,12 +114,10 @@ export const Benefits = () => {
           </div>
         </div>
 
-        {/* Second row - reversed */}
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
-          {/* Left - Benefits cards */}
           <div className="grid grid-cols-2 gap-2 lg:gap-4 order-2 lg:order-1">
             {benefits.slice(4, 6).map((benefit) => (
-              <div 
+              <div
                 key={benefit.title}
                 className="group p-3 lg:p-6 rounded-lg lg:rounded-2xl bg-card border border-border hover:border-primary/20 hover:shadow-xl transition-all duration-500 hover:-translate-y-0.5 lg:hover:-translate-y-1"
               >
@@ -145,21 +134,15 @@ export const Benefits = () => {
             ))}
           </div>
 
-          {/* Right - Image */}
           <div className="relative group order-1 lg:order-2">
             <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-primary/20 rounded-xl lg:rounded-3xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
-            <img 
-              src={propertyManagerImage} 
-              alt="Property manager using Hostylia" 
+            <img
+              src={propertyManagerImage}
+              alt="Anuttama operations team at work"
               className="relative rounded-xl lg:rounded-3xl shadow-2xl w-full h-48 lg:h-[300px] object-cover border border-border/50 group-hover:scale-[1.02] transition-transform duration-500"
             />
-            <div className="absolute -bottom-4 -left-2 lg:-bottom-6 lg:-left-6 p-3 lg:p-6 rounded-xl lg:rounded-2xl bg-card border border-border shadow-xl animate-float" style={{ animationDelay: '1s' }}>
-              <p className="text-2xl lg:text-4xl font-bold text-gradient">4.9/5</p>
-              <p className="text-xs lg:text-sm text-muted-foreground">Rating</p>
-            </div>
           </div>
         </div>
-
       </div>
     </section>
   );
