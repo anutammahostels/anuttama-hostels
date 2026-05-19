@@ -29,18 +29,42 @@ export interface ReceiptData {
 function numberToWordsIndian(n: number): string {
   if (!n || isNaN(n)) return "Zero";
   n = Math.round(n);
-  const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const a = [
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+  ];
   const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-  const two = (x: number): string => x < 20 ? a[x] : `${b[Math.floor(x / 10)]}${x % 10 ? " " + a[x % 10] : ""}`;
+  const two = (x: number): string => (x < 20 ? a[x] : `${b[Math.floor(x / 10)]}${x % 10 ? " " + a[x % 10] : ""}`);
   const three = (x: number): string => {
-    const h = Math.floor(x / 100), r = x % 100;
+    const h = Math.floor(x / 100),
+      r = x % 100;
     return (h ? a[h] + " Hundred" + (r ? " " : "") : "") + (r ? two(r) : "");
   };
   if (n === 0) return "Zero";
-  const crore = Math.floor(n / 10000000); n %= 10000000;
-  const lakh = Math.floor(n / 100000); n %= 100000;
-  const thousand = Math.floor(n / 1000); n %= 1000;
+  const crore = Math.floor(n / 10000000);
+  n %= 10000000;
+  const lakh = Math.floor(n / 100000);
+  n %= 100000;
+  const thousand = Math.floor(n / 1000);
+  n %= 1000;
   const hundred = n;
   let out = "";
   if (crore) out += three(crore) + " Crore ";
@@ -53,10 +77,12 @@ function numberToWordsIndian(n: number): string {
 const LOGO_URL = "/anuttama-logo.png";
 const ORG_NAME = "ANUTTAMA HOSTELS";
 const ORG_PHONE = "+91-9686923233";
-const ORG_ADDRESS = "No. 106/2, B. Hosahalli Road (behind S2 Housing Avantikaa), Sarjapur Main Rd, Bengaluru, Karnataka 562125, India";
+const ORG_ADDRESS =
+  "No. 106/2, B. Hosahalli Road (behind S2 Housing Avantikaa), Sarjapur Main Rd, Bengaluru, Karnataka 562125, India";
 
 function copyHtml(data: ReceiptData, label: "INSTITUTE COPY" | "STUDENT COPY"): string {
-  const fmtINR = (v: number) => Number(v || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtINR = (v: number) =>
+    Number(v || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const words = numberToWordsIndian(data.paidAmount) + " Only";
   const discountWords = data.discounts > 0 ? numberToWordsIndian(data.discounts) + " Only" : "";
   return `
@@ -105,12 +131,16 @@ function copyHtml(data: ReceiptData, label: "INSTITUTE COPY" | "STUDENT COPY"): 
     <table class="inst-table">
       <thead><tr><th>Installment</th><th>Fee Type</th><th class="r">Due</th><th class="r">Paid</th><th class="r">Balance</th></tr></thead>
       <tbody>
-        ${data.lineItems.map(li => `<tr>
+        ${data.lineItems
+          .map(
+            (li) => `<tr>
           <td>${li.date}</td><td>${li.type}</td>
           <td class="r">${fmtINR(li.due)}</td>
           <td class="r">${fmtINR(li.paid)}</td>
           <td class="r">${fmtINR(li.balance)}</td>
-        </tr>`).join("")}
+        </tr>`,
+          )
+          .join("")}
       </tbody>
     </table>
 
@@ -118,10 +148,14 @@ function copyHtml(data: ReceiptData, label: "INSTITUTE COPY" | "STUDENT COPY"): 
       <div class="paid-l">Paid amount</div>
       <div class="paid-r"><strong>INR ${fmtINR(data.paidAmount)}</strong><div class="words">(${words})</div></div>
     </div>
-    ${data.discounts > 0 ? `<div class="paid-row">
+    ${
+      data.discounts > 0
+        ? `<div class="paid-row">
       <div class="paid-l">Total discount</div>
       <div class="paid-r">-INR ${fmtINR(data.discounts)}<div class="words">(${discountWords})</div></div>
-    </div>` : ""}
+    </div>`
+        : ""
+    }
 
     <div class="section-title">Overview</div>
     <div class="ov-grid">
@@ -156,7 +190,7 @@ export function buildReceiptHtml(data: ReceiptData): string {
   .sheet{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;position:relative}
   .sheet::after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1.5px dashed #9ca3af}
   .copy{padding:14px 16px;position:relative;overflow:hidden}
-  .copy::before{content:"";position:absolute;top:50%;left:50%;width:70%;aspect-ratio:1/1;transform:translate(-50%,-50%);background-image:url('${''}${LOGO_URL}');background-repeat:no-repeat;background-position:center;background-size:contain;opacity:0.15;pointer-events:none;z-index:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .copy::before{content:"";position:absolute;top:50%;left:50%;width:50%;aspect-ratio:1/1;transform:translate(-50%,-50%);background-image:url('${""}${LOGO_URL}');background-repeat:no-repeat;background-position:center;background-size:contain;opacity:0.15;pointer-events:none;z-index:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .copy > *{position:relative;z-index:1}
   .copy + .copy{border-left:0}
   .copy-head{display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;margin:-14px -16px 12px;padding:8px 14px;border-bottom:1px solid #e5e7eb}
@@ -218,7 +252,10 @@ export function buildReceiptHtml(data: ReceiptData): string {
 </body></html>`;
 }
 
-export function invoiceToReceipt(inv: any, opts: { studentName: string; rollNumber?: string; fatherName?: string; gender?: string; course?: string; }): ReceiptData {
+export function invoiceToReceipt(
+  inv: any,
+  opts: { studentName: string; rollNumber?: string; fatherName?: string; gender?: string; course?: string },
+): ReceiptData {
   const total = Number(inv.total_amount) || 0;
   const discounts = Number(inv.discounts) || 0;
   const paid = Number(inv.paid_amount) || 0;
@@ -239,7 +276,10 @@ export function invoiceToReceipt(inv: any, opts: { studentName: string; rollNumb
   return {
     invoiceNumber: inv.invoice_number,
     receiptDate: inv.payment_date ? new Date(inv.payment_date) : new Date(inv.created_at || Date.now()),
-    paymentMethod: (inv.payment_method || "Cash").toString().replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    paymentMethod: (inv.payment_method || "Cash")
+      .toString()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c: string) => c.toUpperCase()),
     amountPaid: paid || total,
     totalAmount: total,
     discounts,
