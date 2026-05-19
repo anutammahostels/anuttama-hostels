@@ -190,7 +190,7 @@ export function buildReceiptHtml(data: ReceiptData): string {
   .sheet{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;position:relative}
   .sheet::after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1.5px dashed #9ca3af}
   .copy{padding:14px 16px;position:relative;overflow:hidden}
-  .copy::before{content:"";position:absolute;top:50%;left:50%;width:50%;aspect-ratio:1/1;transform:translate(-50%,-50%);background-image:url('${""}${LOGO_URL}');background-repeat:no-repeat;background-position:center;background-size:contain;opacity:0.15;pointer-events:none;z-index:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .copy::before{content:"";position:absolute;top:50%;left:50%;width:35%%;aspect-ratio:1/1;transform:translate(-50%,-50%);background-image:url('${""}${LOGO_URL}');background-repeat:no-repeat;background-position:center;background-size:contain;opacity:0.15;pointer-events:none;z-index:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .copy > *{position:relative;z-index:1}
   .copy + .copy{border-left:0}
   .copy-head{display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;margin:-14px -16px 12px;padding:8px 14px;border-bottom:1px solid #e5e7eb}
