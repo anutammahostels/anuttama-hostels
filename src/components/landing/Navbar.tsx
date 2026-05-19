@@ -10,8 +10,8 @@ export const Navbar = () => {
 
   const navLinks = [
     { label: "Home", href: "/" },
-    { label: "Solutions", href: "/solutions" },
-    { label: "Features", href: "/features" },
+    { label: "Our Hostels", href: "/solutions" },
+    { label: "Operations", href: "/features" },
     { label: "About", href: "/about" },
     { label: "Contact", href: "/contact" },
   ];
@@ -22,12 +22,10 @@ export const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-white/10 shadow-sm" style={{ backgroundColor: "#080d19E6" }}>
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
           <Link to="/" className="relative z-10">
             <HostyliaLogo size="lg" variant="dark" rounded="full" />
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
@@ -44,25 +42,18 @@ export const Navbar = () => {
             ))}
           </div>
 
-          {/* CTA Buttons */}
           <div className="hidden lg:flex items-center gap-3">
             <Link to="/auth">
-              <Button variant="ghost" size="sm" className="font-medium text-white hover:bg-white/10 hover:text-white">
-                Log in
-              </Button>
-            </Link>
-            <Link to="/onboarding">
               <Button
                 size="sm"
                 className="bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 gap-2"
               >
-                Get Started
+                Sign In
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             className="lg:hidden p-2.5 rounded-xl transition-colors hover:bg-white/10"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -75,7 +66,6 @@ export const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         <div
           className={`lg:hidden overflow-hidden transition-all duration-500 ease-out ${
             isMobileMenuOpen ? "max-h-[500px] opacity-100 pb-6" : "max-h-0 opacity-0"
@@ -98,11 +88,8 @@ export const Navbar = () => {
             ))}
             <div className="pt-4 space-y-2 px-4">
               <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="outline" className="w-full">Log in</Button>
-              </Link>
-              <Link to="/onboarding" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button className="w-full bg-gradient-to-r from-primary to-secondary">
-                  Get Started
+                  Sign In
                 </Button>
               </Link>
             </div>
