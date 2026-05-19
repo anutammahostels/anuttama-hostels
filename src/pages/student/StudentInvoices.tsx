@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { createPaymentSession, openPaymentCheckout } from "@/lib/hdfc";
 import { PaymentOrderDetails } from "@/components/student/PaymentOrderDetails";
+import { buildReceiptHtml, invoiceToReceipt } from "@/lib/receiptTemplate";
 
 export default function StudentInvoices() {
   const { user } = useAuth();
@@ -127,94 +128,17 @@ export default function StudentInvoices() {
   const handleDownloadInvoice = (inv: any) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-
     const studentName = profile?.full_name || "Student";
-    const studentEmail = profile?.email || "";
-    const studentPhone = profile?.phone || "";
-    const rollNumber = student?.roll_number || "";
-
-    const html = `<!DOCTYPE html><html><head><title>Invoice ${inv.invoice_number}</title>
-    <style>
-      body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#1a1a2e;max-width:800px;margin:0 auto}
-      .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0f3460;padding-bottom:20px;margin-bottom:30px}
-      .logo{font-size:24px;font-weight:bold;color:#0f3460}
-      .invoice-title{font-size:28px;color:#0f3460;text-align:right}
-      .invoice-number{font-size:14px;color:#666;text-align:right}
-      .details-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px}
-      .detail-section h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:8px}
-      .detail-section p{margin:4px 0;font-size:14px}
-      table{width:100%;border-collapse:collapse;margin:20px 0}
-      th{background:#0f3460;color:#fff;padding:12px 16px;text-align:left;font-size:13px}
-      td{border-bottom:1px solid #eee;padding:10px 16px;font-size:14px}
-      .total-row td{font-weight:bold;border-top:2px solid #0f3460;font-size:16px}
-      .status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
-      .status-paid{background:#dcfce7;color:#16a34a}
-      .status-pending{background:#fef9c3;color:#ca8a04}
-      .status-overdue{background:#fecaca;color:#dc2626}
-      .status-partial{background:#dbeafe;color:#2563eb}
-      .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px}
-      .payment-info{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-top:20px}
-      @media print{body{padding:20px}@page{margin:1cm}}
-    </style></head><body>
-    <div class="header">
-      <div>
-        <div class="logo">🏨 Hostylia</div>
-        <p style="color:#666;font-size:13px;margin-top:4px">Hostel Management System</p>
-      </div>
-      <div>
-        <div class="invoice-title">INVOICE</div>
-        <div class="invoice-number">${inv.invoice_number}</div>
-        <div style="margin-top:8px">
-          <span class="status-badge status-${inv.status || 'pending'}">${(inv.status || 'pending').toUpperCase()}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="details-grid">
-      <div class="detail-section">
-        <h3>Bill To</h3>
-        <p><strong>${studentName}</strong></p>
-        ${rollNumber ? `<p>Roll No: ${rollNumber}</p>` : ''}
-        ${studentEmail ? `<p>${studentEmail}</p>` : ''}
-        ${studentPhone ? `<p>${studentPhone}</p>` : ''}
-      </div>
-      <div class="detail-section" style="text-align:right">
-        <h3>Invoice Details</h3>
-        <p>Billing Month: <strong>${format(new Date(inv.billing_month), "MMMM yyyy")}</strong></p>
-        <p>Due Date: <strong>${format(new Date(inv.due_date), "dd MMM yyyy")}</strong></p>
-        <p>Generated: ${format(new Date(inv.created_at), "dd MMM yyyy")}</p>
-      </div>
-    </div>
-
-    <table>
-      <tr><th>Description</th><th style="text-align:right">Amount (₹)</th></tr>
-      ${inv.room_rent ? `<tr><td>Room Rent</td><td style="text-align:right">₹${Number(inv.room_rent).toLocaleString('en-IN')}</td></tr>` : ''}
-      ${inv.mess_charges ? `<tr><td>Mess Charges</td><td style="text-align:right">₹${Number(inv.mess_charges).toLocaleString('en-IN')}</td></tr>` : ''}
-      ${inv.electricity_charges ? `<tr><td>Electricity Charges</td><td style="text-align:right">₹${Number(inv.electricity_charges).toLocaleString('en-IN')}</td></tr>` : ''}
-      ${inv.other_charges && inv.other_charges > 0 ? `<tr><td>Other Charges</td><td style="text-align:right">₹${Number(inv.other_charges).toLocaleString('en-IN')}</td></tr>` : ''}
-      ${inv.discounts && inv.discounts > 0 ? `<tr><td>Discount</td><td style="text-align:right;color:#16a34a">-₹${Number(inv.discounts).toLocaleString('en-IN')}</td></tr>` : ''}
-      <tr class="total-row"><td>Total Amount</td><td style="text-align:right">₹${Number(inv.total_amount).toLocaleString('en-IN')}</td></tr>
-    </table>
-
-    ${inv.status === 'paid' ? `
-    <div class="payment-info">
-      <strong>✅ Payment Received</strong><br/>
-      <span style="font-size:14px">Amount: ₹${Number(inv.paid_amount || inv.total_amount).toLocaleString('en-IN')} | Method: ${(inv.payment_method || 'N/A').toUpperCase()}${inv.payment_date ? ` | Date: ${format(new Date(inv.payment_date), "dd MMM yyyy")}` : ''}</span>
-    </div>` : inv.paid_amount && inv.paid_amount > 0 ? `
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-top:20px">
-      <strong>Partial Payment Received</strong><br/>
-      <span style="font-size:14px">Paid: ₹${Number(inv.paid_amount).toLocaleString('en-IN')} | Balance Due: ₹${(inv.total_amount - inv.paid_amount).toLocaleString('en-IN')}</span>
-    </div>` : ''}
-
-    <div class="footer">
-      <p>This is a computer-generated invoice and does not require a signature.</p>
-      <p>For queries, contact your hostel administration.</p>
-    </div>
-    </body></html>`;
-
-    printWindow.document.write(html);
+    const s: any = student || {};
+    const data = invoiceToReceipt(inv, {
+      studentName,
+      rollNumber: s.roll_number,
+      fatherName: s.father_name,
+      gender: s.gender,
+      course: s.course,
+    });
+    printWindow.document.write(buildReceiptHtml(data));
     printWindow.document.close();
-    printWindow.print();
   };
 
   return (
