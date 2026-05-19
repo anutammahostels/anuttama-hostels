@@ -22,6 +22,7 @@ import { useProperties } from "@/hooks/useProperties";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { exportToExcel } from "@/lib/exportExcel";
+import { buildReceiptHtml, invoiceToReceipt } from "@/lib/receiptTemplate";
 
 const getStatusBadge = (status: string | null) => {
   switch (status) {
@@ -177,47 +178,6 @@ const Billing = () => {
     printWindow.document.close();
   };
 
-  const _unusedOldDownload = (invoice: InvoiceWithStudent) => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    const studentName = invoice.student?.profile?.full_name || "Unknown";
-    const rollNumber = invoice.student?.roll_number || "";
-    const html = `<!DOCTYPE html><html><head><title>Invoice ${invoice.invoice_number}</title>
-    <style>
-      body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#1a1a2e;max-width:800px;margin:0 auto}
-      .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0f3460;padding-bottom:20px;margin-bottom:30px}
-      .logo{font-size:24px;font-weight:bold;color:#0f3460}
-      .invoice-title{font-size:28px;color:#0f3460;text-align:right}
-      table{width:100%;border-collapse:collapse;margin:20px 0}
-      th{background:#0f3460;color:#fff;padding:12px 16px;text-align:left;font-size:13px}
-      td{border-bottom:1px solid #eee;padding:10px 16px;font-size:14px}
-      .total-row td{font-weight:bold;border-top:2px solid #0f3460;font-size:16px}
-      .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px}
-      @media print{body{padding:20px}@page{margin:1cm}}
-    </style></head><body>
-    <div class="header">
-      <div><div class="logo">🏨 Anuttama Hostels</div><p style="color:#666;font-size:13px">Smart Residential Management</p></div>
-      <div><div class="invoice-title">INVOICE</div><div style="color:#666;font-size:14px">${invoice.invoice_number}</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px">
-      <div><h3 style="font-size:12px;text-transform:uppercase;color:#999">Bill To</h3><p><strong>${studentName}</strong></p><div><h3 style="font-size:12px;text-transform:uppercase;color:#999">Bill To</h3><p><strong>${studentName}</strong></p>${rollNumber ? `<p>Form Number: ${rollNumber}</p>` : ''}</div></div>
-      <div style="text-align:right"><h3 style="font-size:12px;text-transform:uppercase;color:#999">Details</h3><p>Billing: ${format(new Date(invoice.billing_month), "MMMM yyyy")}</p><p>Due: ${format(new Date(invoice.due_date), "dd MMM yyyy")}</p></div>
-    </div>
-    <table>
-      <tr><th>Description</th><th style="text-align:right">Amount (₹)</th></tr>
-      ${invoice.room_rent ? `<tr><td>Room Rent</td><td style="text-align:right">₹${Number(invoice.room_rent).toLocaleString('en-IN')}</td></tr>` : ''}
-      ${invoice.mess_charges ? `<tr><td>Mess Charges</td><td style="text-align:right">₹${Number(invoice.mess_charges).toLocaleString('en-IN')}</td></tr>` : ''}
-      ${invoice.electricity_charges ? `<tr><td>Electricity</td><td style="text-align:right">₹${Number(invoice.electricity_charges).toLocaleString('en-IN')}</td></tr>` : ''}
-      ${invoice.other_charges && invoice.other_charges > 0 ? `<tr><td>Other Charges</td><td style="text-align:right">₹${Number(invoice.other_charges).toLocaleString('en-IN')}</td></tr>` : ''}
-      <tr class="total-row"><td>Total</td><td style="text-align:right">₹${Number(invoice.total_amount).toLocaleString('en-IN')}</td></tr>
-    </table>
-    ${invoice.paid_amount && invoice.paid_amount > 0 ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-top:20px"><strong>Paid: ₹${Number(invoice.paid_amount).toLocaleString('en-IN')}</strong> via ${(invoice.payment_method || 'N/A').toUpperCase()}${invoice.total_amount - (invoice.paid_amount || 0) > 0 ? ` | Balance: ₹${(invoice.total_amount - (invoice.paid_amount || 0)).toLocaleString('en-IN')}` : ''}</div>` : ''}
-    <div class="footer"><p>This is a computer-generated invoice.</p></div>
-    </body></html>`;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.print();
-  };
 
   const toggleStudentSelection = (studentId: string) => {
     setSelectedStudentIds(prev => 
