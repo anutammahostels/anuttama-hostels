@@ -164,6 +164,24 @@ const Billing = () => {
     if (!printWindow) return;
     const studentName = invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown");
     const rollNumber = invoice.student?.roll_number || "";
+    const s: any = invoice.student || {};
+    const data = invoiceToReceipt(invoice, {
+      studentName,
+      rollNumber,
+      fatherName: s.father_name,
+      gender: s.gender,
+      course: s.course,
+    });
+    const html = buildReceiptHtml(data);
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const _unusedOldDownload = (invoice: InvoiceWithStudent) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const studentName = invoice.student?.profile?.full_name || "Unknown";
+    const rollNumber = invoice.student?.roll_number || "";
     const html = `<!DOCTYPE html><html><head><title>Invoice ${invoice.invoice_number}</title>
     <style>
       body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#1a1a2e;max-width:800px;margin:0 auto}
