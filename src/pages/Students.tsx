@@ -1315,6 +1315,10 @@ const Students = () => {
                     <Input placeholder="e.g. Ramesh Sharma" value={form.father_name} onChange={(e) => setForm(f => ({ ...f, father_name: e.target.value }))} />
                   </div>
                   <div>
+                    <Label className="text-xs font-semibold">Mother Name</Label>
+                    <Input placeholder="e.g. Sita Sharma" value={form.mother_name} onChange={(e) => setForm(f => ({ ...f, mother_name: e.target.value }))} />
+                  </div>
+                  <div>
                     <Label className="text-xs font-semibold">Gender</Label>
                     <Select value={form.gender} onValueChange={(v) => setForm(f => ({ ...f, gender: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
