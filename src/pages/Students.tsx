@@ -438,6 +438,7 @@ const Students = () => {
     blood_group: "",
     emergency_contact: "",
     father_name: "",
+    mother_name: "",
     gender: "",
     final_fee: "",
     alloted_room_no: "",
