@@ -1642,6 +1642,10 @@ const Students = () => {
                 <Input value={editForm.father_name} onChange={(e) => setEditForm(f => ({ ...f, father_name: e.target.value }))} />
               </div>
               <div>
+                <Label className="text-xs font-semibold">Mother Name</Label>
+                <Input value={editForm.mother_name} onChange={(e) => setEditForm(f => ({ ...f, mother_name: e.target.value }))} />
+              </div>
+              <div>
                 <Label className="text-xs font-semibold">Gender</Label>
                 <Select value={editForm.gender} onValueChange={(v) => setEditForm(f => ({ ...f, gender: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
