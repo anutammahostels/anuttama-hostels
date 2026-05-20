@@ -337,6 +337,7 @@ const Students = () => {
         blood_group: map.blood_group || "",
         emergency_contact: map.contact_no_2 || map.emergency_contact || "",
         father_name: map.father_name || "",
+        mother_name: map.mother_name || "",
         gender: map.gender || "",
         // Finance fields — payment_date kept for backward compat (= installment-1 date)
         payment_date: date1,
