@@ -196,6 +196,7 @@ serve(async (req) => {
         blood_group: blood_group || null,
         emergency_contact: emergency_contact || null,
         father_name: father_name || null,
+        mother_name: mother_name || null,
         gender: gender || null,
         admission_date: new Date().toISOString().split("T")[0],
         status: "active",
