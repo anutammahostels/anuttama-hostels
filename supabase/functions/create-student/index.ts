@@ -94,7 +94,7 @@ serve(async (req) => {
     const body = await req.json();
     const {
       full_name, email, phone, roll_number, course, department, year,
-      date_of_birth, blood_group, emergency_contact, father_name, gender,
+      date_of_birth, blood_group, emergency_contact, father_name, mother_name, gender,
       // New finance fields
       final_fee, payment_date, account_number, alloted_room_no, remarks,
       // Installment 1
