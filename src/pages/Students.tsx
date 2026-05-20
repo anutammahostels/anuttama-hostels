@@ -560,6 +560,7 @@ const Students = () => {
         emergency_contact: editForm.emergency_contact || null,
         status: editForm.status || "active",
         father_name: editForm.father_name || null,
+        mother_name: editForm.mother_name || null,
         gender: editForm.gender || null,
         remarks: editForm.remarks || null,
         alloted_room_no: editForm.alloted_room_no || null,
