@@ -14,6 +14,10 @@ export interface InvoiceWithStudent extends Invoice {
     id: string;
     roll_number: string | null;
     user_id: string;
+    father_name?: string | null;
+    mother_name?: string | null;
+    gender?: string | null;
+    course?: string | null;
     profile?: {
       full_name: string | null;
       email: string | null;
