@@ -234,34 +234,41 @@ serve(async (req) => {
           { n: 2, amt: toAmt(amount_2), mode: payment_mode_2, txn: transaction_details_2, utr: utr_id_2, date: payment_date_2 },
           { n: 3, amt: toAmt(amount_3), mode: payment_mode_3, txn: transaction_details_3, utr: utr_id_3, date: payment_date_3 },
         ];
-        const totalPaid = installments.reduce((s, i) => s + i.amt, 0);
-        const invoiceStatus = totalPaid >= parsedFinalFee ? "paid" : (totalPaid > 0 ? "partial" : "pending");
-
-        const invoiceNumber = `INV-${roll_number}-${Date.now().toString(36).toUpperCase()}`;
         const todayStr = new Date().toISOString().split("T")[0];
-        const billingDate = toDateOnly(payment_date_1, undefined) || toDateOnly(payment_date, undefined) || todayStr;
+        const baseBillingDate = toDateOnly(payment_date_1, undefined) || toDateOnly(payment_date, undefined) || todayStr;
 
-        const noteParts: string[] = [];
-        if (balance_payment) noteParts.push(`Balance: ${balance_payment}`);
-        if (remarks) noteParts.push(`Remarks: ${remarks}`);
+        const nonZeroInstallments = installments.filter((i) => i.amt > 0);
+        const totalPaid = nonZeroInstallments.reduce((s, i) => s + i.amt, 0);
 
-        const { data: invoice, error: invError } = await adminClient.from("invoices").insert({
-          student_id: student.id,
-          invoice_number: invoiceNumber,
-          billing_month: billingDate,
-          due_date: billingDate,
-          total_amount: parsedFinalFee,
-          paid_amount: totalPaid,
-          room_rent: parsedFinalFee,
-          status: invoiceStatus,
-          notes: noteParts.join(" | ") || null,
-        }).select().single();
+        const baseRemarks = remarks ? `Remarks: ${remarks}` : "";
+        const balanceNote = balance_payment ? `Balance: ${balance_payment}` : "";
 
-        if (!invError && invoice) {
-          // Create one payment row per non-zero installment
-          for (const inst of installments) {
-            if (inst.amt <= 0) continue;
-            const paidAt = toIsoTimestamp(inst.date, toIsoTimestamp(billingDate));
+        // Strategy: create one invoice per installment (each invoice = that installment's amount, marked paid).
+        // If totalPaid < final_fee, create an additional pending invoice for the outstanding balance.
+        const tsToken = Date.now().toString(36).toUpperCase();
+
+        for (const inst of nonZeroInstallments) {
+          const billingDate = toDateOnly(inst.date, undefined) || baseBillingDate;
+          const invoiceNumber = `INV-${roll_number}-P${inst.n}-${tsToken}`;
+          const noteParts: string[] = [`Installment ${inst.n} of ${installments.length}`];
+          if (inst.n === installments.length && balanceNote) noteParts.push(balanceNote);
+          if (baseRemarks) noteParts.push(baseRemarks);
+
+          const { data: invoice, error: invError } = await adminClient.from("invoices").insert({
+            student_id: student.id,
+            invoice_number: invoiceNumber,
+            billing_month: billingDate,
+            due_date: billingDate,
+            total_amount: inst.amt,
+            paid_amount: inst.amt,
+            room_rent: inst.amt,
+            status: "paid",
+            payment_method: (inst.mode || "cash").toLowerCase(),
+            payment_date: toIsoTimestamp(inst.date, toIsoTimestamp(billingDate)),
+            notes: noteParts.join(" | "),
+          }).select().single();
+
+          if (!invError && invoice) {
             await adminClient.from("payments").insert({
               invoice_id: invoice.id,
               student_id: student.id,
@@ -271,11 +278,33 @@ serve(async (req) => {
               payment_mode_label: inst.mode || null,
               transaction_id: inst.txn || null,
               transaction_reference: inst.utr || null,
-              payment_label: `Amount ${inst.n}`,
+              payment_label: `Installment ${inst.n}`,
               status: "completed",
-              paid_at: paidAt,
+              paid_at: toIsoTimestamp(inst.date, toIsoTimestamp(billingDate)),
             });
           }
+        }
+
+        // Outstanding balance → pending invoice
+        const outstanding = parsedFinalFee - totalPaid;
+        if (outstanding > 0) {
+          const invoiceNumber = `INV-${roll_number}-BAL-${tsToken}`;
+          const balDueDate = toDateOnly(balance_payment, undefined) || baseBillingDate;
+          const noteParts: string[] = ["Outstanding balance"];
+          if (balanceNote) noteParts.push(balanceNote);
+          if (baseRemarks) noteParts.push(baseRemarks);
+
+          await adminClient.from("invoices").insert({
+            student_id: student.id,
+            invoice_number: invoiceNumber,
+            billing_month: baseBillingDate,
+            due_date: balDueDate,
+            total_amount: outstanding,
+            paid_amount: 0,
+            room_rent: outstanding,
+            status: "pending",
+            notes: noteParts.join(" | "),
+          });
         }
       }
     }
