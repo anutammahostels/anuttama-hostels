@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle, Undo2 } from "lucide-react";
+import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle, Undo2, Trash2 } from "lucide-react";
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudents } from "@/hooks/useStudents";
@@ -74,7 +75,8 @@ const Billing = () => {
   const [refundReason, setRefundReason] = useState("");
   const [refundMethod, setRefundMethod] = useState("cash");
 
-  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund } = useInvoices();
+  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund, deleteInvoice } = useInvoices();
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const { students } = useStudents();
   const { properties } = useProperties();
   const { toast } = useToast();
@@ -549,6 +551,10 @@ const Billing = () => {
                                         Process Refund
                                       </DropdownMenuItem>
                                     )}
+                                    <DropdownMenuItem onClick={() => setDeleteDialog({ open: true, invoice })} className="text-destructive">
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Invoice
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
@@ -1025,6 +1031,40 @@ const Billing = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, invoice: null })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this invoice?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete invoice{" "}
+                <span className="font-semibold text-foreground">{deleteDialog.invoice?.invoice_number}</span>
+                {deleteDialog.invoice?.student?.profile?.full_name ? (
+                  <> for <span className="font-semibold text-foreground">{deleteDialog.invoice.student.profile.full_name}</span></>
+                ) : null}
+                {(deleteDialog.invoice?.paid_amount || 0) > 0 ? (
+                  <> along with its recorded payments and refunds (₹{(deleteDialog.invoice?.paid_amount || 0).toLocaleString('en-IN')} paid)</>
+                ) : null}
+                . This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteInvoice.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleteInvoice.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!deleteDialog.invoice) return;
+                  await deleteInvoice.mutateAsync(deleteDialog.invoice.id);
+                  setDeleteDialog({ open: false, invoice: null });
+                }}
+              >
+                {deleteInvoice.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Invoice"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </>
   );

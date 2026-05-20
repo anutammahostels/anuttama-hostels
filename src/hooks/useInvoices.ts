@@ -268,6 +268,26 @@ export function useInvoices(studentId?: string) {
     },
   });
 
+  const deleteInvoice = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from('payments').delete().eq('invoice_id', id);
+      await supabase.from('refunds').delete().eq('invoice_id', id);
+      await supabase.from('payment_transactions').delete().eq('invoice_id', id);
+      const { error } = await supabase.from('invoices').delete().eq('id', id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['refunds'] });
+      toast({ title: 'Invoice Deleted', description: 'The invoice and related payment records have been removed.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const stats = {
     totalInvoices: invoicesQuery.data?.length || 0,
     totalAmount: invoicesQuery.data?.reduce((acc, inv) => acc + inv.total_amount, 0) || 0,
@@ -290,5 +310,6 @@ export function useInvoices(studentId?: string) {
     updateInvoice,
     recordPayment,
     processRefund,
+    deleteInvoice,
   };
 }
