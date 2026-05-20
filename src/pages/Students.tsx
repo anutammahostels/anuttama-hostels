@@ -526,6 +526,7 @@ const Students = () => {
       emergency_contact: student.emergency_contact || "",
       status: student.status || "active",
       father_name: (student as any).father_name || "",
+      mother_name: (student as any).mother_name || "",
       gender: student.gender || "",
       remarks: (student as any).remarks || "",
       alloted_room_no: (student as any).alloted_room_no || "",
