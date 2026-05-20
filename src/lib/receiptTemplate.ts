@@ -290,6 +290,7 @@ export function invoiceToReceipt(
     studentName: opts.studentName,
     rollNumber: opts.rollNumber,
     fatherName: opts.fatherName,
+    motherName: opts.motherName,
     gender: opts.gender,
     course: opts.course,
     lineItems: items,
