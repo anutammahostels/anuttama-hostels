@@ -53,6 +53,7 @@ const Students = () => {
     emergency_contact: "",
     status: "",
     father_name: "",
+    mother_name: "",
     gender: "",
     remarks: "",
     alloted_room_no: "",
