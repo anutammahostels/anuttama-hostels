@@ -53,6 +53,7 @@ const Students = () => {
     emergency_contact: "",
     status: "",
     father_name: "",
+    mother_name: "",
     gender: "",
     remarks: "",
     alloted_room_no: "",
@@ -336,6 +337,7 @@ const Students = () => {
         blood_group: map.blood_group || "",
         emergency_contact: map.contact_no_2 || map.emergency_contact || "",
         father_name: map.father_name || "",
+        mother_name: map.mother_name || "",
         gender: map.gender || "",
         // Finance fields — payment_date kept for backward compat (= installment-1 date)
         payment_date: date1,
@@ -438,6 +440,7 @@ const Students = () => {
     blood_group: "",
     emergency_contact: "",
     father_name: "",
+    mother_name: "",
     gender: "",
     final_fee: "",
     alloted_room_no: "",
@@ -524,6 +527,7 @@ const Students = () => {
       emergency_contact: student.emergency_contact || "",
       status: student.status || "active",
       father_name: (student as any).father_name || "",
+      mother_name: (student as any).mother_name || "",
       gender: student.gender || "",
       remarks: (student as any).remarks || "",
       alloted_room_no: (student as any).alloted_room_no || "",
@@ -557,6 +561,7 @@ const Students = () => {
         emergency_contact: editForm.emergency_contact || null,
         status: editForm.status || "active",
         father_name: editForm.father_name || null,
+        mother_name: editForm.mother_name || null,
         gender: editForm.gender || null,
         remarks: editForm.remarks || null,
         alloted_room_no: editForm.alloted_room_no || null,
@@ -1310,6 +1315,10 @@ const Students = () => {
                     <Input placeholder="e.g. Ramesh Sharma" value={form.father_name} onChange={(e) => setForm(f => ({ ...f, father_name: e.target.value }))} />
                   </div>
                   <div>
+                    <Label className="text-xs font-semibold">Mother Name</Label>
+                    <Input placeholder="e.g. Sita Sharma" value={form.mother_name} onChange={(e) => setForm(f => ({ ...f, mother_name: e.target.value }))} />
+                  </div>
+                  <div>
                     <Label className="text-xs font-semibold">Gender</Label>
                     <Select value={form.gender} onValueChange={(v) => setForm(f => ({ ...f, gender: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
@@ -1631,6 +1640,10 @@ const Students = () => {
               <div>
                 <Label className="text-xs font-semibold">Father Name</Label>
                 <Input value={editForm.father_name} onChange={(e) => setEditForm(f => ({ ...f, father_name: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Mother Name</Label>
+                <Input value={editForm.mother_name} onChange={(e) => setEditForm(f => ({ ...f, mother_name: e.target.value }))} />
               </div>
               <div>
                 <Label className="text-xs font-semibold">Gender</Label>

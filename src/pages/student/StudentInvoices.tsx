@@ -134,6 +134,7 @@ export default function StudentInvoices() {
       studentName,
       rollNumber: s.roll_number,
       fatherName: s.father_name,
+      motherName: s.mother_name,
       gender: s.gender,
       course: s.course,
     });

@@ -170,6 +170,7 @@ const Billing = () => {
       studentName,
       rollNumber,
       fatherName: s.father_name,
+      motherName: s.mother_name,
       gender: s.gender,
       course: s.course,
     });

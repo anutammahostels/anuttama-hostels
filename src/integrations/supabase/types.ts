@@ -1519,6 +1519,7 @@ export type Database = {
           final_fee: number | null
           gender: string | null
           id: string
+          mother_name: string | null
           parent_id: string | null
           payment_date: string | null
           remarks: string | null
@@ -1542,6 +1543,7 @@ export type Database = {
           final_fee?: number | null
           gender?: string | null
           id?: string
+          mother_name?: string | null
           parent_id?: string | null
           payment_date?: string | null
           remarks?: string | null
@@ -1565,6 +1567,7 @@ export type Database = {
           final_fee?: number | null
           gender?: string | null
           id?: string
+          mother_name?: string | null
           parent_id?: string | null
           payment_date?: string | null
           remarks?: string | null
