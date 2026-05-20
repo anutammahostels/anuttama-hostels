@@ -1031,6 +1031,40 @@ const Billing = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, invoice: null })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this invoice?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete invoice{" "}
+                <span className="font-semibold text-foreground">{deleteDialog.invoice?.invoice_number}</span>
+                {deleteDialog.invoice?.student?.profile?.full_name ? (
+                  <> for <span className="font-semibold text-foreground">{deleteDialog.invoice.student.profile.full_name}</span></>
+                ) : null}
+                {(deleteDialog.invoice?.paid_amount || 0) > 0 ? (
+                  <> along with its recorded payments and refunds (₹{(deleteDialog.invoice?.paid_amount || 0).toLocaleString('en-IN')} paid)</>
+                ) : null}
+                . This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteInvoice.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleteInvoice.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!deleteDialog.invoice) return;
+                  await deleteInvoice.mutateAsync(deleteDialog.invoice.id);
+                  setDeleteDialog({ open: false, invoice: null });
+                }}
+              >
+                {deleteInvoice.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Invoice"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </>
   );
