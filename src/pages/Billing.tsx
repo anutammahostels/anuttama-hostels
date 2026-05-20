@@ -75,7 +75,8 @@ const Billing = () => {
   const [refundReason, setRefundReason] = useState("");
   const [refundMethod, setRefundMethod] = useState("cash");
 
-  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund } = useInvoices();
+  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund, deleteInvoice } = useInvoices();
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const { students } = useStudents();
   const { properties } = useProperties();
   const { toast } = useToast();
