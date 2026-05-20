@@ -254,7 +254,7 @@ export function buildReceiptHtml(data: ReceiptData): string {
 
 export function invoiceToReceipt(
   inv: any,
-  opts: { studentName: string; rollNumber?: string; fatherName?: string; gender?: string; course?: string },
+  opts: { studentName: string; rollNumber?: string; fatherName?: string; motherName?: string; gender?: string; course?: string },
 ): ReceiptData {
   const total = Number(inv.total_amount) || 0;
   const discounts = Number(inv.discounts) || 0;
