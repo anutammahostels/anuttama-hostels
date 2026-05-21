@@ -1,39 +1,69 @@
-# Fix "Unknown" student names after bulk upload
+# Align HDFC Order Status with official spec
 
-## Root cause
+The `hdfc-order-status` edge function technically works, but it deviates from
+the SmartGateway Order Status API contract in a few places, which is why the
+entries in `payment_logs` look noisy/incorrect. We bring the request, status
+mapping, response normalization, and logging in line with the documented spec.
 
-The uploaded Excel file (`HS_BULK_DATA_780_STD_SOFTWARE.xlsx`) is in the correct 26-column template format. The bulk upload succeeded and the student names are stored correctly in the `profiles` table.
+## What changes
 
-The "Unknown" labels in the Students page are a **display bug**: `src/hooks/useStudents.ts` fetches all student profiles in a single query:
+1. **Fix Basic Auth header**
+   - Spec: `Authorization: Basic base64(API_KEY)` (no colon).
+   - Current: `btoa(API_KEY + ":")` — works on UAT only by accident.
+   - Switch to `btoa(API_KEY)`.
 
-```ts
-supabase.from('profiles').select('*').in('id', userIds)
-```
+2. **Complete `status` → internal status mapping**
+   Per the HDFC transaction-status table:
+   - `SUCCESS`: `CHARGED`, `AUTO_REFUNDED`, `COD_INITIATED`, `PARTIAL_CHARGED`
+   - `PENDING`: `NEW`, `PENDING_VBV`, `AUTHORIZING`, `AUTHORIZED`,
+     `CAPTURE_INITIATED`, `VOID_INITIATED`, `STARTED`, `PENDING`
+   - `FAILED`: `AUTHENTICATION_FAILED`, `AUTHORIZATION_FAILED`,
+     `JUSPAY_DECLINED`, `CAPTURE_FAILED`, `VOID_FAILED`, `VOIDED`,
+     `NOT_FOUND`, `DECLINED`, `EXPIRED`
+   Anything else stays `UNKNOWN`. Today `AUTHORIZED`, `CAPTURE_INITIATED`,
+   `PARTIAL_CHARGED`, `EXPIRED` etc. fall through to `UNKNOWN` and pollute logs.
 
-With 664+ students, that produces a request URL of ~25 KB worth of UUIDs, exceeding the PostgREST URL length limit. The profiles query silently returns a truncated/empty set, so most rows render `student.profile?.full_name || "Unknown"`.
+3. **Normalize response to match documented fields**
+   Return (and persist) a structured payload that mirrors the spec:
+   - top-level: `order_id`, `status`, `status_id`, `amount`, `currency`,
+     `customer_id`, `customer_email`, `customer_phone`, `merchant_id`,
+     `date_created`, `txn_id`, `txn_uuid`, `payment_method`,
+     `payment_method_type`, `auth_type`, `refunded`, `amount_refunded`,
+     `effective_amount`, `gateway_id`, `gateway_reference_id`, `payer_vpa`
+   - nested: `txn_detail`, `payment_gateway_response`, `card`, `upi`,
+     `refunds[]` (with `id`, `unique_request_id`, `amount`, `status`, `ref`,
+     `created`, `refund_type`, `refund_source`, `sent_to_gateway`,
+     `initiated_by`, `error_code`, `error_message`)
+   This replaces today's flatter shape that drops `status_id`, `effective_amount`,
+   `auth_type`, `sent_to_gateway`, etc.
 
-The same pattern is used for the `beds` lookup and will hit the same limit as the dataset grows.
+4. **Cleaner `payment_logs` entries**
+   - `request_payload` becomes `{ method, url, headers: { x-merchantid,
+     x-customerid, x-resellerid, version } }` — no auth secret, but enough
+     to debug.
+   - `response_payload` becomes `{ http_status, parsed: <normalized>, raw_status,
+     raw_status_id }` instead of dumping the whole gateway blob, which is what
+     makes today's log look wrong (it currently shows session-creation fields
+     like `payment_page_sdk_payload`, `payment_links` etc.).
+   - Keep the full raw body only when the HTTP status is non-2xx or JSON parse
+     fails (for forensic debugging).
 
-## Fix
+5. **Tamper-check uses normalized fields**
+   Compare `data.order_id` and `data.amount` exactly as the spec returns them
+   (already correct, but reuses the normalized object now).
 
-Batch the `profiles` and `beds` lookups in `src/hooks/useStudents.ts` into chunks of ~200 IDs and merge the results before mapping them onto the students list. No schema or upload changes are needed.
+No DB schema changes. No frontend changes (the response shape stays
+backward-compatible — we add fields, don't remove any consumed by `src/lib/hdfc.ts`).
 
-### Technical details
+## Files touched
 
-In `useStudents.ts`:
+- `supabase/functions/hdfc-order-status/index.ts`
 
-- Add a small helper `chunk<T>(arr: T[], size: number)`.
-- Replace the single `profiles … .in('id', userIds)` call with `Promise.all` over chunks of 200 IDs; concatenate the rows into `profilesData`.
-- Do the same for the `beds … .in('student_id', studentIds)` call.
-- Keep the existing `profilesMap` / `bedsMap` and final `.map(...)` logic unchanged.
+## Technical notes
 
-## Verification
-
-After the change, on `/dashboard/students` with 664 students:
-- Every row should show the real student name instead of "Unknown".
-- Spot-check the form numbers from the screenshot (2460232917, 2460158866, 2460267822, 2460259077, 2460254774) — they should display Preetham RV, Gagan S, BHAVI JAIN, Anegondi Sreeja, BASAVAPRASAD PATIL respectively.
-
-## Out of scope
-
-- No changes to the bulk upload parser or template — the file format is correct.
-- No changes to the `students` / `profiles` schema or RLS.
+- Basic-auth fix is a one-line change at the `btoa(...)` call.
+- Status map is implemented as three `Set<string>` constants for clarity.
+- Normalization is a single `normalizeOrderStatus(data)` helper so the same
+  shape is used in the return value, the tamper check, and the log entry.
+- `payment_logs` writes use the new compact shape; the full raw response is
+  only written when `!res.ok` or JSON.parse throws.
