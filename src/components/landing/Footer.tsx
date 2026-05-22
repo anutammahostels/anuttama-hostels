@@ -49,12 +49,6 @@ export const Footer = () => {
                 </div>
                 +91 8619483010
               </a>
-              <div className="flex items-start gap-2 md:gap-3 text-white/50 text-xs md:text-sm">
-                <div className="p-1.5 md:p-2 rounded-lg bg-white/5 flex-shrink-0">
-                  <MapPin className="h-3 w-3 md:h-4 md:w-4" />
-                </div>
-                <span>22, Modern Petrol Pump, Second Floor, Kota, Rajasthan</span>
-              </div>
             </div>
           </div>
 
