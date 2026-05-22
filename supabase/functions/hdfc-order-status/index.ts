@@ -13,6 +13,159 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+// HDFC SmartGateway status buckets (per docs/transaction-status)
+const SUCCESS_STATUSES = new Set([
+  "CHARGED",
+  "AUTO_REFUNDED",
+  "COD_INITIATED",
+  "PARTIAL_CHARGED",
+]);
+const PENDING_STATUSES = new Set([
+  "NEW",
+  "PENDING",
+  "PENDING_VBV",
+  "AUTHORIZING",
+  "AUTHORIZED",
+  "CAPTURE_INITIATED",
+  "VOID_INITIATED",
+  "STARTED",
+]);
+const FAILED_STATUSES = new Set([
+  "AUTHENTICATION_FAILED",
+  "AUTHORIZATION_FAILED",
+  "JUSPAY_DECLINED",
+  "CAPTURE_FAILED",
+  "VOID_FAILED",
+  "VOIDED",
+  "NOT_FOUND",
+  "DECLINED",
+  "EXPIRED",
+]);
+
+function mapStatus(hdfcStatus: string): "SUCCESS" | "PENDING" | "FAILED" | "UNKNOWN" {
+  if (SUCCESS_STATUSES.has(hdfcStatus)) return "SUCCESS";
+  if (PENDING_STATUSES.has(hdfcStatus)) return "PENDING";
+  if (FAILED_STATUSES.has(hdfcStatus)) return "FAILED";
+  return "UNKNOWN";
+}
+
+// Normalize HDFC Order Status API response to the documented spec shape.
+function normalizeOrderStatus(data: Record<string, any>, fallbackOrderId: string) {
+  const hdfcStatus = String(data.status || "").toUpperCase();
+  const mappedStatus = mapStatus(hdfcStatus);
+
+  const card = data.card
+    ? {
+        card_brand: data.card.card_brand ?? null,
+        card_type: data.card.card_type ?? null,
+        card_issuer: data.card.card_issuer ?? null,
+        last_four_digits: data.card.last_four_digits ?? null,
+        card_isin: data.card.card_isin ?? null,
+        expiry_month: data.card.expiry_month ?? null,
+        expiry_year: data.card.expiry_year ?? null,
+        name_on_card: data.card.name_on_card ?? null,
+        using_saved_card: data.card.using_saved_card ?? null,
+        card_fingerprint: data.card.card_fingerprint ?? null,
+        card_reference: data.card.card_reference ?? null,
+      }
+    : null;
+
+  const pgr = data.payment_gateway_response
+    ? {
+        resp_code: data.payment_gateway_response.resp_code ?? null,
+        resp_message: data.payment_gateway_response.resp_message ?? null,
+        rrn: data.payment_gateway_response.rrn ?? null,
+        epg_txn_id: data.payment_gateway_response.epg_txn_id ?? null,
+        auth_id_code: data.payment_gateway_response.auth_id_code ?? null,
+        txn_id: data.payment_gateway_response.txn_id ?? null,
+        created: data.payment_gateway_response.created ?? null,
+      }
+    : null;
+
+  const txnDetail = data.txn_detail
+    ? {
+        txn_id: data.txn_detail.txn_id ?? null,
+        txn_uuid: data.txn_detail.txn_uuid ?? null,
+        order_id: data.txn_detail.order_id ?? null,
+        status: data.txn_detail.status ?? null,
+        gateway: data.txn_detail.gateway ?? null,
+        gateway_id: data.txn_detail.gateway_id ?? null,
+        net_amount: data.txn_detail.net_amount ?? null,
+        txn_amount: data.txn_detail.txn_amount ?? null,
+        tax_amount: data.txn_detail.tax_amount ?? null,
+        surcharge_amount: data.txn_detail.surcharge_amount ?? null,
+        currency: data.txn_detail.currency ?? null,
+        express_checkout: data.txn_detail.express_checkout ?? null,
+        redirect: data.txn_detail.redirect ?? null,
+        error_code: data.txn_detail.error_code ?? null,
+        error_message: data.txn_detail.error_message ?? null,
+        created: data.txn_detail.created ?? null,
+      }
+    : null;
+
+  const upi = data.upi
+    ? {
+        payer_vpa: data.upi.payer_vpa ?? null,
+        txn_flow_type: data.upi.txn_flow_type ?? null,
+      }
+    : null;
+
+  const refunds = Array.isArray(data.refunds)
+    ? data.refunds.map((r: any) => ({
+        id: r.id ?? r.unique_request_id ?? null,
+        unique_request_id: r.unique_request_id ?? null,
+        amount: Number(r.amount ?? 0),
+        status: r.status ?? null,
+        ref: r.ref ?? null,
+        created: r.created ?? null,
+        refund_type: r.refund_type ?? null,
+        refund_source: r.refund_source ?? null,
+        sent_to_gateway: r.sent_to_gateway ?? null,
+        initiated_by: r.initiated_by ?? null,
+        error_code: r.error_code ?? null,
+        error_message: r.error_message ?? null,
+      }))
+    : [];
+
+  return {
+    order_id: data.order_id || fallbackOrderId,
+    id: data.id ?? null,
+    status: mappedStatus,
+    hdfc_status: hdfcStatus,
+    status_id: data.status_id ?? null,
+    amount: Number(data.amount ?? 0),
+    currency: data.currency || "INR",
+    customer_id: data.customer_id ?? null,
+    customer_email: data.customer_email ?? null,
+    customer_phone: data.customer_phone ?? null,
+    merchant_id: data.merchant_id ?? null,
+    date_created: data.date_created ?? null,
+    return_url: data.return_url ?? null,
+    product_id: data.product_id ?? null,
+    txn_id: data.txn_id ?? null,
+    txn_uuid: data.txn_uuid ?? null,
+    payment_method: data.payment_method ?? null,
+    payment_method_type: data.payment_method_type ?? null,
+    auth_type: data.auth_type ?? null,
+    refunded: Boolean(data.refunded),
+    amount_refunded: Number(data.amount_refunded ?? 0),
+    effective_amount: data.effective_amount ?? null,
+    gateway_id: data.gateway_id ?? null,
+    gateway_reference_id: data.gateway_reference_id ?? null,
+    gateway: data.txn_detail?.gateway ?? null,
+    payer_vpa: data.payer_vpa ?? data.upi?.payer_vpa ?? null,
+    bank_error_code: data.bank_error_code ?? null,
+    bank_error_message: data.bank_error_message ?? null,
+    resp_code: data.resp_code ?? null,
+    resp_message: data.resp_message ?? null,
+    card,
+    upi,
+    txn_detail: txnDetail,
+    payment_gateway_response: pgr,
+    refunds,
+  };
+}
+
 async function logPayment(
   client: any,
   orderId: string,
@@ -89,15 +242,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    const basicAuth = btoa(API_KEY + ":");
+    // Per HDFC docs: Authorization is Base64(API_KEY) only — no colon suffix.
+    const basicAuth = btoa(API_KEY);
     const RESELLER_ID = Deno.env.get("HDFC_RESELLER_ID") || "hdfc_reseller";
 
-    // Customer ID must match what was sent at session creation.
-    // Stored on payment_transactions; fall back to a deterministic anonymous id.
     const customerId =
       (existingTxn?.customer_id as string | undefined) || `${MERCHANT_ID}_anon`;
 
-    const res = await fetch(`${BASE_URL}/orders/${order_id}`, {
+    const requestUrl = `${BASE_URL}/orders/${order_id}`;
+    const requestMeta = {
+      method: "GET",
+      url: requestUrl,
+      headers: {
+        "x-merchantid": MERCHANT_ID,
+        "x-customerid": customerId,
+        "x-resellerid": RESELLER_ID,
+        version: "2023-06-30",
+        "Content-Type": "application/json",
+      },
+    };
+
+    const res = await fetch(requestUrl, {
       method: "GET",
       headers: {
         Authorization: `Basic ${basicAuth}`,
@@ -109,15 +274,15 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Per spec: 400 / 401 / 429 / 500 are explicit error envelopes.
-    // For ANY non-2xx (esp. 429 rate-limit), if we already have a local
-    // transaction we surface it as PENDING instead of UNKNOWN so the UI
-    // never shows the scary "Payment Status Unknown" purely due to a
-    // gateway hiccup or rate limit.
+    // Non-2xx: surface as PENDING when we have a local txn so the UI doesn't
+    // panic on rate-limit / transient errors.
     if (!res.ok) {
       const errBody = await res.text();
       console.error("HDFC order status non-2xx:", res.status, errBody);
-      await logPayment(adminClient, order_id, "status_api", { order_id, customer_id: customerId }, { http: res.status, raw: errBody });
+      await logPayment(adminClient, order_id, "status_api", requestMeta, {
+        http_status: res.status,
+        raw: errBody,
+      });
 
       if (existingTxn) {
         const fallbackStatus =
@@ -156,23 +321,30 @@ Deno.serve(async (req) => {
     try {
       data = JSON.parse(body);
     } catch {
-      await logPayment(adminClient, order_id, "status_api", { order_id }, { http: res.status, raw: body });
+      await logPayment(adminClient, order_id, "status_api", requestMeta, {
+        http_status: res.status,
+        raw: body,
+        parse_error: true,
+      });
       return jsonResponse({ error: "Invalid response from gateway", raw: body }, 502);
     }
 
-    // Always log status_api response
-    await logPayment(adminClient, order_id, "status_api", { order_id }, { http: res.status, body: data });
+    const normalized = normalizeOrderStatus(data, order_id);
+    const mappedStatus = normalized.status;
+    const hdfcStatus = normalized.hdfc_status;
 
-    const hdfcStatus = (data.status || "").toUpperCase();
-    let mappedStatus = "UNKNOWN";
-    if (["CHARGED", "AUTO_REFUNDED"].includes(hdfcStatus)) mappedStatus = "SUCCESS";
-    else if (["NEW", "PENDING_VBV", "AUTHORIZING", "COD_INITIATED", "STARTED", "AUTHENTICATION_FAILED"].includes(hdfcStatus)) mappedStatus = "PENDING";
-    else if (["AUTHORIZATION_FAILED", "JUSPAY_DECLINED", "NOT_FOUND", "VOIDED"].includes(hdfcStatus)) mappedStatus = "FAILED";
+    // Compact log entry: documented fields only, no secrets, no SDK payloads.
+    await logPayment(adminClient, order_id, "status_api", requestMeta, {
+      http_status: res.status,
+      raw_status: hdfcStatus,
+      raw_status_id: normalized.status_id,
+      parsed: normalized,
+    });
 
-    // --- TAMPER CHECK: compare HDFC response vs stored payment_transactions ---
+    // --- TAMPER CHECK ---
     if (mappedStatus === "SUCCESS" && existingTxn) {
-      const hdfcOrderId = String(data.order_id || "").trim();
-      const hdfcAmount = Number(data.amount || 0);
+      const hdfcOrderId = String(normalized.order_id || "").trim();
+      const hdfcAmount = Number(normalized.amount || 0);
       const storedAmount = Number(existingTxn.amount);
 
       const orderMatch = hdfcOrderId === order_id;
@@ -184,21 +356,15 @@ Deno.serve(async (req) => {
           .from("payment_transactions")
           .update({
             status: "TAMPERED",
-            hdfc_txn_id: data.txn_id || null,
+            hdfc_txn_id: normalized.txn_id || null,
           })
           .eq("order_id", order_id);
         await logPayment(adminClient, order_id, "status_api", { tamper_check: true }, { hdfcOrderId, hdfcAmount, storedAmount });
 
         return jsonResponse({
-          order_id,
+          ...normalized,
           status: "TAMPERED",
-          hdfc_status: hdfcStatus,
           amount: storedAmount,
-          txn_id: data.txn_id || null,
-          payment_method: data.payment_method || null,
-          payment_method_type: data.payment_method_type || null,
-          refunded: false,
-          amount_refunded: 0,
           gateway_response: data,
         });
       }
@@ -214,7 +380,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (payment && payment.status === "pending") {
-          const txnId = data.txn_id || null;
+          const txnId = normalized.txn_id;
 
           if (mappedStatus === "SUCCESS") {
             await adminClient.from("payments").update({
@@ -223,18 +389,15 @@ Deno.serve(async (req) => {
               gateway_response: data,
               paid_at: new Date().toISOString(),
               payment_label: "Online Payment",
-              payment_mode_label: data.payment_method_type || data.payment_method || "online",
+              payment_mode_label: normalized.payment_method_type || normalized.payment_method || "online",
             }).eq("id", payment.id);
 
             await adminClient.from("payment_transactions").update({
               status: "SUCCESS",
               hdfc_txn_id: txnId,
-              payment_method: data.payment_method_type || data.payment_method || null,
+              payment_method: normalized.payment_method_type || normalized.payment_method || null,
             }).eq("order_id", order_id);
 
-            // Idempotent invoice reconciliation — recompute paid_amount from
-            // completed payments rather than additive update so retries/webhooks
-            // never double-count.
             await reconcileInvoice(adminClient, payment.invoice_id);
 
             const { data: invoice } = await adminClient
@@ -263,14 +426,12 @@ Deno.serve(async (req) => {
             if (invoice) await notifyStudent(adminClient, payment, invoice, "failed");
           }
         } else if (existingTxn && existingTxn.status !== "SUCCESS") {
-          // payment_transactions exists but no payments row in pending state — still update txn status
           await adminClient.from("payment_transactions").update({
             status: mappedStatus === "SUCCESS" ? "SUCCESS" : "FAILED",
-            hdfc_txn_id: data.txn_id || null,
-            payment_method: data.payment_method_type || data.payment_method || null,
+            hdfc_txn_id: normalized.txn_id || null,
+            payment_method: normalized.payment_method_type || normalized.payment_method || null,
           }).eq("order_id", order_id);
 
-          // Even if payment row already completed, ensure invoice is reconciled.
           if (mappedStatus === "SUCCESS" && existingTxn.invoice_id) {
             await reconcileInvoice(adminClient, existingTxn.invoice_id);
           }
@@ -282,58 +443,8 @@ Deno.serve(async (req) => {
       await adminClient.from("payment_transactions").update({ status: "PENDING" }).eq("order_id", order_id);
     }
 
-    // Normalize the rich subset of the spec response
-    const card = data.card
-      ? {
-          card_brand: data.card.card_brand || null,
-          card_type: data.card.card_type || null,
-          card_issuer: data.card.card_issuer || null,
-          last_four_digits: data.card.last_four_digits || null,
-        }
-      : null;
-
-    const pgr = data.payment_gateway_response
-      ? {
-          resp_code: data.payment_gateway_response.resp_code ?? null,
-          resp_message: data.payment_gateway_response.resp_message ?? null,
-          rrn: data.payment_gateway_response.rrn ?? null,
-          epg_txn_id: data.payment_gateway_response.epg_txn_id ?? null,
-          auth_id_code: data.payment_gateway_response.auth_id_code ?? null,
-        }
-      : null;
-
-    const refunds = Array.isArray(data.refunds)
-      ? data.refunds.map((r: any) => ({
-          id: r.id ?? r.unique_request_id ?? null,
-          unique_request_id: r.unique_request_id ?? null,
-          amount: Number(r.amount ?? 0),
-          status: r.status ?? null,
-          ref: r.ref ?? null,
-          created: r.created ?? null,
-          refund_type: r.refund_type ?? null,
-          refund_source: r.refund_source ?? null,
-        }))
-      : [];
-
     return jsonResponse({
-      order_id: data.order_id || order_id,
-      status: mappedStatus,
-      hdfc_status: hdfcStatus,
-      amount: data.amount,
-      currency: data.currency || "INR",
-      txn_id: data.txn_id || null,
-      txn_uuid: data.txn_uuid || null,
-      payment_method: data.payment_method || null,
-      payment_method_type: data.payment_method_type || null,
-      refunded: data.refunded || false,
-      amount_refunded: data.amount_refunded || 0,
-      gateway: data.txn_detail?.gateway || null,
-      gateway_id: data.gateway_id ?? null,
-      gateway_reference_id: data.gateway_reference_id ?? null,
-      payment_gateway_response: pgr,
-      card,
-      payer_vpa: data.payer_vpa || data.upi?.payer_vpa || null,
-      refunds,
+      ...normalized,
       gateway_response: data,
     });
   } catch (err) {
@@ -408,9 +519,6 @@ async function notifyStudent(client: any, payment: any, invoice: any, type: "suc
   });
 }
 
-// Idempotent invoice reconciliation: recompute paid_amount strictly from
-// completed payments and update status accordingly. Safe to call from
-// callbacks, polling, and webhooks without double-counting.
 async function reconcileInvoice(client: any, invoiceId: string) {
   if (!invoiceId) return;
 
