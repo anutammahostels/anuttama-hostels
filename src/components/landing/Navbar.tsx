@@ -10,10 +10,6 @@ export const Navbar = () => {
 
   const navLinks = [
     { label: "Home", href: "/" },
-    { label: "Our Hostel", href: "/solutions" },
-    { label: "Operations", href: "/features" },
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
   ];
 
   const isActive = (href: string) => location.pathname === href;
