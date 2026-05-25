@@ -347,9 +347,6 @@ export default function Auth() {
             </>
           )}
           
-          <p className="text-center text-sm text-muted-foreground">
-            By continuing, you agree to our <Link to="/terms" className="text-primary hover:underline">Terms</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
-          </p>
         </div>
       </div>
     </div>
