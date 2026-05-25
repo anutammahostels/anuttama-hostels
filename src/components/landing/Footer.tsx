@@ -65,19 +65,12 @@ export const Footer = () => {
           <p className="text-sm md:text-base font-semibold text-white/70">Jeevijay Technologies Private Limited</p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
-          <p className="text-xs md:text-sm text-white/30 text-center md:text-left">
+        <div className="flex items-center justify-center gap-3 md:gap-4">
+          <p className="text-xs md:text-sm text-white/30 text-center">
             © 2026 Anuttama Hostels. All rights reserved. Internal platform — not a public software service.
           </p>
-          <div className="flex items-center gap-4 md:gap-6">
-            <Link to="#" className="text-xs md:text-sm text-white/30 hover:text-white transition-colors">
-              Privacy
-            </Link>
-            <Link to="#" className="text-xs md:text-sm text-white/30 hover:text-white transition-colors">
-              Terms
-            </Link>
-          </div>
         </div>
+
       </div>
     </footer>
   );
