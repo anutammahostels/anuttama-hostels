@@ -16,10 +16,6 @@ import { LayoutProvider } from "@/contexts/LayoutContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
-import Solutions from "./pages/Solutions";
-import FeaturesPage from "./pages/FeaturesPage";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Students from "./pages/Students";
@@ -69,11 +65,6 @@ const App = () => (
             {/* Landing pages - shared Navbar/Footer layout */}
             <Route element={<LandingLayout />}>
               <Route path="/" element={<Index />} />
-              <Route path="/solutions" element={<Solutions />} />
-              <Route path="/features" element={<FeaturesPage />} />
-              
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
             </Route>
 
             <Route path="/auth" element={<Auth />} />

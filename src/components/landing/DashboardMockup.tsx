@@ -29,9 +29,9 @@ export const DashboardMockup = () => {
           <div className="hidden lg:flex flex-col w-48 bg-[hsl(222,47%,8%)] rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                <span className="text-white font-bold text-sm">H</span>
+                <span className="text-white font-bold text-sm">A</span>
               </div>
-              <span className="text-white font-semibold text-sm">Hostylia</span>
+              <span className="text-white font-semibold text-sm">Anuttama</span>
             </div>
             
             {[

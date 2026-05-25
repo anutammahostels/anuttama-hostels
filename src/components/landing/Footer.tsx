@@ -3,14 +3,6 @@ import { Link } from "react-router-dom";
 import { HostyliaLogo } from "@/components/brand/HostyliaLogo";
 
 const footerLinks = {
-  Platform: [
-    { label: "Operations", href: "/features" },
-    { label: "Our Hostel", href: "/solutions" },
-  ],
-  Anuttama: [
-    { label: "About Us", href: "/about" },
-    { label: "Contact", href: "/contact" },
-  ],
   Access: [
     { label: "Sign In", href: "/auth" },
   ],
