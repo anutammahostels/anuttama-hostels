@@ -68,7 +68,7 @@ export const Hero = () => {
 
           {/* Subtitle */}
           <p className="text-center text-base lg:text-xl text-white/60 max-w-3xl mx-auto mb-6 lg:mb-8 animate-slide-up stagger-1 leading-relaxed px-2">
-            Anuttama Hostels owns and operates its own hostel ecosystem across multiple locations. This is our dedicated internal workspace used by our staff to run
+            Anuttama Hostels owns and operates its hostel. This is our dedicated internal workspace used by our staff to run
             <span className="text-white/80 font-medium"> resident records, fee collections, mess, gate passes and day-to-day operations.</span>
           </p>
 

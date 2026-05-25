@@ -10,7 +10,7 @@ export const Navbar = () => {
 
   const navLinks = [
     { label: "Home", href: "/" },
-    { label: "Our Hostels", href: "/solutions" },
+    { label: "Our Hostel", href: "/solutions" },
     { label: "Operations", href: "/features" },
     { label: "About", href: "/about" },
     { label: "Contact", href: "/contact" },

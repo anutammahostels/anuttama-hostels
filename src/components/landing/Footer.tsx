@@ -5,7 +5,7 @@ import { HostyliaLogo } from "@/components/brand/HostyliaLogo";
 const footerLinks = {
   Platform: [
     { label: "Operations", href: "/features" },
-    { label: "Our Hostels", href: "/solutions" },
+    { label: "Our Hostel", href: "/solutions" },
   ],
   Anuttama: [
     { label: "About Us", href: "/about" },
@@ -33,7 +33,7 @@ export const Footer = () => {
               <HostyliaLogo size="lg" variant="dark" />
             </Link>
             <p className="text-white/50 text-xs md:text-sm mb-4 md:mb-6 max-w-xs leading-relaxed">
-              Anuttama Hostels owns and operates a network of hostels. This is our internal operations workspace, developed exclusively for Anuttama-owned hostel operations and not offered as a public software service.
+              Anuttama Hostels owns and operates its hostel. This is our internal operations workspace, developed exclusively for our hostel operations and not offered as a public software service.
             </p>
 
             <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
