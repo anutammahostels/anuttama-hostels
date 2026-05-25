@@ -35,7 +35,10 @@ export const Footer = () => {
                 +91 8619483010
               </a>
             </div>
+          </div>
         </div>
+
+
 
 
         <div className="py-4 md:py-6 border-t border-b border-white/10 mb-4 md:mb-6 text-center">
