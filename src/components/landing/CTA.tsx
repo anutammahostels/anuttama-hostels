@@ -46,26 +46,6 @@ export const CTA = () => {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4">
-            <Link to="/auth">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary text-white px-6 lg:px-10 py-5 lg:py-7 text-sm lg:text-lg shadow-2xl hover:shadow-primary/25 hover:scale-105 transition-all duration-500 gap-2 rounded-xl group"
-              >
-                Staff Login
-                <ArrowRight className="h-4 w-4 lg:h-5 lg:w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto border-white/20 bg-white/5 text-white hover:bg-white/10 px-6 lg:px-10 py-5 lg:py-7 text-sm lg:text-lg transition-all duration-300 rounded-xl"
-              >
-                Resident Login
-              </Button>
-            </Link>
-          </div>
         </div>
       </div>
     </section>
