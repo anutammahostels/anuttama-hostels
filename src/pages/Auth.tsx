@@ -224,21 +224,6 @@ export default function Auth() {
                 </button>
               </div>
 
-              {/* Sign up CTA for admins */}
-              <div className="text-center space-y-4">
-                <p className="text-muted-foreground">New hostel admin?</p>
-                <Link to="/onboarding">
-                  <Button 
-                    variant="outline" 
-                    className="w-full h-12 rounded-xl gap-2 border-2 hover:bg-secondary/10 hover:border-secondary/50"
-                  >
-                    <Sparkles className="h-4 w-4 text-secondary" />
-                    Start Free Trial
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <p className="text-sm text-muted-foreground">7 days free • No credit card required</p>
-              </div>
             </>
           )}
 
