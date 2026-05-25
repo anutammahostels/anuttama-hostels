@@ -2,11 +2,7 @@ import { Mail, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { HostyliaLogo } from "@/components/brand/HostyliaLogo";
 
-const footerLinks = {
-  Access: [
-    { label: "Sign In", href: "/auth" },
-  ],
-};
+
 
 
 export const Footer = () => {
@@ -39,26 +35,8 @@ export const Footer = () => {
                 +91 8619483010
               </a>
             </div>
-          </div>
-
-          {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
-              <h4 className="font-semibold text-white mb-3 md:mb-4 text-xs md:text-sm">{title}</h4>
-              <ul className="space-y-2 md:space-y-3">
-                {links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      to={link.href}
-                      className="text-xs md:text-sm text-white/50 hover:text-white transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
         </div>
+
 
         <div className="py-4 md:py-6 border-t border-b border-white/10 mb-4 md:mb-6 text-center">
           <p className="text-xs text-white/40 mb-1">Powered by</p>
