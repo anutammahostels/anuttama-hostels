@@ -22,7 +22,7 @@ const benefits = [
   {
     icon: TrendingDown,
     title: "Lower Operational Overhead",
-    description: "Digital workflows, automated payslips and refund handling cut paperwork across Anuttama locations.",
+    description: "Digital workflows, automated payslips and refund handling cut paperwork at our hostel.",
     stat: "Less",
     statLabel: "Paperwork",
     gradient: "from-secondary to-emerald-500",

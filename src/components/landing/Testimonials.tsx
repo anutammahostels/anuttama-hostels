@@ -7,7 +7,7 @@ const notes = [
     id: 1,
     role: "Operations Team",
     organization: "Anuttama Hostels HQ",
-    quote: "All of our hostels run on a single workspace now. Fee runs, mess attendance and gate passes are handled in one place by our internal team.",
+    quote: "Our hostel runs on a single workspace now. Fee runs, mess attendance and gate passes are handled in one place by our internal team.",
     icon: ClipboardList,
   },
   {

@@ -33,10 +33,10 @@ const About = () => {
               About Anuttama Hostels
             </span>
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 animate-slide-up stagger-2">
-              We run our own <span className="text-gradient">hostels</span>
+              We run our own <span className="text-gradient">hostel</span>
             </h1>
             <p className="text-sm md:text-lg lg:text-xl text-white/60 max-w-2xl mx-auto animate-slide-up stagger-3 px-4">
-              Anuttama Hostels owns and operates its own hostel ecosystem across multiple locations.
+              Anuttama Hostels owns and operates its hostel.
               This platform is our internal operations workspace — not a software product offered to others.
             </p>
           </div>
@@ -60,8 +60,8 @@ const About = () => {
                 </div>
                 <h3 className="text-lg md:text-2xl font-bold text-foreground mb-2 md:mb-4">What we do</h3>
                 <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                  Anuttama Hostels owns and operates a network of hostels. Our teams handle resident admissions, room allocation,
-                  fee collection, mess operations, gate passes, maintenance and day-to-day administration in every location we run.
+                  Anuttama Hostels owns and operates its hostel. Our team handles resident admissions, room allocation,
+                  fee collection, mess operations, gate passes, maintenance and day-to-day administration.
                 </p>
               </div>
 
@@ -150,8 +150,8 @@ const About = () => {
                 <div className="flex items-center gap-2 md:gap-3">
                   <Building2 className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                   <div>
-                    <p className="font-bold text-foreground text-sm md:text-base">Multi-location</p>
-                    <p className="text-xs md:text-sm text-muted-foreground">Anuttama-owned hostels</p>
+                    <p className="font-bold text-foreground text-sm md:text-base">Owned & Operated</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">By Anuttama Hostels</p>
                   </div>
                 </div>
               </div>

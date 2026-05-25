@@ -116,7 +116,7 @@ export const Features = () => {
           </h2>
           <p className="text-muted-foreground text-sm lg:text-lg">
             A consolidated workspace for Anuttama’s internal teams — operations, accounts and wardens —
-            <span className="font-medium text-foreground"> built for our own hostels only.</span>
+            <span className="font-medium text-foreground"> built for our own hostel only.</span>
           </p>
         </div>
 

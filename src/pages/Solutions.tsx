@@ -13,7 +13,7 @@ const areas = [
   {
     icon: Users,
     title: "Resident Management",
-    description: "Manage every resident at our Anuttama-owned hostels — admissions, room allocation, exits and records.",
+    description: "Manage every resident at our hostel — admissions, room allocation, exits and records.",
     items: ["Admissions intake", "Room & bed allocation", "Resident records", "Exit & refund handling"],
     image: hostelRoom,
     gradient: "from-primary to-blue-500",
@@ -76,14 +76,14 @@ const Solutions = () => {
           <div className="max-w-4xl mx-auto text-center">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 text-white/80 text-sm font-medium mb-6 animate-slide-down stagger-1">
               <Sparkles className="h-4 w-4 text-secondary" />
-              Our Hostels
+              Our Hostel
             </span>
             <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 animate-slide-up stagger-2">
               Anuttama-owned <span className="text-gradient">Hostel Operations</span>
             </h1>
             <p className="text-lg text-white/60 mb-8 animate-slide-up stagger-3">
-              We operate our own network of hostels. This internal platform consolidates how our staff manages residents,
-              fees, mess, gate passes and maintenance across every Anuttama location. It is not offered to third-party
+              We operate our own hostel. This internal platform consolidates how our staff manages residents,
+              fees, mess, gate passes and maintenance at our hostel. It is not offered to third-party
               hostels or institutions.
             </p>
           </div>
@@ -141,7 +141,7 @@ const Solutions = () => {
               An internal platform — not a public software service
             </h2>
             <p className="text-muted-foreground text-base lg:text-lg">
-              This workspace is developed and used exclusively by Anuttama Hostels for hostels we own and operate.
+              This workspace is developed and used exclusively by Anuttama Hostels for the hostel we own and operate.
               It is not sold, licensed or offered to other hostels, schools, co-living spaces, PGs or institutions.
             </p>
             <div className="mt-8">
