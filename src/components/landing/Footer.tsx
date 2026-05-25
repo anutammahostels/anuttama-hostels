@@ -6,11 +6,8 @@ const footerLinks = {
   Access: [
     { label: "Sign In", href: "/auth" },
   ],
-  Legal: [
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms of Use", href: "#" },
-  ],
 };
+
 
 export const Footer = () => {
   return (
