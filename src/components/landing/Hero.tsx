@@ -76,27 +76,6 @@ export const Hero = () => {
             This platform is developed exclusively for Anuttama-owned hostel operations and is not offered as a public software service.
           </p>
 
-          {/* Login Buttons (internal access only) */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4 mb-8 lg:mb-12 animate-slide-up stagger-2">
-            <Link to="/auth">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary text-white px-6 lg:px-8 py-5 lg:py-6 text-base lg:text-lg shadow-2xl hover:shadow-primary/25 hover:scale-105 transition-all duration-500 gap-2 rounded-xl group"
-              >
-                Staff Login
-                <ArrowRight className="h-4 w-4 lg:h-5 lg:w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto border-white/20 bg-white/5 text-white hover:bg-white/10 px-6 lg:px-8 py-5 lg:py-6 text-base lg:text-lg transition-all duration-300 gap-2 rounded-xl backdrop-blur-sm"
-              >
-                Resident Login
-              </Button>
-            </Link>
-          </div>
 
           {/* Internal capability indicators */}
           <div className="flex flex-wrap justify-center gap-4 lg:gap-8 mb-10 lg:mb-16 animate-slide-up stagger-3">
