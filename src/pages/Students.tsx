@@ -787,8 +787,12 @@ const Students = () => {
     setBulkProcessing(true);
     try {
       const ids = [...selectedStudents];
-      const { error } = await supabase.from("students").update({ status }).in("id", ids);
-      if (error) throw error;
+      const CHUNK = 100;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const chunk = ids.slice(i, i + CHUNK);
+        const { error } = await supabase.from("students").update({ status }).in("id", chunk);
+        if (error) throw error;
+      }
       queryClient.invalidateQueries({ queryKey: ["students"] });
       toast({ title: "Status Updated", description: `${ids.length} student(s) marked as ${status}.` });
       clearSelection();
