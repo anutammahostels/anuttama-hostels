@@ -1074,6 +1074,9 @@ const Students = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => setPaymentDetailsStudent(student)}>
+                                <IndianRupee className="h-4 w-4 mr-2" /> View Payment Details
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openEditDialog(student)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit Details
                               </DropdownMenuItem>
