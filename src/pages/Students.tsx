@@ -1128,6 +1128,11 @@ const Students = () => {
                         <TableHead>Course</TableHead>
                         <TableHead>Stream</TableHead>
                         <TableHead>Final Fee</TableHead>
+                        <TableHead>Paid</TableHead>
+                        <TableHead>Pending</TableHead>
+                        <TableHead>Payment Mode</TableHead>
+                        <TableHead>Transaction Details</TableHead>
+                        <TableHead>UTR / Reference</TableHead>
                         <TableHead>Remarks</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
