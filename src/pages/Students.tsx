@@ -834,8 +834,12 @@ const Students = () => {
     setBulkProcessing(true);
     try {
       const ids = [...selectedStudents];
-      const { error } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", ids);
-      if (error) throw error;
+      const CHUNK = 100;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const chunk = ids.slice(i, i + CHUNK);
+        const { error } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", chunk);
+        if (error) throw error;
+      }
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({ title: "Rooms Vacated", description: `Beds vacated for ${ids.length} student(s).` });
