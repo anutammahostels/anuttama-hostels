@@ -1128,6 +1128,11 @@ const Students = () => {
                         <TableHead>Course</TableHead>
                         <TableHead>Stream</TableHead>
                         <TableHead>Final Fee</TableHead>
+                        <TableHead>Paid</TableHead>
+                        <TableHead>Pending</TableHead>
+                        <TableHead>Payment Mode</TableHead>
+                        <TableHead>Transaction Details</TableHead>
+                        <TableHead>UTR / Reference</TableHead>
                         <TableHead>Remarks</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -1187,6 +1192,36 @@ const Students = () => {
                             ) : (
                               <p className="text-sm text-muted-foreground">-</p>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            {student.finance?.totalPaid ? (
+                              <p className="text-sm font-medium text-green-600">₹{student.finance.totalPaid.toLocaleString("en-IN")}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {student.finance && student.finance.pending > 0 ? (
+                              <p className="text-sm font-medium text-orange-600">₹{student.finance.pending.toLocaleString("en-IN")}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm whitespace-nowrap">{student.finance?.lastPaymentMode || "-"}</p>
+                            {student.finance && student.finance.payments.length > 1 && (
+                              <p className="text-xs text-muted-foreground">+{student.finance.payments.length - 1} more</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm truncate max-w-[180px]" title={student.finance?.lastTransactionDetails || ""}>
+                              {student.finance?.lastTransactionDetails || "-"}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm truncate max-w-[160px] font-mono text-xs" title={student.finance?.lastUtr || ""}>
+                              {student.finance?.lastUtr || "-"}
+                            </p>
                           </TableCell>
                           <TableCell>
                             <p className="text-sm truncate max-w-[150px]" title={(student as any).remarks || ""}>{(student as any).remarks || "-"}</p>

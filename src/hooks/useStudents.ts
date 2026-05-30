@@ -32,6 +32,22 @@ export interface StudentWithProfile extends Student {
       } | null;
     } | null;
   } | null;
+  finance?: {
+    totalPaid: number;
+    pending: number;
+    lastPaymentMode: string | null;
+    lastTransactionDetails: string | null;
+    lastUtr: string | null;
+    lastPaymentDate: string | null;
+    payments: Array<{
+      amount: number;
+      mode: string | null;
+      txn: string | null;
+      utr: string | null;
+      label: string | null;
+      paid_at: string | null;
+    }>;
+  };
 }
 
 export function useStudents(propertyId?: string) {
@@ -93,15 +109,80 @@ export function useStudents(propertyId?: string) {
       );
       const bedsData = bedChunks.flat();
 
+      // Get payments + invoices for finance summary (batched)
+      const paymentChunks = await Promise.all(
+        chunk(studentIds, 200).map(ids =>
+          supabase
+            .from('payments')
+            .select('student_id, amount, payment_mode_label, payment_method, transaction_id, transaction_reference, payment_label, paid_at')
+            .in('student_id', ids)
+            .order('paid_at', { ascending: false })
+            .then(r => r.data || [])
+        )
+      );
+      const paymentsData = paymentChunks.flat();
+
+      const invoiceChunks = await Promise.all(
+        chunk(studentIds, 200).map(ids =>
+          supabase
+            .from('invoices')
+            .select('student_id, total_amount, paid_amount, status')
+            .in('student_id', ids)
+            .then(r => r.data || [])
+        )
+      );
+      const invoicesData = invoiceChunks.flat();
+
       // Map profiles and beds to students
       const profilesMap = new Map(profilesData.map(p => [p.id, p]));
       const bedsMap = new Map(bedsData.map(b => [b.student_id, b]));
 
-      const result = studentsData.map(student => ({
-        ...student,
-        profile: profilesMap.get(student.user_id) || null,
-        bed: bedsMap.get(student.id) || null,
-      }));
+      const paymentsByStudent = new Map<string, typeof paymentsData>();
+      paymentsData.forEach(p => {
+        if (!p.student_id) return;
+        const list = paymentsByStudent.get(p.student_id) || [];
+        list.push(p);
+        paymentsByStudent.set(p.student_id, list);
+      });
+      const invoicesByStudent = new Map<string, typeof invoicesData>();
+      invoicesData.forEach(i => {
+        if (!i.student_id) return;
+        const list = invoicesByStudent.get(i.student_id) || [];
+        list.push(i);
+        invoicesByStudent.set(i.student_id, list);
+      });
+
+      const result = studentsData.map(student => {
+        const pays = paymentsByStudent.get(student.id) || [];
+        const invs = invoicesByStudent.get(student.id) || [];
+        const totalPaid = pays.reduce((s, p) => s + Number(p.amount || 0), 0);
+        const invoiceTotal = invs.reduce((s, i) => s + Number(i.total_amount || 0), 0);
+        const finalFee = Number((student as any).final_fee || 0);
+        const totalDue = Math.max(invoiceTotal, finalFee);
+        const pending = Math.max(totalDue - totalPaid, 0);
+        const last = pays[0];
+        return {
+          ...student,
+          profile: profilesMap.get(student.user_id) || null,
+          bed: bedsMap.get(student.id) || null,
+          finance: {
+            totalPaid,
+            pending,
+            lastPaymentMode: last?.payment_mode_label || last?.payment_method || null,
+            lastTransactionDetails: last?.transaction_id || null,
+            lastUtr: last?.transaction_reference || null,
+            lastPaymentDate: last?.paid_at || null,
+            payments: pays.map(p => ({
+              amount: Number(p.amount || 0),
+              mode: p.payment_mode_label || p.payment_method || null,
+              txn: p.transaction_id || null,
+              utr: p.transaction_reference || null,
+              label: p.payment_label || null,
+              paid_at: p.paid_at || null,
+            })),
+          },
+        };
+      });
 
       return result as StudentWithProfile[];
     },
