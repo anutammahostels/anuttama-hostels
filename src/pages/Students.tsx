@@ -803,11 +803,17 @@ const Students = () => {
     setBulkProcessing(true);
     try {
       const ids = [...selectedStudents];
-      // Vacate beds first
-      const { error: bedErr } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", ids);
-      if (bedErr) throw bedErr;
-      const { error } = await supabase.from("students").delete().in("id", ids);
-      if (error) throw error;
+      // Chunk to avoid URL length limits (PostgREST "Bad Request" on large .in() lists)
+      const CHUNK = 100;
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
+
+      for (const chunk of chunks) {
+        const { error: bedErr } = await supabase.from("beds").update({ student_id: null, status: "vacant" }).in("student_id", chunk);
+        if (bedErr) throw bedErr;
+        const { error } = await supabase.from("students").delete().in("id", chunk);
+        if (error) throw error;
+      }
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({ title: "Students Deleted", description: `${ids.length} student(s) deleted.` });
