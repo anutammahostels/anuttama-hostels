@@ -1221,20 +1221,21 @@ const Students = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm whitespace-nowrap">{student.finance?.lastPaymentMode || "-"}</p>
-                            {student.finance && student.finance.payments.length > 1 && (
-                              <p className="text-xs text-muted-foreground">+{student.finance.payments.length - 1} more</p>
+                            {student.finance && student.finance.payments.length > 0 ? (
+                              <div className="min-w-[160px]">
+                                <p className="text-sm font-medium whitespace-nowrap">
+                                  {student.finance.lastPaymentMode || "Payment"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {student.finance.lastPaymentDate
+                                    ? new Date(student.finance.lastPaymentDate).toLocaleDateString("en-IN")
+                                    : ""}
+                                  {student.finance.payments.length > 1 && ` · ${student.finance.payments.length} txns`}
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <p className="text-sm truncate max-w-[180px]" title={student.finance?.lastTransactionDetails || ""}>
-                              {student.finance?.lastTransactionDetails || "-"}
-                            </p>
-                          </TableCell>
-                          <TableCell>
-                            <p className="text-sm truncate max-w-[160px] font-mono text-xs" title={student.finance?.lastUtr || ""}>
-                              {student.finance?.lastUtr || "-"}
-                            </p>
                           </TableCell>
                           <TableCell>
                             <p className="text-sm truncate max-w-[150px]" title={(student as any).remarks || ""}>{(student as any).remarks || "-"}</p>
