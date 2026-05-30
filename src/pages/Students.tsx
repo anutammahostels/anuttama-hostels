@@ -77,6 +77,7 @@ const Students = () => {
   const [filterYear, setFilterYear] = useState("all");
   const [filterRoom, setFilterRoom] = useState("all");
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
+  const [paymentDetailsStudent, setPaymentDetailsStudent] = useState<StudentWithProfile | null>(null);
 
   // Reset password state
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
