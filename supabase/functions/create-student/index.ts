@@ -223,10 +223,40 @@ serve(async (req) => {
     );
 
     // Auto-create invoice and payment records if final_fee > 0
+    const invoiceErrors: string[] = [];
+    let invoicesCreated = 0;
     if (parsedFinalFee > 0) {
-      // Get property_id
-      const { data: propData } = await adminClient.from("properties").select("id").limit(1).single();
-      const propertyId = propData?.id;
+      // Get or auto-create a default property so payments can be recorded.
+      let propertyId: string | null = null;
+      const { data: propData } = await adminClient.from("properties").select("id").limit(1).maybeSingle();
+      propertyId = propData?.id ?? null;
+
+      if (!propertyId) {
+        // Ensure an organization exists for this admin
+        let orgId: string | null = null;
+        const { data: existingOrg } = await adminClient
+          .from("organizations")
+          .select("id")
+          .eq("owner_id", callingUser.id)
+          .maybeSingle();
+        orgId = existingOrg?.id ?? null;
+        if (!orgId) {
+          const { data: newOrg, error: orgErr } = await adminClient
+            .from("organizations")
+            .insert({ name: "Anuttama Hostels", type: "hostel", owner_id: callingUser.id })
+            .select("id")
+            .single();
+          if (orgErr) invoiceErrors.push(`org: ${orgErr.message}`);
+          orgId = newOrg?.id ?? null;
+        }
+        const { data: newProp, error: propErr } = await adminClient
+          .from("properties")
+          .insert({ name: "Main Property", organization_id: orgId, owner_id: callingUser.id, status: "active" })
+          .select("id")
+          .single();
+        if (propErr) invoiceErrors.push(`property: ${propErr.message}`);
+        propertyId = newProp?.id ?? null;
+      }
 
       if (propertyId) {
         const toAmt = (v: any) => parseFloat(String(v ?? "0").replace(/,/g, "")) || 0;
@@ -244,8 +274,6 @@ serve(async (req) => {
         const baseRemarks = remarks ? `Remarks: ${remarks}` : "";
         const balanceNote = balance_payment ? `Balance: ${balance_payment}` : "";
 
-        // Strategy: create one invoice per installment (each invoice = that installment's amount, marked paid).
-        // If totalPaid < final_fee, create an additional pending invoice for the outstanding balance.
         const tsToken = Date.now().toString(36).toUpperCase();
 
         for (const inst of nonZeroInstallments) {
@@ -269,8 +297,11 @@ serve(async (req) => {
             notes: noteParts.join(" | "),
           }).select().single();
 
-          if (!invError && invoice) {
-            await adminClient.from("payments").insert({
+          if (invError) {
+            invoiceErrors.push(`invoice P${inst.n}: ${invError.message}`);
+          } else if (invoice) {
+            invoicesCreated++;
+            const { error: payErr } = await adminClient.from("payments").insert({
               invoice_id: invoice.id,
               student_id: student.id,
               property_id: propertyId,
@@ -283,10 +314,10 @@ serve(async (req) => {
               status: "completed",
               paid_at: toIsoTimestamp(inst.date, toIsoTimestamp(billingDate)),
             });
+            if (payErr) invoiceErrors.push(`payment P${inst.n}: ${payErr.message}`);
           }
         }
 
-        // Outstanding balance → pending invoice
         const outstanding = parsedFinalFee - totalPaid;
         if (outstanding > 0) {
           const invoiceNumber = `INV-${roll_number}-BAL-${tsToken}`;
@@ -295,7 +326,7 @@ serve(async (req) => {
           if (balanceNote) noteParts.push(balanceNote);
           if (baseRemarks) noteParts.push(baseRemarks);
 
-          await adminClient.from("invoices").insert({
+          const { error: balErr } = await adminClient.from("invoices").insert({
             student_id: student.id,
             invoice_number: invoiceNumber,
             billing_month: baseBillingDate,
@@ -306,7 +337,11 @@ serve(async (req) => {
             status: "pending",
             notes: noteParts.join(" | "),
           });
+          if (balErr) invoiceErrors.push(`balance invoice: ${balErr.message}`);
+          else invoicesCreated++;
         }
+      } else {
+        invoiceErrors.push("No property available to record payments");
       }
     }
 
