@@ -2164,6 +2164,85 @@ const Students = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Details Dialog */}
+      <Dialog open={!!paymentDetailsStudent} onOpenChange={(open) => { if (!open) setPaymentDetailsStudent(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5" /> Payment Details
+            </DialogTitle>
+            <DialogDescription>
+              {paymentDetailsStudent?.profile?.full_name || "Student"} · {paymentDetailsStudent?.roll_number || "No Form #"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {paymentDetailsStudent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Final Fee</p>
+                  <p className="text-base font-semibold">₹{Number((paymentDetailsStudent as any).final_fee || 0).toLocaleString("en-IN")}</p>
+                </div>
+                <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-3">
+                  <p className="text-xs text-muted-foreground">Total Paid</p>
+                  <p className="text-base font-semibold text-green-600">₹{(paymentDetailsStudent.finance?.totalPaid || 0).toLocaleString("en-IN")}</p>
+                </div>
+                <div className="rounded-lg border bg-orange-50 dark:bg-orange-950/20 p-3">
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                  <p className="text-base font-semibold text-orange-600">₹{(paymentDetailsStudent.finance?.pending || 0).toLocaleString("en-IN")}</p>
+                </div>
+              </div>
+
+              {paymentDetailsStudent.finance && paymentDetailsStudent.finance.payments.length > 0 ? (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">Transactions ({paymentDetailsStudent.finance.payments.length})</h4>
+                  {paymentDetailsStudent.finance.payments.map((p, idx) => (
+                    <div key={idx} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {p.label || `Installment ${idx + 1}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.paid_at ? new Date(p.paid_at).toLocaleDateString("en-IN") : "-"}
+                          </p>
+                        </div>
+                        <p className="text-base font-semibold text-green-600">
+                          ₹{p.amount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Payment Mode</p>
+                          <p className="font-medium">{p.mode || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Transaction Details</p>
+                          <p className="font-medium break-all">{p.txn || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">UTR / Reference</p>
+                          <p className="font-mono font-medium break-all">{p.utr || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No payment transactions recorded for this student.
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentDetailsStudent(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
