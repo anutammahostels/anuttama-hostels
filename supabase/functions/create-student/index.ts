@@ -346,7 +346,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ student, tempPassword: finalPassword, userId, loginId: roll_number }),
+      JSON.stringify({ student, tempPassword: finalPassword, userId, loginId: roll_number, invoicesCreated, invoiceErrors }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
