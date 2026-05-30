@@ -32,6 +32,22 @@ export interface StudentWithProfile extends Student {
       } | null;
     } | null;
   } | null;
+  finance?: {
+    totalPaid: number;
+    pending: number;
+    lastPaymentMode: string | null;
+    lastTransactionDetails: string | null;
+    lastUtr: string | null;
+    lastPaymentDate: string | null;
+    payments: Array<{
+      amount: number;
+      mode: string | null;
+      txn: string | null;
+      utr: string | null;
+      label: string | null;
+      paid_at: string | null;
+    }>;
+  };
 }
 
 export function useStudents(propertyId?: string) {
