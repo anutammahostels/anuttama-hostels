@@ -77,6 +77,7 @@ const Students = () => {
   const [filterYear, setFilterYear] = useState("all");
   const [filterRoom, setFilterRoom] = useState("all");
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
+  const [paymentDetailsStudent, setPaymentDetailsStudent] = useState<StudentWithProfile | null>(null);
 
   // Reset password state
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
@@ -1073,6 +1074,9 @@ const Students = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => setPaymentDetailsStudent(student)}>
+                                <IndianRupee className="h-4 w-4 mr-2" /> View Payment Details
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openEditDialog(student)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit Details
                               </DropdownMenuItem>
@@ -1144,9 +1148,7 @@ const Students = () => {
                         <TableHead>Final Fee</TableHead>
                         <TableHead>Paid</TableHead>
                         <TableHead>Pending</TableHead>
-                        <TableHead>Payment Mode</TableHead>
-                        <TableHead>Transaction Details</TableHead>
-                        <TableHead>UTR / Reference</TableHead>
+                        <TableHead>Last Payment</TableHead>
                         <TableHead>Remarks</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -1222,20 +1224,21 @@ const Students = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm whitespace-nowrap">{student.finance?.lastPaymentMode || "-"}</p>
-                            {student.finance && student.finance.payments.length > 1 && (
-                              <p className="text-xs text-muted-foreground">+{student.finance.payments.length - 1} more</p>
+                            {student.finance && student.finance.payments.length > 0 ? (
+                              <div className="min-w-[160px]">
+                                <p className="text-sm font-medium whitespace-nowrap">
+                                  {student.finance.lastPaymentMode || "Payment"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {student.finance.lastPaymentDate
+                                    ? new Date(student.finance.lastPaymentDate).toLocaleDateString("en-IN")
+                                    : ""}
+                                  {student.finance.payments.length > 1 && ` · ${student.finance.payments.length} txns`}
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <p className="text-sm truncate max-w-[180px]" title={student.finance?.lastTransactionDetails || ""}>
-                              {student.finance?.lastTransactionDetails || "-"}
-                            </p>
-                          </TableCell>
-                          <TableCell>
-                            <p className="text-sm truncate max-w-[160px] font-mono text-xs" title={student.finance?.lastUtr || ""}>
-                              {student.finance?.lastUtr || "-"}
-                            </p>
                           </TableCell>
                           <TableCell>
                             <p className="text-sm truncate max-w-[150px]" title={(student as any).remarks || ""}>{(student as any).remarks || "-"}</p>
@@ -1253,6 +1256,9 @@ const Students = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="bg-popover">
+                                <DropdownMenuItem onClick={() => setPaymentDetailsStudent(student)}>
+                                  <IndianRupee className="h-4 w-4 mr-2" /> View Payment Details
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openEditDialog(student)}>
                                   <Pencil className="h-4 w-4 mr-2" /> Edit Details
                                 </DropdownMenuItem>
@@ -2155,6 +2161,85 @@ const Students = () => {
                 </Button>
               </>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Details Dialog */}
+      <Dialog open={!!paymentDetailsStudent} onOpenChange={(open) => { if (!open) setPaymentDetailsStudent(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5" /> Payment Details
+            </DialogTitle>
+            <DialogDescription>
+              {paymentDetailsStudent?.profile?.full_name || "Student"} · {paymentDetailsStudent?.roll_number || "No Form #"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {paymentDetailsStudent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Final Fee</p>
+                  <p className="text-base font-semibold">₹{Number((paymentDetailsStudent as any).final_fee || 0).toLocaleString("en-IN")}</p>
+                </div>
+                <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-3">
+                  <p className="text-xs text-muted-foreground">Total Paid</p>
+                  <p className="text-base font-semibold text-green-600">₹{(paymentDetailsStudent.finance?.totalPaid || 0).toLocaleString("en-IN")}</p>
+                </div>
+                <div className="rounded-lg border bg-orange-50 dark:bg-orange-950/20 p-3">
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                  <p className="text-base font-semibold text-orange-600">₹{(paymentDetailsStudent.finance?.pending || 0).toLocaleString("en-IN")}</p>
+                </div>
+              </div>
+
+              {paymentDetailsStudent.finance && paymentDetailsStudent.finance.payments.length > 0 ? (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">Transactions ({paymentDetailsStudent.finance.payments.length})</h4>
+                  {paymentDetailsStudent.finance.payments.map((p, idx) => (
+                    <div key={idx} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {p.label || `Installment ${idx + 1}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.paid_at ? new Date(p.paid_at).toLocaleDateString("en-IN") : "-"}
+                          </p>
+                        </div>
+                        <p className="text-base font-semibold text-green-600">
+                          ₹{p.amount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Payment Mode</p>
+                          <p className="font-medium">{p.mode || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Transaction Details</p>
+                          <p className="font-medium break-all">{p.txn || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">UTR / Reference</p>
+                          <p className="font-mono font-medium break-all">{p.utr || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No payment transactions recorded for this student.
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentDetailsStudent(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
