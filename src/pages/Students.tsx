@@ -374,6 +374,8 @@ const Students = () => {
         account_number: findCol(["account_number"]),
         alloted_room_no: findCol(["alloted_room", "alloted_room_no"]),
         remarks: findCol(["remarks"]),
+        // Center (property name). Defaults to "Sarjapur" if missing for backward compat.
+        center: findCol(["center"]) || "Sarjapur",
       };
 
       if (!formData.full_name || !formData.roll_number) {
