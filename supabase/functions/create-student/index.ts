@@ -56,6 +56,12 @@ function toIsoTimestamp(input: any, fallback?: string): string {
   return fallback ?? new Date().toISOString();
 }
 
+// Coerce arbitrary input (number, null, undefined, string) to a trimmed string.
+function safeStr(v: any): string {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
