@@ -56,6 +56,12 @@ function toIsoTimestamp(input: any, fallback?: string): string {
   return fallback ?? new Date().toISOString();
 }
 
+// Coerce arbitrary input (number, null, undefined, string) to a trimmed string.
+function safeStr(v: any): string {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -92,28 +98,58 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const {
-      full_name, email, phone, roll_number, course, department, year,
-      date_of_birth, blood_group, emergency_contact, father_name, mother_name, gender,
-      // New finance fields
-      final_fee, payment_date, account_number, alloted_room_no, remarks,
-      // Installment 1
-      payment_date_1, payment_mode_1, amount_1, transaction_details_1, utr_id_1,
-      // Installment 2
-      payment_date_2, payment_mode_2, amount_2, transaction_details_2, utr_id_2,
-      // Installment 3
-      payment_date_3, payment_mode_3, amount_3, transaction_details_3, utr_id_3,
-      balance_payment,
-    } = body;
+    const rawBody = body || {};
+    // Coerce all string-ish fields to safe trimmed strings (Excel cells often arrive as numbers / null)
+    const full_name = safeStr(rawBody.full_name);
+    const email = safeStr(rawBody.email);
+    const phone = safeStr(rawBody.phone);
+    const roll_number = safeStr(rawBody.roll_number);
+    const course = safeStr(rawBody.course);
+    const department = safeStr(rawBody.department);
+    const year = rawBody.year;
+    const date_of_birth = rawBody.date_of_birth;
+    const blood_group = safeStr(rawBody.blood_group);
+    const emergency_contact = safeStr(rawBody.emergency_contact);
+    const father_name = safeStr(rawBody.father_name);
+    const mother_name = safeStr(rawBody.mother_name);
+    const gender = safeStr(rawBody.gender);
+    const final_fee = rawBody.final_fee;
+    const payment_date = rawBody.payment_date;
+    const account_number = safeStr(rawBody.account_number);
+    const alloted_room_no = safeStr(rawBody.alloted_room_no);
+    const remarks = safeStr(rawBody.remarks);
+    const payment_date_1 = rawBody.payment_date_1;
+    const payment_mode_1 = safeStr(rawBody.payment_mode_1);
+    const amount_1 = rawBody.amount_1;
+    const transaction_details_1 = safeStr(rawBody.transaction_details_1);
+    const utr_id_1 = safeStr(rawBody.utr_id_1);
+    const payment_date_2 = rawBody.payment_date_2;
+    const payment_mode_2 = safeStr(rawBody.payment_mode_2);
+    const amount_2 = rawBody.amount_2;
+    const transaction_details_2 = safeStr(rawBody.transaction_details_2);
+    const utr_id_2 = safeStr(rawBody.utr_id_2);
+    const payment_date_3 = rawBody.payment_date_3;
+    const payment_mode_3 = safeStr(rawBody.payment_mode_3);
+    const amount_3 = rawBody.amount_3;
+    const transaction_details_3 = safeStr(rawBody.transaction_details_3);
+    const utr_id_3 = safeStr(rawBody.utr_id_3);
+    const balance_payment = rawBody.balance_payment;
 
     if (!full_name || !roll_number) {
-      return new Response(JSON.stringify({ error: "Student name and enrollment number are required" }), {
+      return new Response(JSON.stringify({ error: "Student name and enrollment number are required", code: "MISSING_REQUIRED" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const loginEmail = email || `${roll_number.toLowerCase().replace(/[^a-z0-9]/g, "")}@anuttama.student`;
+    const sanitizedRoll = roll_number.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!sanitizedRoll) {
+      return new Response(JSON.stringify({ error: `Invalid enrollment number: "${roll_number}"`, code: "INVALID_ROLL_NUMBER" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const loginEmail = email || `${sanitizedRoll}@anuttama.student`;
 
     // Check if a student with this enrollment number already exists
     const { data: existingStudent } = await adminClient
@@ -350,7 +386,8 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err?.message ?? String(err) }), {
+    console.error("[create-student] failed", { message: err?.message, stack: err?.stack });
+    return new Response(JSON.stringify({ error: err?.message ?? String(err), code: "UNHANDLED" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
