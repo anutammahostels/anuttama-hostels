@@ -817,7 +817,7 @@ const Billing = () => {
                             <TableBody>
                               {refundsList.length === 0 ? (
                                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No refunds processed yet</TableCell></TableRow>
-                              ) : refundsList.map(r => (
+                              ) : pagedRefunds.map(r => (
                                 <TableRow key={r.id}>
                                   <TableCell className="text-sm">{format(new Date(r.created_at), "MMM d, yyyy")}</TableCell>
                                   <TableCell>
@@ -836,6 +836,13 @@ const Billing = () => {
                             </TableBody>
                           </Table>
                         )}
+                        <TablePagination
+                          page={refundsPage}
+                          pageSize={TAB_PAGE_SIZE}
+                          totalItems={refundsList.length}
+                          onPageChange={setRefundsPage}
+                          itemLabel="refunds"
+                        />
                       </div>
                     </CardContent>
                   </Card>
