@@ -1389,6 +1389,17 @@ const Students = () => {
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">
+                    <Label className="text-xs font-semibold">Center *</Label>
+                    <Select value={form.center || (sarjapurId ? "Sarjapur" : "")} onValueChange={(v) => setForm(f => ({ ...f, center: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select center" /></SelectTrigger>
+                      <SelectContent>
+                        {properties.map(p => (
+                          <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-2">
                     <Label className="text-xs font-semibold">Student Name *</Label>
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
                   </div>
