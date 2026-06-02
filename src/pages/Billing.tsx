@@ -463,12 +463,12 @@ const Billing = () => {
 
             <Card className="border-border/50">
               <CardContent className="p-0">
-                {filteredInvoices.length === 0 ? (
+                {pagedTotal === 0 && !paginatedQuery.isLoading ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium mb-2">No Invoices Found</h3>
                     <p className="text-muted-foreground mb-4">
-                      {invoices.length === 0 ? "Generate your first invoice to get started" : "Try adjusting your search"}
+                      {searchQuery ? "Try adjusting your search" : "Generate your first invoice to get started"}
                     </p>
                     <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
                       <Plus className="h-4 w-4 mr-2" />
