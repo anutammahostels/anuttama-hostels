@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertTriangle, MoreVertical, FileText, Send, Loader2, CheckCircle, Undo2, Trash2 } from "lucide-react";
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
+import { useInvoicesPaginated } from "@/hooks/useInvoicesPaginated";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudents } from "@/hooks/useStudents";
 import { useProperties } from "@/hooks/useProperties";
@@ -26,6 +27,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { exportToExcel } from "@/lib/exportExcel";
 import { buildReceiptHtml, invoiceToReceipt } from "@/lib/receiptTemplate";
+import { formatCompactINR } from "@/lib/formatCurrency";
 
 const getStatusBadge = (status: string | null) => {
   switch (status) {
@@ -42,10 +44,7 @@ const getStatusBadge = (status: string | null) => {
   }
 };
 
-const formatCurrency = (amount: number | null) => {
-  if (amount === null) return "₹0";
-  return `₹${amount.toLocaleString('en-IN')}`;
-};
+const formatCurrency = (amount: number | null) => formatCompactINR(amount);
 
 const Billing = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,19 +152,22 @@ const Billing = () => {
   // Active students for invoice generation
   const activeStudents = students.filter(s => s.status === 'active');
 
-  // Filter invoices based on search
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = searchQuery === "" ||
-      invoice.student?.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.student?.roll_number?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  // Note: All Invoices tab uses server-side pagination (see paginatedQuery below).
+  // Other tabs (Pending, Overdue, Payment History) still operate on the full invoice list.
 
   const [invoicePage, setInvoicePage] = useState(1);
-  const invoicePageSize = 25;
-  useEffect(() => { setInvoicePage(1); }, [searchQuery]);
-  const pagedInvoices = filteredInvoices.slice((invoicePage - 1) * invoicePageSize, invoicePage * invoicePageSize);
+  const invoicePageSize = 10;
+  useEffect(() => { setInvoicePage(1); }, [searchQuery, centerId]);
+
+  // Server-side paginated query for the All Invoices table (10 per page).
+  const paginatedQuery = useInvoicesPaginated({
+    page: invoicePage,
+    pageSize: invoicePageSize,
+    search: searchQuery,
+    centerId,
+  });
+  const pagedInvoices = paginatedQuery.data?.rows ?? [];
+  const pagedTotal = paginatedQuery.data?.totalCount ?? 0;
 
   const handleRecordPayment = async () => {
     if (!paymentDialog.invoice || !paymentAmount) return;
@@ -455,12 +457,12 @@ const Billing = () => {
 
             <Card className="border-border/50">
               <CardContent className="p-0">
-                {filteredInvoices.length === 0 ? (
+                {pagedTotal === 0 && !paginatedQuery.isLoading ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium mb-2">No Invoices Found</h3>
                     <p className="text-muted-foreground mb-4">
-                      {invoices.length === 0 ? "Generate your first invoice to get started" : "Try adjusting your search"}
+                      {searchQuery ? "Try adjusting your search" : "Generate your first invoice to get started"}
                     </p>
                     <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
                       <Plus className="h-4 w-4 mr-2" />
@@ -588,7 +590,7 @@ const Billing = () => {
                       </TableBody>
                     </Table>
                     </div>
-                    <TablePagination page={invoicePage} pageSize={invoicePageSize} totalItems={filteredInvoices.length} onPageChange={setInvoicePage} itemLabel="invoices" />
+                    <TablePagination page={invoicePage} pageSize={invoicePageSize} totalItems={pagedTotal} onPageChange={setInvoicePage} itemLabel="invoices" />
                   </>
                 )}
               </CardContent>
