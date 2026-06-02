@@ -35,21 +35,32 @@ export function useInvoices(studentId?: string) {
   const invoicesQuery = useQuery({
     queryKey: ['invoices', user?.id, studentId],
     queryFn: async () => {
-      let query = supabase
-        .from('invoices')
-        .select(`
-          *,
-          student:students(id, roll_number, user_id, property_id, father_name, mother_name, gender, course)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (studentId) {
-        query = query.eq('student_id', studentId);
+      // Paginate through all invoices to bypass Supabase's default 1000-row cap
+      const PAGE = 1000;
+      const invoicesData: any[] = [];
+      let from = 0;
+      while (true) {
+        let query = supabase
+          .from('invoices')
+          .select(`
+            *,
+            student:students(id, roll_number, user_id, property_id, father_name, mother_name, gender, course)
+          `)
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE - 1);
+
+        if (studentId) {
+          query = query.eq('student_id', studentId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        invoicesData.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
       }
-      
-      const { data: invoicesData, error: invoicesError } = await query;
-      if (invoicesError) throw invoicesError;
-      if (!invoicesData || invoicesData.length === 0) return [] as InvoiceWithStudent[];
+      if (invoicesData.length === 0) return [] as InvoiceWithStudent[];
 
       const userIds = invoicesData
         .map(inv => inv.student?.user_id)
