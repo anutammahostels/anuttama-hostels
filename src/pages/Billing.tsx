@@ -20,6 +20,8 @@ import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudents } from "@/hooks/useStudents";
 import { useProperties } from "@/hooks/useProperties";
+import { useCenter } from "@/contexts/CenterContext";
+import { CenterFilter } from "@/components/dashboard/CenterFilter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { exportToExcel } from "@/lib/exportExcel";
