@@ -162,9 +162,18 @@ const Billing = () => {
   });
 
   const [invoicePage, setInvoicePage] = useState(1);
-  const invoicePageSize = 25;
-  useEffect(() => { setInvoicePage(1); }, [searchQuery]);
-  const pagedInvoices = filteredInvoices.slice((invoicePage - 1) * invoicePageSize, invoicePage * invoicePageSize);
+  const invoicePageSize = 10;
+  useEffect(() => { setInvoicePage(1); }, [searchQuery, centerId]);
+
+  // Server-side paginated query for the All Invoices table (10 per page).
+  const paginatedQuery = useInvoicesPaginated({
+    page: invoicePage,
+    pageSize: invoicePageSize,
+    search: searchQuery,
+    centerId,
+  });
+  const pagedInvoices = paginatedQuery.data?.rows ?? [];
+  const pagedTotal = paginatedQuery.data?.totalCount ?? 0;
 
   const handleRecordPayment = async () => {
     if (!paymentDialog.invoice || !paymentAmount) return;
