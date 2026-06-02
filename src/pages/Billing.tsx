@@ -435,7 +435,7 @@ const Billing = () => {
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
-            {/* Search */}
+            {/* Search + Center filter */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -446,6 +446,7 @@ const Billing = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+              <CenterFilter />
               <Button variant="outline" onClick={() => handleSendReminder()}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Reminders
