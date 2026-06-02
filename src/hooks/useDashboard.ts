@@ -148,11 +148,8 @@ export function useDashboard(centerId: string = "all") {
         totalBeds = tb || 0;
         occupiedBeds = ob || 0;
       }
-        const { count: tb } = await supabase.from('beds').select('*', { count: 'exact', head: true });
-        const { count: ob } = await supabase.from('beds').select('*', { count: 'exact', head: true }).not('student_id', 'is', null);
-        totalBeds = tb || 0;
-        occupiedBeds = ob || 0;
-      }
+
+
 
       const occupancyRate = totalBeds > 0
         ? Math.round((occupiedBeds || 0) / totalBeds * 100 * 10) / 10
