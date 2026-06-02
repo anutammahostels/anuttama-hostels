@@ -121,17 +121,33 @@ export function useDashboard(centerId: string = "all") {
       const { count: totalStudents } = await studentsQ;
 
       // Get occupancy data. Beds belong to rooms → floors → blocks → property.
-      // For a scoped center, fetch bed counts via a join through blocks.property_id.
+      // No FK relations are declared, so walk the hierarchy manually when scoped.
       let totalBeds = 0;
       let occupiedBeds = 0;
       if (scopeId) {
-        const { data: scopedBeds } = await supabase
-          .from('beds')
-          .select('id, student_id, rooms!inner(floors!inner(blocks!inner(property_id)))')
-          .eq('rooms.floors.blocks.property_id', scopeId);
-        totalBeds = scopedBeds?.length || 0;
-        occupiedBeds = scopedBeds?.filter((b: any) => b.student_id).length || 0;
+        const { data: blocks } = await supabase.from('blocks').select('id').eq('property_id', scopeId);
+        const blockIds = (blocks || []).map((b: any) => b.id);
+        let bedIds: string[] = [];
+        if (blockIds.length) {
+          const { data: floors } = await supabase.from('floors').select('id').in('block_id', blockIds);
+          const floorIds = (floors || []).map((f: any) => f.id);
+          if (floorIds.length) {
+            const { data: rooms } = await supabase.from('rooms').select('id').in('floor_id', floorIds);
+            const roomIds = (rooms || []).map((r: any) => r.id);
+            if (roomIds.length) {
+              const { data: beds } = await supabase.from('beds').select('id, student_id').in('room_id', roomIds);
+              bedIds = (beds || []).map((b: any) => b.id);
+              totalBeds = beds?.length || 0;
+              occupiedBeds = (beds || []).filter((b: any) => b.student_id).length;
+            }
+          }
+        }
       } else {
+        const { count: tb } = await supabase.from('beds').select('*', { count: 'exact', head: true });
+        const { count: ob } = await supabase.from('beds').select('*', { count: 'exact', head: true }).not('student_id', 'is', null);
+        totalBeds = tb || 0;
+        occupiedBeds = ob || 0;
+      }
         const { count: tb } = await supabase.from('beds').select('*', { count: 'exact', head: true });
         const { count: ob } = await supabase.from('beds').select('*', { count: 'exact', head: true }).not('student_id', 'is', null);
         totalBeds = tb || 0;
