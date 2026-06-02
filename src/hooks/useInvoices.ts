@@ -62,16 +62,22 @@ export function useInvoices(studentId?: string) {
       }
       if (invoicesData.length === 0) return [] as InvoiceWithStudent[];
 
-      const userIds = invoicesData
-        .map(inv => inv.student?.user_id)
-        .filter((id): id is string => !!id);
+      const userIds = Array.from(new Set(
+        invoicesData
+          .map(inv => inv.student?.user_id)
+          .filter((id): id is string => !!id)
+      ));
 
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, phone')
-        .in('id', userIds);
-
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      // Chunk profiles fetch in batches of 500 to bypass Supabase's 1000-row cap
+      const profilesMap = new Map<string, any>();
+      for (let i = 0; i < userIds.length; i += 500) {
+        const chunk = userIds.slice(i, i + 500);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, phone')
+          .in('id', chunk);
+        profilesData?.forEach(p => profilesMap.set(p.id, p));
+      }
 
       const result = invoicesData.map(invoice => ({
         ...invoice,
