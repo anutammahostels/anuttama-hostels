@@ -134,6 +134,8 @@ serve(async (req) => {
     const transaction_details_3 = safeStr(rawBody.transaction_details_3);
     const utr_id_3 = safeStr(rawBody.utr_id_3);
     const balance_payment = rawBody.balance_payment;
+    const centerInput = safeStr(rawBody.center);
+    const propertyIdInput = safeStr(rawBody.property_id);
 
     if (!full_name || !roll_number) {
       return new Response(JSON.stringify({ error: "Student name and enrollment number are required", code: "MISSING_REQUIRED" }), {
