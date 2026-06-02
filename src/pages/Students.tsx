@@ -389,18 +389,27 @@ const Students = () => {
           results.errors.push(item.error);
         } else {
           const { rowNum, formData } = item;
+          // Defense-in-depth: coerce key fields to trimmed strings before sending
+          const safePayload = {
+            ...formData,
+            roll_number: String(formData.roll_number ?? "").trim(),
+            phone: String(formData.phone ?? "").trim(),
+            full_name: String(formData.full_name ?? "").trim(),
+          };
           try {
-            const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: formData });
-            if (fnError) throw fnError;
+            const { data, error: fnError } = await supabase.functions.invoke("create-student", { body: safePayload });
+            // Read response body first — supabase.functions.invoke returns `data` even on non-2xx
             if (data?.existing) {
-              results.errors.push({ row: rowNum, name: formData.full_name, error: `Enrollment ${formData.roll_number} already exists (skipped)` });
+              results.errors.push({ row: rowNum, name: safePayload.full_name, error: `Enrollment ${safePayload.roll_number} already exists (skipped)` });
             } else if (data?.error) {
               throw new Error(data.error);
+            } else if (fnError) {
+              throw fnError;
             } else {
-              results.success.push({ enrollmentNumber: formData.roll_number, password: data.tempPassword, name: formData.full_name });
+              results.success.push({ enrollmentNumber: safePayload.roll_number, password: data.tempPassword, name: safePayload.full_name });
             }
           } catch (err: any) {
-            results.errors.push({ row: rowNum, name: formData.full_name, error: err.message || "Failed" });
+            results.errors.push({ row: rowNum, name: safePayload.full_name, error: err.message || "Failed" });
           }
         }
         completed++;
