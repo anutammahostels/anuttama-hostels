@@ -227,7 +227,7 @@ const Students = () => {
     const XLSX = await import("xlsx");
     // Canonical 26-column Anuttama Hostels format (correct "TRANSACTION" spelling)
     const headers = [
-      "S.NO", "FORM NO", "STUDENT NAME", "FATHER NAME",
+      "S.NO", "CENTER", "FORM NO", "STUDENT NAME", "FATHER NAME",
       "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM",
       "DATE OF THE PAYMENT", "FINAL FEE",
       "PAYMENT MODE-1", "AMOUNT 1", "TRANSACTION DETAILS-1", "UTR ID",
@@ -237,7 +237,7 @@ const Students = () => {
       "TRANSACTION DETAILS-3", "UTR ID-3"
     ];
     const sampleRow = [
-      1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
+      1, "Sarjapur", "CS2026001", "Rahul Sharma", "Ramesh Sharma",
       "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science",
       "01-04-2026", "1,80,000",
       "RTGS", "90,000 + 21,000", "Bank Transfer Ref", "UTR123456789",
