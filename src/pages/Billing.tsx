@@ -508,7 +508,7 @@ const Billing = () => {
                         <TableRow>
                           <TableHead>Invoice</TableHead>
                           <TableHead>Student</TableHead>
-                          
+                          <TableHead>Center</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Paid</TableHead>
                           <TableHead>Due Date</TableHead>
