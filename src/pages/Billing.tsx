@@ -159,6 +159,23 @@ const Billing = () => {
   const invoicePageSize = 10;
   useEffect(() => { setInvoicePage(1); }, [searchQuery, centerId]);
 
+  // Client-side pagination for the other tabs (10 per page each)
+  const TAB_PAGE_SIZE = 10;
+  const [pendingPage, setPendingPage] = useState(1);
+  const [overduePage, setOverduePage] = useState(1);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [refundsPage, setRefundsPage] = useState(1);
+  useEffect(() => { setPendingPage(1); setOverduePage(1); setPaymentsPage(1); setRefundsPage(1); }, [centerId]);
+
+  const pendingList = invoices.filter(inv => inv.status === 'pending' || inv.status === 'partial');
+  const overdueList = invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date());
+  const paymentsList = invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0);
+
+  const pagedPending = pendingList.slice((pendingPage - 1) * TAB_PAGE_SIZE, pendingPage * TAB_PAGE_SIZE);
+  const pagedOverdue = overdueList.slice((overduePage - 1) * TAB_PAGE_SIZE, overduePage * TAB_PAGE_SIZE);
+  const pagedPayments = paymentsList.slice((paymentsPage - 1) * TAB_PAGE_SIZE, paymentsPage * TAB_PAGE_SIZE);
+  const pagedRefunds = refundsList.slice((refundsPage - 1) * TAB_PAGE_SIZE, refundsPage * TAB_PAGE_SIZE);
+
   // Server-side paginated query for the All Invoices table (10 per page).
   const paginatedQuery = useInvoicesPaginated({
     page: invoicePage,
