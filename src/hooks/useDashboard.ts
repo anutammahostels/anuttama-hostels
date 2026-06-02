@@ -153,14 +153,27 @@ export function useDashboard(centerId: string = "all") {
         ? Math.round((occupiedBeds || 0) / totalBeds * 100 * 10) / 10
         : 0;
 
-      // Get pending dues (filtered by center via student.property_id when scoped)
-      let invQ = supabase.from('invoices').select('total_amount, paid_amount, student:students!inner(property_id)').neq('status', 'paid');
-      if (scopeId) invQ = invQ.eq('student.property_id', scopeId);
-      const { data: invoicesData } = await invQ;
-
-      const pendingDues = invoicesData?.reduce((sum: number, inv: any) => {
-        return sum + (inv.total_amount - (inv.paid_amount || 0));
-      }, 0) || 0;
+      // Get pending dues (paginated to bypass Supabase's 1000-row cap)
+      const INV_PAGE = 1000;
+      let invFrom = 0;
+      let pendingDues = 0;
+      while (true) {
+        let invQ = supabase
+          .from('invoices')
+          .select('total_amount, paid_amount, student:students!inner(property_id)')
+          .neq('status', 'paid')
+          .range(invFrom, invFrom + INV_PAGE - 1);
+        if (scopeId) invQ = invQ.eq('student.property_id', scopeId);
+        const { data: invoicesData, error: invErr } = await invQ;
+        if (invErr) throw invErr;
+        if (!invoicesData || invoicesData.length === 0) break;
+        pendingDues += invoicesData.reduce(
+          (sum: number, inv: any) => sum + (Number(inv.total_amount) - Number(inv.paid_amount || 0)),
+          0
+        );
+        if (invoicesData.length < INV_PAGE) break;
+        invFrom += INV_PAGE;
+      }
 
       // Get open tickets (scoped by property when set)
       let ticketQ = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).in('status', ['open', 'in_progress']);
