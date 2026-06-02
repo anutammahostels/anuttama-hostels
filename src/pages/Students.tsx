@@ -505,8 +505,9 @@ const Students = () => {
 
     setIsSubmitting(true);
     try {
+      const payload = { ...form, center: form.center || "Sarjapur" };
       const { data, error: fnError } = await supabase.functions.invoke("create-student", {
-        body: form,
+        body: payload,
       });
 
       if (fnError) throw fnError;
