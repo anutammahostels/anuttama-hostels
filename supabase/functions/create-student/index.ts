@@ -182,15 +182,35 @@ serve(async (req) => {
 
     if (createError) {
       if (createError.message?.includes("already been registered")) {
-        const { data: allUsersData } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const existingAuthUser = allUsersData?.users?.find((u: any) => u.email === loginEmail);
-        
-        if (!existingAuthUser) {
-          return new Response(JSON.stringify({ error: "Email is registered but user could not be found. Please contact support." }), {
+        // Look up the existing auth user via the profiles table (indexed, no pagination limit).
+        // listUsers() caps at 1000 per page and would miss users on later pages.
+        let foundUserId: string | null = null;
+        const { data: profileMatch } = await adminClient
+          .from("profiles")
+          .select("id")
+          .eq("email", loginEmail)
+          .maybeSingle();
+        if (profileMatch?.id) {
+          foundUserId = profileMatch.id;
+        } else {
+          // Fallback: paginate auth.admin.listUsers (handles edge case where profile row is missing)
+          for (let page = 1; page <= 20 && !foundUserId; page++) {
+            const { data: pageData } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+            const hit = pageData?.users?.find((u: any) => u.email === loginEmail);
+            if (hit) foundUserId = hit.id;
+            if (!pageData?.users || pageData.users.length < 1000) break;
+          }
+        }
+
+        if (!foundUserId) {
+          console.error("[create-student] orphan email not found", { loginEmail, roll_number });
+          return new Response(JSON.stringify({ error: `Auth user for ${loginEmail} exists but could not be located. Please contact support.`, code: "ORPHAN_AUTH_USER" }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+
+        const existingAuthUser = { id: foundUserId };
 
         userId = existingAuthUser.id;
         const newPassword = crypto.randomUUID().slice(0, 12) + "A1!";
