@@ -152,14 +152,8 @@ const Billing = () => {
   // Active students for invoice generation
   const activeStudents = students.filter(s => s.status === 'active');
 
-  // Filter invoices based on search
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = searchQuery === "" ||
-      invoice.student?.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.student?.roll_number?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  // Note: All Invoices tab uses server-side pagination (see paginatedQuery below).
+  // Other tabs (Pending, Overdue, Payment History) still operate on the full invoice list.
 
   const [invoicePage, setInvoicePage] = useState(1);
   const invoicePageSize = 10;
