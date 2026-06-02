@@ -479,6 +479,7 @@ const Billing = () => {
                               <div>
                                 <p className="font-medium">{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</p>
                                 <p className="text-xs text-muted-foreground">{invoice.student?.roll_number || "-"} • {invoice.invoice_number}</p>
+                                <p className="text-[10px] text-muted-foreground">Center: {propertyMap.get(invoice.student?.property_id || "") || "—"}</p>
                               </div>
                               {getStatusBadge(invoice.status)}
                             </div>
