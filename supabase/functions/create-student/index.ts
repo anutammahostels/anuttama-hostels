@@ -320,10 +320,12 @@ serve(async (req) => {
     const invoiceErrors: string[] = [];
     let invoicesCreated = 0;
     if (parsedFinalFee > 0) {
-      // Get or auto-create a default property so payments can be recorded.
-      let propertyId: string | null = null;
-      const { data: propData } = await adminClient.from("properties").select("id").limit(1).maybeSingle();
-      propertyId = propData?.id ?? null;
+      // Prefer the student's own center; fall back to first property.
+      let propertyId: string | null = resolvedPropertyId;
+      if (!propertyId) {
+        const { data: propData } = await adminClient.from("properties").select("id").limit(1).maybeSingle();
+        propertyId = propData?.id ?? null;
+      }
 
       if (!propertyId) {
         // Ensure an organization exists for this admin
