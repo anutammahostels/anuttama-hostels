@@ -630,7 +630,7 @@ const Billing = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.filter(inv => inv.status === 'pending' || inv.status === 'partial').map((invoice) => (
+                      {pagedPending.map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
                           <TableCell>{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</TableCell>
@@ -652,6 +652,13 @@ const Billing = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    page={pendingPage}
+                    pageSize={TAB_PAGE_SIZE}
+                    totalItems={pendingList.length}
+                    onPageChange={setPendingPage}
+                    itemLabel="pending invoices"
+                  />
                 </div>
               </CardContent>
             </Card>
