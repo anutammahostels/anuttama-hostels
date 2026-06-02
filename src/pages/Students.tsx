@@ -1162,6 +1162,7 @@ const Students = () => {
                           />
                         </TableHead>
                         <TableHead>Student</TableHead>
+                        <TableHead>Center</TableHead>
                         <TableHead>Father Name</TableHead>
                         <TableHead>Gender</TableHead>
                         <TableHead>Phone</TableHead>
@@ -1200,6 +1201,11 @@ const Students = () => {
                                 <p className="text-sm text-muted-foreground">{student.roll_number || "No Roll #"}</p>
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {propertyMap.get((student as any).property_id) || "—"}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <p className="text-sm">{(student as any).father_name || "-"}</p>
