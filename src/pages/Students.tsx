@@ -450,6 +450,7 @@ const Students = () => {
 
   // Form state
   const emptyForm = {
+    center: "",
     full_name: "",
     email: "",
     phone: "",
