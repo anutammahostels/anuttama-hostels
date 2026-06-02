@@ -742,12 +742,12 @@ const Billing = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).length === 0 ? (
+                      {paymentsList.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No payments recorded yet</TableCell>
                         </TableRow>
                       ) : (
-                        invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).map((invoice) => (
+                        pagedPayments.map((invoice) => (
                           <TableRow key={invoice.id}>
                             <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
                             <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
@@ -762,6 +762,13 @@ const Billing = () => {
                       )}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    page={paymentsPage}
+                    pageSize={TAB_PAGE_SIZE}
+                    totalItems={paymentsList.length}
+                    onPageChange={setPaymentsPage}
+                    itemLabel="payments"
+                  />
                 </div>
               </CardContent>
             </Card>
