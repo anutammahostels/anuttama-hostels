@@ -77,11 +77,26 @@ const Billing = () => {
   const [refundReason, setRefundReason] = useState("");
   const [refundMethod, setRefundMethod] = useState("cash");
 
-  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund, deleteInvoice } = useInvoices();
+  const { invoices: allInvoices, stats: rawStats, isLoading, recordPayment, createInvoice, processRefund, deleteInvoice } = useInvoices();
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const { students } = useStudents();
   const { properties } = useProperties();
+  const { centerId } = useCenter();
+  const propertyMap = new Map(properties.map(p => [p.id, p.name]));
   const { toast } = useToast();
+
+  // Apply center scope to invoices and recompute stats locally
+  const invoices = centerId === "all"
+    ? allInvoices
+    : allInvoices.filter(inv => inv.student?.property_id === centerId);
+
+  const stats = centerId === "all" ? rawStats : {
+    totalInvoices: invoices.length,
+    totalAmount: invoices.reduce((acc, inv) => acc + inv.total_amount, 0),
+    paidAmount: invoices.reduce((acc, inv) => acc + (inv.paid_amount || 0), 0),
+    pendingAmount: invoices.reduce((acc, inv) => acc + (inv.total_amount - (inv.paid_amount || 0)), 0),
+    overdueCount: invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date()).length,
+  };
 
   // Fetch refunds for the Refunds tab
   const [refundsList, setRefundsList] = useState<any[]>([]);
