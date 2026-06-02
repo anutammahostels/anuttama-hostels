@@ -44,10 +44,7 @@ const getStatusBadge = (status: string | null) => {
   }
 };
 
-const formatCurrency = (amount: number | null) => {
-  if (amount === null) return "₹0";
-  return `₹${amount.toLocaleString('en-IN')}`;
-};
+const formatCurrency = (amount: number | null) => formatCompactINR(amount);
 
 const Billing = () => {
   const [searchQuery, setSearchQuery] = useState("");
