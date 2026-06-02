@@ -58,14 +58,23 @@ export function useStudents(propertyId?: string) {
   const studentsQuery = useQuery({
     queryKey: ['students', user?.id, propertyId],
     queryFn: async () => {
-      // Get students
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('students')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (studentsError) throw studentsError;
-      if (!studentsData || studentsData.length === 0) return [] as StudentWithProfile[];
+      // Get students (paginated to bypass PostgREST 1000-row default cap)
+      const PAGE = 1000;
+      let from = 0;
+      const studentsData: any[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        studentsData.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      if (studentsData.length === 0) return [] as StudentWithProfile[];
 
       // Helper: chunk arrays to keep PostgREST URL length under limits
       const chunk = <T,>(arr: T[], size: number): T[][] => {
