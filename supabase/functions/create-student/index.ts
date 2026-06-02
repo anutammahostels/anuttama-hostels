@@ -386,7 +386,8 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err?.message ?? String(err) }), {
+    console.error("[create-student] failed", { message: err?.message, stack: err?.stack });
+    return new Response(JSON.stringify({ error: err?.message ?? String(err), code: "UNHANDLED" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
