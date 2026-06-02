@@ -24,6 +24,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Progress } from "@/components/ui/progress";
 import { createNotification } from "@/lib/notifications";
+import { useProperties } from "@/hooks/useProperties";
+import { useCenter } from "@/contexts/CenterContext";
+import { CenterFilter } from "@/components/dashboard/CenterFilter";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,8 +104,14 @@ const Students = () => {
 
   const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
+  const { properties } = useProperties();
+  const { centerId } = useCenter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Helper: property id → name lookup
+  const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p.name])), [properties]);
+  const sarjapurId = useMemo(() => properties.find(p => p.name.toLowerCase() === "sarjapur")?.id || "", [properties]);
 
   // Derive unique courses for filter
   const uniqueCourses = useMemo(() => {
@@ -218,7 +227,7 @@ const Students = () => {
     const XLSX = await import("xlsx");
     // Canonical 26-column Anuttama Hostels format (correct "TRANSACTION" spelling)
     const headers = [
-      "S.NO", "FORM NO", "STUDENT NAME", "FATHER NAME",
+      "S.NO", "CENTER", "FORM NO", "STUDENT NAME", "FATHER NAME",
       "Gender", "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM",
       "DATE OF THE PAYMENT", "FINAL FEE",
       "PAYMENT MODE-1", "AMOUNT 1", "TRANSACTION DETAILS-1", "UTR ID",
@@ -228,7 +237,7 @@ const Students = () => {
       "TRANSACTION DETAILS-3", "UTR ID-3"
     ];
     const sampleRow = [
-      1, "CS2026001", "Rahul Sharma", "Ramesh Sharma",
+      1, "Sarjapur", "CS2026001", "Rahul Sharma", "Ramesh Sharma",
       "Male", "9876543210", "9876543211", "B.Tech CSE", "Computer Science",
       "01-04-2026", "1,80,000",
       "RTGS", "90,000 + 21,000", "Bank Transfer Ref", "UTR123456789",
@@ -365,6 +374,8 @@ const Students = () => {
         account_number: findCol(["account_number"]),
         alloted_room_no: findCol(["alloted_room", "alloted_room_no"]),
         remarks: findCol(["remarks"]),
+        // Center (property name). Defaults to "Sarjapur" if missing for backward compat.
+        center: findCol(["center"]) || "Sarjapur",
       };
 
       if (!formData.full_name || !formData.roll_number) {
@@ -439,6 +450,7 @@ const Students = () => {
 
   // Form state
   const emptyForm = {
+    center: "",
     full_name: "",
     email: "",
     phone: "",
@@ -493,8 +505,9 @@ const Students = () => {
 
     setIsSubmitting(true);
     try {
+      const payload = { ...form, center: form.center || "Sarjapur" };
       const { data, error: fnError } = await supabase.functions.invoke("create-student", {
-        body: form,
+        body: payload,
       });
 
       if (fnError) throw fnError;
@@ -766,12 +779,13 @@ const Students = () => {
     const matchesYear = filterYear === "all" || student.year?.toString() === filterYear;
     const matchesRoom = filterRoom === "all" || 
       (filterRoom === "allocated" ? !!student.bed : !student.bed);
-    return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
+    const matchesCenter = centerId === "all" || (student as any).property_id === centerId;
+    return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom && matchesCenter;
   });
 
   const [page, setPage] = useState(1);
   const pageSize = 25;
-  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterCourse, filterYear, filterRoom]);
+  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterCourse, filterYear, filterRoom, centerId]);
   const pagedStudents = useMemo(() => filteredStudents.slice((page - 1) * pageSize, page * pageSize), [filteredStudents, page]);
 
   // Bulk selection helpers
@@ -954,6 +968,7 @@ const Students = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search by name or roll number..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
+              <CenterFilter />
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="relative">
@@ -1123,6 +1138,7 @@ const Students = () => {
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-1 mt-2 text-xs text-muted-foreground">
+                          <p>Center: {propertyMap.get((student as any).property_id) || "—"}</p>
                           {(student as any).father_name && <p>Father: {(student as any).father_name}</p>}
                           {student.gender && <p>Gender: {student.gender}</p>}
                           {student.profile?.phone && <p>Phone: {student.profile.phone}</p>}
@@ -1147,6 +1163,7 @@ const Students = () => {
                           />
                         </TableHead>
                         <TableHead>Student</TableHead>
+                        <TableHead>Center</TableHead>
                         <TableHead>Father Name</TableHead>
                         <TableHead>Gender</TableHead>
                         <TableHead>Phone</TableHead>
@@ -1185,6 +1202,11 @@ const Students = () => {
                                 <p className="text-sm text-muted-foreground">{student.roll_number || "No Roll #"}</p>
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {propertyMap.get((student as any).property_id) || "—"}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <p className="text-sm">{(student as any).father_name || "-"}</p>
@@ -1366,6 +1388,17 @@ const Students = () => {
 
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs font-semibold">Center *</Label>
+                    <Select value={form.center || (sarjapurId ? "Sarjapur" : "")} onValueChange={(v) => setForm(f => ({ ...f, center: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select center" /></SelectTrigger>
+                      <SelectContent>
+                        {properties.map(p => (
+                          <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="sm:col-span-2">
                     <Label className="text-xs font-semibold">Student Name *</Label>
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />

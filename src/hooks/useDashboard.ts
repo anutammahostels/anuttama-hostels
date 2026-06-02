@@ -48,7 +48,7 @@ export interface UserProperty {
   organizationName?: string;
 }
 
-export function useDashboard() {
+export function useDashboard(centerId: string = "all") {
   const { user } = useAuth();
 
   // Fetch user's property context
@@ -110,51 +110,69 @@ export function useDashboard() {
 
   // Fetch dashboard statistics
   const statsQuery = useQuery({
-    queryKey: ['dashboard-stats', user?.id, propertyQuery.data?.id],
+    queryKey: ['dashboard-stats', user?.id, propertyQuery.data?.id, centerId],
     queryFn: async () => {
-      const propertyId = propertyQuery.data?.id;
+      // Resolve effective property scope (selected center or all)
+      const scopeId = centerId !== "all" ? centerId : null;
 
-      // Get total students
-      const { count: totalStudents } = await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true });
+      // Get total students (filtered by center if selected)
+      let studentsQ = supabase.from('students').select('*', { count: 'exact', head: true });
+      if (scopeId) studentsQ = studentsQ.eq('property_id', scopeId);
+      const { count: totalStudents } = await studentsQ;
 
-      // Get occupancy data
-      const { count: totalBeds } = await supabase
-        .from('beds')
-        .select('*', { count: 'exact', head: true });
+      // Get occupancy data. Beds belong to rooms → floors → blocks → property.
+      // No FK relations are declared, so walk the hierarchy manually when scoped.
+      let totalBeds = 0;
+      let occupiedBeds = 0;
+      if (scopeId) {
+        const { data: blocks } = await supabase.from('blocks').select('id').eq('property_id', scopeId);
+        const blockIds = (blocks || []).map((b: any) => b.id);
+        if (blockIds.length) {
+          const { data: floors } = await supabase.from('floors').select('id').in('block_id', blockIds);
+          const floorIds = (floors || []).map((f: any) => f.id);
+          if (floorIds.length) {
+            const { data: rooms } = await supabase.from('rooms').select('id').in('floor_id', floorIds);
+            const roomIds = (rooms || []).map((r: any) => r.id);
+            if (roomIds.length) {
+              const { data: beds } = await supabase.from('beds').select('id, student_id').in('room_id', roomIds);
+              totalBeds = beds?.length || 0;
+              occupiedBeds = (beds || []).filter((b: any) => b.student_id).length;
+            }
+          }
+        }
+      } else {
+        const { count: tb } = await supabase.from('beds').select('*', { count: 'exact', head: true });
+        const { count: ob } = await supabase.from('beds').select('*', { count: 'exact', head: true }).not('student_id', 'is', null);
+        totalBeds = tb || 0;
+        occupiedBeds = ob || 0;
+      }
 
-      const { count: occupiedBeds } = await supabase
-        .from('beds')
-        .select('*', { count: 'exact', head: true })
-        .not('student_id', 'is', null);
 
-      const occupancyRate = totalBeds && totalBeds > 0 
+
+      const occupancyRate = totalBeds > 0
         ? Math.round((occupiedBeds || 0) / totalBeds * 100 * 10) / 10
         : 0;
 
-      // Get pending dues
-      const { data: invoicesData } = await supabase
-        .from('invoices')
-        .select('total_amount, paid_amount')
-        .neq('status', 'paid');
+      // Get pending dues (filtered by center via student.property_id when scoped)
+      let invQ = supabase.from('invoices').select('total_amount, paid_amount, student:students!inner(property_id)').neq('status', 'paid');
+      if (scopeId) invQ = invQ.eq('student.property_id', scopeId);
+      const { data: invoicesData } = await invQ;
 
-      const pendingDues = invoicesData?.reduce((sum, inv) => {
+      const pendingDues = invoicesData?.reduce((sum: number, inv: any) => {
         return sum + (inv.total_amount - (inv.paid_amount || 0));
       }, 0) || 0;
 
-      // Get open tickets
-      const { count: openTickets } = await supabase
-        .from('maintenance_tickets')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['open', 'in_progress']);
+      // Get open tickets (scoped by property when set)
+      let ticketQ = supabase.from('maintenance_tickets').select('*', { count: 'exact', head: true }).in('status', ['open', 'in_progress']);
+      if (scopeId) ticketQ = ticketQ.eq('property_id', scopeId);
+      const { count: openTickets } = await ticketQ;
 
-      // Get refunds data
-      const { data: refundsData } = await supabase
-        .from('refunds')
-        .select('amount');
+      // Get refunds data (scoped by property when set)
+      let refundQ = supabase.from('refunds').select('amount');
+      if (scopeId) refundQ = refundQ.eq('property_id', scopeId);
+      const { data: refundsData } = await refundQ;
 
-      const totalRefunds = refundsData?.reduce((sum, r) => sum + Number(r.amount), 0) || 0;
+      const totalRefunds = refundsData?.reduce((sum: number, r: any) => sum + Number(r.amount), 0) || 0;
       const refundsCount = refundsData?.length || 0;
 
       return {

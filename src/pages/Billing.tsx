@@ -20,6 +20,8 @@ import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudents } from "@/hooks/useStudents";
 import { useProperties } from "@/hooks/useProperties";
+import { useCenter } from "@/contexts/CenterContext";
+import { CenterFilter } from "@/components/dashboard/CenterFilter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -75,11 +77,26 @@ const Billing = () => {
   const [refundReason, setRefundReason] = useState("");
   const [refundMethod, setRefundMethod] = useState("cash");
 
-  const { invoices, stats, isLoading, recordPayment, createInvoice, processRefund, deleteInvoice } = useInvoices();
+  const { invoices: allInvoices, stats: rawStats, isLoading, recordPayment, createInvoice, processRefund, deleteInvoice } = useInvoices();
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const { students } = useStudents();
   const { properties } = useProperties();
+  const { centerId } = useCenter();
+  const propertyMap = new Map(properties.map(p => [p.id, p.name]));
   const { toast } = useToast();
+
+  // Apply center scope to invoices and recompute stats locally
+  const invoices = centerId === "all"
+    ? allInvoices
+    : allInvoices.filter(inv => inv.student?.property_id === centerId);
+
+  const stats = centerId === "all" ? rawStats : {
+    totalInvoices: invoices.length,
+    totalAmount: invoices.reduce((acc, inv) => acc + inv.total_amount, 0),
+    paidAmount: invoices.reduce((acc, inv) => acc + (inv.paid_amount || 0), 0),
+    pendingAmount: invoices.reduce((acc, inv) => acc + (inv.total_amount - (inv.paid_amount || 0)), 0),
+    overdueCount: invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date()).length,
+  };
 
   // Fetch refunds for the Refunds tab
   const [refundsList, setRefundsList] = useState<any[]>([]);
@@ -418,7 +435,7 @@ const Billing = () => {
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
-            {/* Search */}
+            {/* Search + Center filter */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -429,6 +446,7 @@ const Billing = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+              <CenterFilter />
               <Button variant="outline" onClick={() => handleSendReminder()}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Reminders
@@ -461,6 +479,7 @@ const Billing = () => {
                               <div>
                                 <p className="font-medium">{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</p>
                                 <p className="text-xs text-muted-foreground">{invoice.student?.roll_number || "-"} • {invoice.invoice_number}</p>
+                                <p className="text-[10px] text-muted-foreground">Center: {propertyMap.get(invoice.student?.property_id || "") || "—"}</p>
                               </div>
                               {getStatusBadge(invoice.status)}
                             </div>
@@ -490,7 +509,7 @@ const Billing = () => {
                         <TableRow>
                           <TableHead>Invoice</TableHead>
                           <TableHead>Student</TableHead>
-                          
+                          <TableHead>Center</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Paid</TableHead>
                           <TableHead>Due Date</TableHead>
@@ -509,6 +528,11 @@ const Billing = () => {
                                   <p className="font-medium">{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</p>
                                   <p className="text-sm text-muted-foreground">{invoice.student?.roll_number || "-"}</p>
                                 </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {propertyMap.get(invoice.student?.property_id || "") || "—"}
+                                </Badge>
                               </TableCell>
                               <TableCell>
                                 <span className="font-bold text-lg">{formatCurrency(invoice.total_amount)}</span>

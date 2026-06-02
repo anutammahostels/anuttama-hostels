@@ -1,6 +1,7 @@
 import { Users, BedDouble, Receipt, AlertTriangle, TrendingUp, TrendingDown, Undo2, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useCenter } from "@/contexts/CenterContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface StatCard {
@@ -14,7 +15,8 @@ interface StatCard {
 }
 
 export const DashboardStats = () => {
-  const { stats, isLoading } = useDashboard();
+  const { centerId } = useCenter();
+  const { stats, isLoading } = useDashboard(centerId);
 
   const formatCurrency = (value: number) => {
     if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;

@@ -134,6 +134,8 @@ serve(async (req) => {
     const transaction_details_3 = safeStr(rawBody.transaction_details_3);
     const utr_id_3 = safeStr(rawBody.utr_id_3);
     const balance_payment = rawBody.balance_payment;
+    const centerInput = safeStr(rawBody.center);
+    const propertyIdInput = safeStr(rawBody.property_id);
 
     if (!full_name || !roll_number) {
       return new Response(JSON.stringify({ error: "Student name and enrollment number are required", code: "MISSING_REQUIRED" }), {
@@ -240,6 +242,41 @@ serve(async (req) => {
     // Create student record with new fields
     const parsedFinalFee = parseFloat(String(final_fee || "0").replace(/,/g, "")) || 0;
 
+    // Resolve center → property_id. Order: explicit property_id, then center name match,
+    // then fallback to the first available property (keeps legacy uploads working).
+    let resolvedPropertyId: string | null = null;
+    if (propertyIdInput) {
+      const { data: pById } = await adminClient
+        .from("properties")
+        .select("id")
+        .eq("id", propertyIdInput)
+        .maybeSingle();
+      resolvedPropertyId = pById?.id ?? null;
+    }
+    if (!resolvedPropertyId && centerInput) {
+      const { data: pByName } = await adminClient
+        .from("properties")
+        .select("id")
+        .ilike("name", centerInput)
+        .maybeSingle();
+      if (!pByName) {
+        return new Response(JSON.stringify({ error: `Unknown center "${centerInput}". Please create the center under Properties first.`, code: "UNKNOWN_CENTER" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      resolvedPropertyId = pByName.id;
+    }
+    if (!resolvedPropertyId) {
+      const { data: firstProp } = await adminClient
+        .from("properties")
+        .select("id")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      resolvedPropertyId = firstProp?.id ?? null;
+    }
+
     const { data: student, error: studentError } = await adminClient
       .from("students")
       .insert({
@@ -261,6 +298,7 @@ serve(async (req) => {
         account_number: account_number || null,
         alloted_room_no: alloted_room_no || null,
         remarks: remarks || null,
+        property_id: resolvedPropertyId,
       })
       .select()
       .single();
@@ -282,10 +320,12 @@ serve(async (req) => {
     const invoiceErrors: string[] = [];
     let invoicesCreated = 0;
     if (parsedFinalFee > 0) {
-      // Get or auto-create a default property so payments can be recorded.
-      let propertyId: string | null = null;
-      const { data: propData } = await adminClient.from("properties").select("id").limit(1).maybeSingle();
-      propertyId = propData?.id ?? null;
+      // Prefer the student's own center; fall back to first property.
+      let propertyId: string | null = resolvedPropertyId;
+      if (!propertyId) {
+        const { data: propData } = await adminClient.from("properties").select("id").limit(1).maybeSingle();
+        propertyId = propData?.id ?? null;
+      }
 
       if (!propertyId) {
         // Ensure an organization exists for this admin

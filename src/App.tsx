@@ -11,6 +11,7 @@ import { LandingLayout } from "@/components/landing/LandingLayout";
 import { StudentLayoutRoute } from "@/components/student/StudentLayoutRoute";
 import { SuperAdminLayoutRoute } from "@/components/superadmin/SuperAdminLayoutRoute";
 import { LayoutProvider } from "@/contexts/LayoutContext";
+import { CenterProvider } from "@/contexts/CenterContext";
 
 
 import Index from "./pages/Index";
@@ -61,6 +62,7 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <AuthProvider>
+        <CenterProvider>
           <Routes>
             {/* Landing pages - shared Navbar/Footer layout */}
             <Route element={<LandingLayout />}>
@@ -119,6 +121,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+        </CenterProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

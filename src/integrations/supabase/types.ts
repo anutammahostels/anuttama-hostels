@@ -1522,6 +1522,7 @@ export type Database = {
           mother_name: string | null
           parent_id: string | null
           payment_date: string | null
+          property_id: string | null
           remarks: string | null
           roll_number: string | null
           status: string | null
@@ -1546,6 +1547,7 @@ export type Database = {
           mother_name?: string | null
           parent_id?: string | null
           payment_date?: string | null
+          property_id?: string | null
           remarks?: string | null
           roll_number?: string | null
           status?: string | null
@@ -1570,6 +1572,7 @@ export type Database = {
           mother_name?: string | null
           parent_id?: string | null
           payment_date?: string | null
+          property_id?: string | null
           remarks?: string | null
           roll_number?: string | null
           status?: string | null
@@ -1577,7 +1580,15 @@ export type Database = {
           user_id?: string
           year?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "students_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {

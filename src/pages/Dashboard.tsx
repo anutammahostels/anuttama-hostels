@@ -5,15 +5,20 @@ import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { PendingApprovals } from "@/components/dashboard/PendingApprovals";
 import { PullToRefreshIndicator } from "@/components/dashboard/PullToRefresh";
+import { CenterFilter } from "@/components/dashboard/CenterFilter";
 import { useDashboard } from "@/hooks/useDashboard";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCenter } from "@/contexts/CenterContext";
+import { useProperties } from "@/hooks/useProperties";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Dashboard = () => {
   const { profile } = useAuth();
-  const { property, isLoading, refetchAll } = useDashboard();
+  const { centerId } = useCenter();
+  const { properties } = useProperties();
+  const { property, isLoading, refetchAll } = useDashboard(centerId);
   const isMobile = useIsMobile();
 
   const { 
@@ -29,7 +34,9 @@ const Dashboard = () => {
   });
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Admin';
-  const propertyName = property?.name || 'your property';
+  const selectedCenterName = centerId === "all"
+    ? "All Centers"
+    : properties.find(p => p.id === centerId)?.name || property?.name || 'your property';
 
   return (
     <>
@@ -46,7 +53,7 @@ const Dashboard = () => {
 
         {/* Welcome section */}
         <div className="mb-4 md:mb-6 animate-fade-in">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
               {isLoading ? (
                 <>
@@ -59,20 +66,23 @@ const Dashboard = () => {
                     Welcome, {firstName} 👋
                   </h1>
                   <p className="text-xs md:text-sm text-muted-foreground">
-                    <span className="text-hostylia-forest font-medium">{propertyName}</span> overview
+                    <span className="text-hostylia-forest font-medium">{selectedCenterName}</span> overview
                   </p>
                 </>
               )}
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg w-fit">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
-              <span>All systems operational</span>
-              {isMobile && (
-                <span className="text-[10px] text-muted-foreground/60 ml-2">
-                  Pull down to refresh
-                </span>
-              )}
+            <div className="flex items-center gap-2">
+              <CenterFilter />
             </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg w-fit mt-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+            <span>All systems operational</span>
+            {isMobile && (
+              <span className="text-[10px] text-muted-foreground/60 ml-2">
+                Pull down to refresh
+              </span>
+            )}
           </div>
         </div>
 
