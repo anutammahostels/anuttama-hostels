@@ -24,6 +24,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Progress } from "@/components/ui/progress";
 import { createNotification } from "@/lib/notifications";
+import { useProperties } from "@/hooks/useProperties";
+import { useCenter } from "@/contexts/CenterContext";
+import { CenterFilter } from "@/components/dashboard/CenterFilter";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,8 +104,14 @@ const Students = () => {
 
   const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
+  const { properties } = useProperties();
+  const { centerId, setCenterId } = useCenter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Helper: property id → name lookup
+  const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p.name])), [properties]);
+  const sarjapurId = useMemo(() => properties.find(p => p.name.toLowerCase() === "sarjapur")?.id || "", [properties]);
 
   // Derive unique courses for filter
   const uniqueCourses = useMemo(() => {
