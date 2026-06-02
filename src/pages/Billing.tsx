@@ -159,6 +159,23 @@ const Billing = () => {
   const invoicePageSize = 10;
   useEffect(() => { setInvoicePage(1); }, [searchQuery, centerId]);
 
+  // Client-side pagination for the other tabs (10 per page each)
+  const TAB_PAGE_SIZE = 10;
+  const [pendingPage, setPendingPage] = useState(1);
+  const [overduePage, setOverduePage] = useState(1);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [refundsPage, setRefundsPage] = useState(1);
+  useEffect(() => { setPendingPage(1); setOverduePage(1); setPaymentsPage(1); setRefundsPage(1); }, [centerId]);
+
+  const pendingList = invoices.filter(inv => inv.status === 'pending' || inv.status === 'partial');
+  const overdueList = invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date());
+  const paymentsList = invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0);
+
+  const pagedPending = pendingList.slice((pendingPage - 1) * TAB_PAGE_SIZE, pendingPage * TAB_PAGE_SIZE);
+  const pagedOverdue = overdueList.slice((overduePage - 1) * TAB_PAGE_SIZE, overduePage * TAB_PAGE_SIZE);
+  const pagedPayments = paymentsList.slice((paymentsPage - 1) * TAB_PAGE_SIZE, paymentsPage * TAB_PAGE_SIZE);
+  const pagedRefunds = refundsList.slice((refundsPage - 1) * TAB_PAGE_SIZE, refundsPage * TAB_PAGE_SIZE);
+
   // Server-side paginated query for the All Invoices table (10 per page).
   const paginatedQuery = useInvoicesPaginated({
     page: invoicePage,
@@ -613,7 +630,7 @@ const Billing = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.filter(inv => inv.status === 'pending' || inv.status === 'partial').map((invoice) => (
+                      {pagedPending.map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
                           <TableCell>{invoice.student?.profile?.full_name || (invoice.student_id === null ? "Deleted Student" : "Unknown")}</TableCell>
@@ -635,6 +652,13 @@ const Billing = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    page={pendingPage}
+                    pageSize={TAB_PAGE_SIZE}
+                    totalItems={pendingList.length}
+                    onPageChange={setPendingPage}
+                    itemLabel="pending invoices"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -655,7 +679,7 @@ const Billing = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date()).map((invoice) => {
+                      {pagedOverdue.map((invoice) => {
                         const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
                         return (
                           <TableRow key={invoice.id}>
@@ -687,6 +711,13 @@ const Billing = () => {
                       })}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    page={overduePage}
+                    pageSize={TAB_PAGE_SIZE}
+                    totalItems={overdueList.length}
+                    onPageChange={setOverduePage}
+                    itemLabel="overdue invoices"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -711,12 +742,12 @@ const Billing = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).length === 0 ? (
+                      {paymentsList.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No payments recorded yet</TableCell>
                         </TableRow>
                       ) : (
-                        invoices.filter(inv => inv.paid_amount && inv.paid_amount > 0).map((invoice) => (
+                        pagedPayments.map((invoice) => (
                           <TableRow key={invoice.id}>
                             <TableCell className="font-medium font-mono text-sm">{invoice.invoice_number}</TableCell>
                             <TableCell>{invoice.student?.profile?.full_name || "Unknown"}</TableCell>
@@ -731,6 +762,13 @@ const Billing = () => {
                       )}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    page={paymentsPage}
+                    pageSize={TAB_PAGE_SIZE}
+                    totalItems={paymentsList.length}
+                    onPageChange={setPaymentsPage}
+                    itemLabel="payments"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -779,7 +817,7 @@ const Billing = () => {
                             <TableBody>
                               {refundsList.length === 0 ? (
                                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No refunds processed yet</TableCell></TableRow>
-                              ) : refundsList.map(r => (
+                              ) : pagedRefunds.map(r => (
                                 <TableRow key={r.id}>
                                   <TableCell className="text-sm">{format(new Date(r.created_at), "MMM d, yyyy")}</TableCell>
                                   <TableCell>
@@ -798,6 +836,13 @@ const Billing = () => {
                             </TableBody>
                           </Table>
                         )}
+                        <TablePagination
+                          page={refundsPage}
+                          pageSize={TAB_PAGE_SIZE}
+                          totalItems={refundsList.length}
+                          onPageChange={setRefundsPage}
+                          itemLabel="refunds"
+                        />
                       </div>
                     </CardContent>
                   </Card>
