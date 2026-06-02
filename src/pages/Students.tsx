@@ -779,12 +779,13 @@ const Students = () => {
     const matchesYear = filterYear === "all" || student.year?.toString() === filterYear;
     const matchesRoom = filterRoom === "all" || 
       (filterRoom === "allocated" ? !!student.bed : !student.bed);
-    return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom;
+    const matchesCenter = centerId === "all" || (student as any).property_id === centerId;
+    return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom && matchesCenter;
   });
 
   const [page, setPage] = useState(1);
   const pageSize = 25;
-  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterCourse, filterYear, filterRoom]);
+  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterCourse, filterYear, filterRoom, centerId]);
   const pagedStudents = useMemo(() => filteredStudents.slice((page - 1) * pageSize, page * pageSize), [filteredStudents, page]);
 
   // Bulk selection helpers
