@@ -679,7 +679,7 @@ const Billing = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.filter(inv => inv.status !== 'paid' && new Date(inv.due_date) < new Date()).map((invoice) => {
+                      {pagedOverdue.map((invoice) => {
                         const daysOverdue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
                         return (
                           <TableRow key={invoice.id}>
@@ -711,6 +711,13 @@ const Billing = () => {
                       })}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    page={overduePage}
+                    pageSize={TAB_PAGE_SIZE}
+                    totalItems={overdueList.length}
+                    onPageChange={setOverduePage}
+                    itemLabel="overdue invoices"
+                  />
                 </div>
               </CardContent>
             </Card>
