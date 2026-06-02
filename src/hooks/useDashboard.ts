@@ -127,7 +127,6 @@ export function useDashboard(centerId: string = "all") {
       if (scopeId) {
         const { data: blocks } = await supabase.from('blocks').select('id').eq('property_id', scopeId);
         const blockIds = (blocks || []).map((b: any) => b.id);
-        let bedIds: string[] = [];
         if (blockIds.length) {
           const { data: floors } = await supabase.from('floors').select('id').in('block_id', blockIds);
           const floorIds = (floors || []).map((f: any) => f.id);
@@ -136,7 +135,6 @@ export function useDashboard(centerId: string = "all") {
             const roomIds = (rooms || []).map((r: any) => r.id);
             if (roomIds.length) {
               const { data: beds } = await supabase.from('beds').select('id, student_id').in('room_id', roomIds);
-              bedIds = (beds || []).map((b: any) => b.id);
               totalBeds = beds?.length || 0;
               occupiedBeds = (beds || []).filter((b: any) => b.student_id).length;
             }
