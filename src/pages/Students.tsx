@@ -1138,6 +1138,7 @@ const Students = () => {
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-1 mt-2 text-xs text-muted-foreground">
+                          <p>Center: {propertyMap.get((student as any).property_id) || "—"}</p>
                           {(student as any).father_name && <p>Father: {(student as any).father_name}</p>}
                           {student.gender && <p>Gender: {student.gender}</p>}
                           {student.profile?.phone && <p>Phone: {student.profile.phone}</p>}
