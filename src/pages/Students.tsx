@@ -105,7 +105,7 @@ const Students = () => {
   const { students, stats, isLoading, error, updateStudent, deleteStudent } = useStudents();
   const { rooms } = useRooms();
   const { properties } = useProperties();
-  const { centerId, setCenterId } = useCenter();
+  const { centerId } = useCenter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
