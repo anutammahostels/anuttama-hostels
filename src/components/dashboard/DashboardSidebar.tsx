@@ -42,6 +42,7 @@ const allMenuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", shortLabel: "Home", path: "/dashboard", roles: ['super_admin', 'tenant_admin', 'warden'] },
   
   { icon: Users, label: "Students", shortLabel: "Students", path: "/dashboard/students", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: Building2, label: "Centers", shortLabel: "Centers", path: "/dashboard/properties", roles: ['super_admin', 'tenant_admin'] },
   { icon: BedDouble, label: "Rooms", shortLabel: "Rooms", path: "/dashboard/rooms", roles: ['super_admin', 'tenant_admin', 'warden'] },
   { icon: QrCode, label: "Gate Passes", shortLabel: "Passes", path: "/dashboard/passes", roles: ['super_admin', 'tenant_admin', 'warden'] },
   { icon: UtensilsCrossed, label: "Mess", shortLabel: "Mess", path: "/dashboard/mess", roles: ['super_admin', 'tenant_admin', 'warden'] },
