@@ -529,6 +529,11 @@ const Billing = () => {
                                 </div>
                               </TableCell>
                               <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {propertyMap.get(invoice.student?.property_id || "") || "—"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
                                 <span className="font-bold text-lg">{formatCurrency(invoice.total_amount)}</span>
                               </TableCell>
                               <TableCell>
