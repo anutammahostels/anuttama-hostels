@@ -66,6 +66,7 @@ const Billing = () => {
   const [defaultOtherCharges, setDefaultOtherCharges] = useState("0");
   const [defaultDiscount, setDefaultDiscount] = useState("0");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateProgress, setGenerateProgress] = useState(0);
   const [generateResults, setGenerateResults] = useState<{ success: number; failed: number } | null>(null);
