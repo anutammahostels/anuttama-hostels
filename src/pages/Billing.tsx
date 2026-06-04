@@ -1001,32 +1001,63 @@ const Billing = () => {
                 </div>
 
                 {/* Student Selection */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium">Select Students ({selectedStudentIds.length}/{activeStudents.length})</h4>
-                    <Button variant="outline" size="sm" onClick={toggleSelectAll}>
-                      {selectedStudentIds.length === activeStudents.length ? "Deselect All" : "Select All"}
-                    </Button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
-                    {activeStudents.length === 0 ? (
-                      <p className="p-4 text-sm text-muted-foreground text-center">No active students found</p>
-                    ) : (
-                      activeStudents.map(student => (
-                        <div key={student.id} className="flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors">
-                          <Checkbox 
-                            checked={selectedStudentIds.includes(student.id)}
-                            onCheckedChange={() => toggleStudentSelection(student.id)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{student.profile?.full_name || "Unknown"}</p>
-                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "N/A"}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+                {(() => {
+                  const q = studentSearchQuery.trim().toLowerCase();
+                  const filteredStudents = q
+                    ? activeStudents.filter(s =>
+                        (s.profile?.full_name || "").toLowerCase().includes(q) ||
+                        (s.roll_number || "").toLowerCase().includes(q) ||
+                        (s.course || "").toLowerCase().includes(q)
+                      )
+                    : activeStudents;
+                  const allFilteredSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudentIds.includes(s.id));
+                  const toggleFiltered = () => {
+                    if (allFilteredSelected) {
+                      setSelectedStudentIds(prev => prev.filter(id => !filteredStudents.some(s => s.id === id)));
+                    } else {
+                      setSelectedStudentIds(prev => Array.from(new Set([...prev, ...filteredStudents.map(s => s.id)])));
+                    }
+                  };
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium">Select Students ({selectedStudentIds.length}/{activeStudents.length})</h4>
+                        <Button variant="outline" size="sm" onClick={toggleFiltered} disabled={filteredStudents.length === 0}>
+                          {allFilteredSelected ? "Deselect All" : "Select All"}
+                        </Button>
+                      </div>
+                      <div className="relative mb-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search by name, roll # or course..."
+                          value={studentSearchQuery}
+                          onChange={(e) => setStudentSearchQuery(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
+                        {filteredStudents.length === 0 ? (
+                          <p className="p-4 text-sm text-muted-foreground text-center">
+                            {activeStudents.length === 0 ? "No active students found" : "No students match your search"}
+                          </p>
+                        ) : (
+                          filteredStudents.map(student => (
+                            <div key={student.id} className="flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors">
+                              <Checkbox
+                                checked={selectedStudentIds.includes(student.id)}
+                                onCheckedChange={() => toggleStudentSelection(student.id)}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{student.profile?.full_name || "Unknown"}</p>
+                                <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "N/A"}</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {isGenerating && (
                   <div className="space-y-2">
