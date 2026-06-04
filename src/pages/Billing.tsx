@@ -236,6 +236,7 @@ const Billing = () => {
   const resetGenerateDialog = () => {
     setGenerateDialog(false);
     setSelectedStudentIds([]);
+    setStudentSearchQuery("");
     setIsGenerating(false);
     setGenerateProgress(0);
     setGenerateResults(null);
