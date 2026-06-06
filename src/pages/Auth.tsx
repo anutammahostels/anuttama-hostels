@@ -252,7 +252,7 @@ export default function Auth() {
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {isStudent 
-                      ? 'Sign in with your enrollment number and password'
+                      ? 'Sign in with your Form Number and password'
                       : 'Sign in to manage your properties and operations'
                     }
                   </p>
