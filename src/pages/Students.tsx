@@ -1199,7 +1199,7 @@ const Students = () => {
                               </Avatar>
                               <div>
                                 <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
-                                <p className="text-sm text-muted-foreground">{student.roll_number || "No Roll #"}</p>
+                                <p className="text-sm text-muted-foreground">{student.roll_number || "No Form Number"}</p>
                               </div>
                             </div>
                           </TableCell>
