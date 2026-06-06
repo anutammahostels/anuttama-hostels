@@ -1121,7 +1121,7 @@ const Billing = () => {
                               />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{student.profile?.full_name || "Unknown"}</p>
-                                <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "N/A"}</p>
+                                <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"} • {student.course || "N/A"}</p>
                               </div>
                             </div>
                           ))
