@@ -395,7 +395,7 @@ export default function Admissions() {
                   <div><span className="text-muted-foreground">Course:</span> {viewAdmission.course || "—"}</div>
                   <div><span className="text-muted-foreground">Department:</span> {viewAdmission.department || "—"}</div>
                   <div><span className="text-muted-foreground">Year:</span> {viewAdmission.year || "—"}</div>
-                  <div><span className="text-muted-foreground">Roll #:</span> {viewAdmission.roll_number || "—"}</div>
+                  <div><span className="text-muted-foreground">Form Number:</span> {viewAdmission.roll_number || "—"}</div>
                 </div>
               </div>
               <div>
