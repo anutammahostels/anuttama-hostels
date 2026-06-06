@@ -48,6 +48,11 @@ const formatCurrency = (amount: number | null) => formatCompactINR(amount);
 
 const Billing = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("upi");
