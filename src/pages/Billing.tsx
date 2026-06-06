@@ -186,7 +186,7 @@ const Billing = () => {
   const paginatedQuery = useInvoicesPaginated({
     page: invoicePage,
     pageSize: invoicePageSize,
-    search: searchQuery,
+    search: debouncedSearch,
     centerId,
   });
   const pagedInvoices = paginatedQuery.data?.rows ?? [];
