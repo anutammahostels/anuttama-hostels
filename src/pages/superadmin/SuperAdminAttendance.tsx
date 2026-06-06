@@ -88,7 +88,7 @@ const SuperAdminAttendance = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Student</TableHead>
-                    <TableHead>Roll No.</TableHead>
+                    <TableHead>Form Number</TableHead>
                     <TableHead>Property</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Notes</TableHead>
