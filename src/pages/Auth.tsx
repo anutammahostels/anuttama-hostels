@@ -94,7 +94,7 @@ export default function Auth() {
     const { error } = await signIn(loginEmail, password);
     setIsLoading(false);
     if (error) {
-      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? (isStudent ? 'Invalid enrollment number or password.' : 'Invalid email or password.') : error.message, variant: 'destructive' });
+      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? (isStudent ? 'Invalid Form Number or password.' : 'Invalid email or password.') : error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Welcome back!', description: 'You have successfully signed in.' });
     }
