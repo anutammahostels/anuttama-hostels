@@ -1089,7 +1089,7 @@ const Students = () => {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm truncate">{student.profile?.full_name || "Unknown"}</p>
-                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "-"}</p>
+                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"} • {student.course || "-"}</p>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
