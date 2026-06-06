@@ -421,7 +421,7 @@ const DemoPayments = () => {
           <TabsContent value="overview" className="mt-4">
             <div className="mb-4">
               <Input
-                placeholder="Search by student, roll no, or invoice..."
+                placeholder="Search by student, Form Number, or invoice..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="max-w-sm text-sm"
