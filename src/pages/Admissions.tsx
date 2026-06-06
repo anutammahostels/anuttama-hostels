@@ -211,7 +211,7 @@ export default function Admissions() {
                     <div><Label>Course</Label><Input value={form.course} onChange={e => updateField("course", e.target.value)} placeholder="e.g. B.Tech" /></div>
                     <div><Label>Department</Label><Input value={form.department} onChange={e => updateField("department", e.target.value)} placeholder="e.g. Computer Science" /></div>
                     <div><Label>Year</Label><Input type="number" min={1} max={6} value={form.year} onChange={e => updateField("year", e.target.value)} /></div>
-                    <div><Label>Roll Number</Label><Input value={form.roll_number} onChange={e => updateField("roll_number", e.target.value)} /></div>
+                    <div><Label>Form Number</Label><Input value={form.roll_number} onChange={e => updateField("roll_number", e.target.value)} /></div>
                   </div>
                 </div>
 
