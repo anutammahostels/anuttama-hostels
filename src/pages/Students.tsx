@@ -1979,7 +1979,7 @@ const Students = () => {
                     <span className="font-medium">{exitingStudent?.profile?.full_name || "Unknown"}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Roll No:</span>{" "}
+                    <span className="text-muted-foreground">Form Number:</span>{" "}
                     <span className="font-medium">{exitingStudent?.roll_number || "N/A"}</span>
                   </div>
                   <div>
