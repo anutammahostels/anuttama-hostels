@@ -499,7 +499,7 @@ const Students = () => {
 
   const handleSubmit = async () => {
     if (!form.full_name.trim() || !form.roll_number.trim()) {
-      toast({ title: "Validation Error", description: "Student name and enrollment number are required.", variant: "destructive" });
+      toast({ title: "Validation Error", description: "Student name and Form Number are required.", variant: "destructive" });
       return;
     }
 
