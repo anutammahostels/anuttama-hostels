@@ -1601,7 +1601,7 @@ const Students = () => {
                 <DialogTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" /> Student Created!
                 </DialogTitle>
-                <DialogDescription>Share these login credentials with the student. They will use their enrollment number to sign in.</DialogDescription>
+                <DialogDescription>Share these login credentials with the student. They will use their Form Number to sign in.</DialogDescription>
               </DialogHeader>
 
               <div className="space-y-3 py-4">
