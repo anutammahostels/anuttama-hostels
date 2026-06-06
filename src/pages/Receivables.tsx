@@ -161,7 +161,7 @@ const Receivables = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
-                  <TableHead>Roll No</TableHead>
+                  <TableHead>Form Number</TableHead>
                   <TableHead className="text-right">Gross Receivable</TableHead>
                   <TableHead className="text-right">Discounts</TableHead>
                   <TableHead className="text-right">Received</TableHead>
