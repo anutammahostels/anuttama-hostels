@@ -446,7 +446,7 @@ const RoomAllocation = () => {
                   ) : (
                     unassignedStudents.map(student => (
                       <SelectItem key={student.id} value={student.id}>
-                        {student.profile?.full_name || "Unknown"} ({student.roll_number || "No Roll #"})
+                        {student.profile?.full_name || "Unknown"} ({student.roll_number || "No Form Number"})
                       </SelectItem>
                     ))
                   )}
