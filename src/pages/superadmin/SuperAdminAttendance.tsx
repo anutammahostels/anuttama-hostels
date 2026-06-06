@@ -70,7 +70,7 @@ const SuperAdminAttendance = () => {
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by student name or roll number..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+                <Input placeholder="Search by student name or Form Number..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
               </div>
               <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-auto" />
               <Select value={propertyFilter} onValueChange={setPropertyFilter}>
