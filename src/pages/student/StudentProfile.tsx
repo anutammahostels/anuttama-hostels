@@ -108,7 +108,7 @@ export default function StudentProfile() {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs text-muted-foreground">Roll Number</Label>
+                <Label className="text-xs text-muted-foreground">Form Number</Label>
                 <p className="font-medium text-foreground">{student?.roll_number || "—"}</p>
               </div>
               <div>
