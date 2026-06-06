@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Please enter a valid email address');
-const enrollmentSchema = z.string().min(1, 'Please enter your enrollment number');
+const enrollmentSchema = z.string().min(1, 'Please enter your Form Number');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
 const adminFeatures = [
@@ -94,7 +94,7 @@ export default function Auth() {
     const { error } = await signIn(loginEmail, password);
     setIsLoading(false);
     if (error) {
-      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? (isStudent ? 'Invalid enrollment number or password.' : 'Invalid email or password.') : error.message, variant: 'destructive' });
+      toast({ title: 'Sign in failed', description: error.message === 'Invalid login credentials' ? (isStudent ? 'Invalid Form Number or password.' : 'Invalid email or password.') : error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Welcome back!', description: 'You have successfully signed in.' });
     }
@@ -252,7 +252,7 @@ export default function Auth() {
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {isStudent 
-                      ? 'Sign in with your enrollment number and password'
+                      ? 'Sign in with your Form Number and password'
                       : 'Sign in to manage your properties and operations'
                     }
                   </p>
@@ -263,7 +263,7 @@ export default function Auth() {
                 <form onSubmit={handleSignIn} className="space-y-5">
                   {isStudent ? (
                     <div className="space-y-2">
-                      <Label>Enrollment Number</Label>
+                      <Label>Form Number</Label>
                       <div className="relative group">
                         <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 

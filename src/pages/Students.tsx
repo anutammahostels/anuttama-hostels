@@ -499,7 +499,7 @@ const Students = () => {
 
   const handleSubmit = async () => {
     if (!form.full_name.trim() || !form.roll_number.trim()) {
-      toast({ title: "Validation Error", description: "Student name and enrollment number are required.", variant: "destructive" });
+      toast({ title: "Validation Error", description: "Student name and Form Number are required.", variant: "destructive" });
       return;
     }
 
@@ -966,7 +966,7 @@ const Students = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by name or roll number..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                <Input placeholder="Search by name or Form Number..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
               <CenterFilter />
               <Popover>
@@ -1089,7 +1089,7 @@ const Students = () => {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm truncate">{student.profile?.full_name || "Unknown"}</p>
-                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "-"}</p>
+                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"} • {student.course || "-"}</p>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1199,7 +1199,7 @@ const Students = () => {
                               </Avatar>
                               <div>
                                 <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
-                                <p className="text-sm text-muted-foreground">{student.roll_number || "No Roll #"}</p>
+                                <p className="text-sm text-muted-foreground">{student.roll_number || "No Form Number"}</p>
                               </div>
                             </div>
                           </TableCell>
@@ -1404,7 +1404,7 @@ const Students = () => {
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Form No (Enrollment Number) *</Label>
+                    <Label className="text-xs font-semibold">Form Number *</Label>
                     <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
                   </div>
                   <div>
@@ -1601,13 +1601,13 @@ const Students = () => {
                 <DialogTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" /> Student Created!
                 </DialogTitle>
-                <DialogDescription>Share these login credentials with the student. They will use their enrollment number to sign in.</DialogDescription>
+                <DialogDescription>Share these login credentials with the student. They will use their Form Number to sign in.</DialogDescription>
               </DialogHeader>
 
               <div className="space-y-3 py-4">
                 <div className="bg-muted rounded-lg p-4 space-y-3">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Enrollment Number (Login ID)</p>
+                    <p className="text-xs text-muted-foreground mb-1">Form Number (Login ID)</p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-sm font-mono bg-background rounded px-2 py-1">{createdCredentials.enrollmentNumber}</code>
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCopy(createdCredentials.enrollmentNumber, "enrollment")}>
@@ -1758,7 +1758,7 @@ const Students = () => {
                 <Input value={editForm.emergency_contact} onChange={(e) => setEditForm(f => ({ ...f, emergency_contact: e.target.value }))} />
               </div>
               <div>
-                <Label className="text-xs font-semibold">Roll Number</Label>
+                <Label className="text-xs font-semibold">Form Number</Label>
                 <Input value={editForm.roll_number} onChange={(e) => setEditForm(f => ({ ...f, roll_number: e.target.value }))} />
               </div>
               <div>
@@ -1979,7 +1979,7 @@ const Students = () => {
                     <span className="font-medium">{exitingStudent?.profile?.full_name || "Unknown"}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Roll No:</span>{" "}
+                    <span className="text-muted-foreground">Form Number:</span>{" "}
                     <span className="font-medium">{exitingStudent?.roll_number || "N/A"}</span>
                   </div>
                   <div>

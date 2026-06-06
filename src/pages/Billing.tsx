@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -485,11 +486,67 @@ const Billing = () => {
             <Card className="border-border/50">
               <CardContent className="p-0">
                 {paginatedQuery.isFetching && pagedInvoices.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center" role="status" aria-live="polite">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-                    <p className="text-sm text-muted-foreground">
+                  <div role="status" aria-live="polite" aria-label={debouncedSearch ? `Searching invoices for ${debouncedSearch}` : "Loading invoices"}>
+                    {/* Mobile skeleton */}
+                    <div className="sm:hidden divide-y divide-border">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-2 flex-1">
+                              <Skeleton className="h-4 w-40" />
+                              <Skeleton className="h-3 w-56" />
+                              <Skeleton className="h-3 w-32" />
+                            </div>
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Skeleton className="h-6 w-24" />
+                            <Skeleton className="h-4 w-28" />
+                          </div>
+                          <div className="flex gap-2">
+                            <Skeleton className="h-7 w-16" />
+                            <Skeleton className="h-7 w-16" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desktop skeleton table */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Invoice</TableHead>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Center</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead>Paid</TableHead>
+                            <TableHead>Due Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Array.from({ length: invoicePageSize }).map((_, i) => (
+                            <TableRow key={i}>
+                              <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-36 mb-1" />
+                                <Skeleton className="h-3 w-24" />
+                              </TableCell>
+                              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                              <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                              <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                              <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <span className="sr-only">
                       {debouncedSearch ? `Searching invoices for "${debouncedSearch}"...` : "Loading invoices..."}
-                    </p>
+                    </span>
                   </div>
                 ) : pagedTotal === 0 && !paginatedQuery.isLoading ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1064,7 +1121,7 @@ const Billing = () => {
                               />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{student.profile?.full_name || "Unknown"}</p>
-                                <p className="text-xs text-muted-foreground">{student.roll_number || "No Roll #"} • {student.course || "N/A"}</p>
+                                <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"} • {student.course || "N/A"}</p>
                               </div>
                             </div>
                           ))

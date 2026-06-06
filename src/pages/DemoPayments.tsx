@@ -272,7 +272,7 @@ const PaymentGateway = ({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Receipt No.</span><span className="font-mono">{invoice.number}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Student</span><span>{student.name}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Roll No.</span><span>{student.roll}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Form Number</span><span>{student.roll}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Room</span><span>{student.room}</span></div>
                 </div>
                 <Separator />
@@ -421,7 +421,7 @@ const DemoPayments = () => {
           <TabsContent value="overview" className="mt-4">
             <div className="mb-4">
               <Input
-                placeholder="Search by student, roll no, or invoice..."
+                placeholder="Search by student, Form Number, or invoice..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="max-w-sm text-sm"

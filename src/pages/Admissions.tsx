@@ -99,7 +99,7 @@ export default function Admissions() {
 
   const enrollStudent = useMutation({
     mutationFn: async (admission: Admission) => {
-      if (!admission.roll_number) throw new Error("Enrollment number is required for enrollment");
+      if (!admission.roll_number) throw new Error("Form Number is required for enrollment");
 
       // Call edge function to create auth user + student record
       const { data, error } = await supabase.functions.invoke("create-student", {
@@ -211,7 +211,7 @@ export default function Admissions() {
                     <div><Label>Course</Label><Input value={form.course} onChange={e => updateField("course", e.target.value)} placeholder="e.g. B.Tech" /></div>
                     <div><Label>Department</Label><Input value={form.department} onChange={e => updateField("department", e.target.value)} placeholder="e.g. Computer Science" /></div>
                     <div><Label>Year</Label><Input type="number" min={1} max={6} value={form.year} onChange={e => updateField("year", e.target.value)} /></div>
-                    <div><Label>Roll Number</Label><Input value={form.roll_number} onChange={e => updateField("roll_number", e.target.value)} /></div>
+                    <div><Label>Form Number</Label><Input value={form.roll_number} onChange={e => updateField("roll_number", e.target.value)} /></div>
                   </div>
                 </div>
 
@@ -395,7 +395,7 @@ export default function Admissions() {
                   <div><span className="text-muted-foreground">Course:</span> {viewAdmission.course || "—"}</div>
                   <div><span className="text-muted-foreground">Department:</span> {viewAdmission.department || "—"}</div>
                   <div><span className="text-muted-foreground">Year:</span> {viewAdmission.year || "—"}</div>
-                  <div><span className="text-muted-foreground">Roll #:</span> {viewAdmission.roll_number || "—"}</div>
+                  <div><span className="text-muted-foreground">Form Number:</span> {viewAdmission.roll_number || "—"}</div>
                 </div>
               </div>
               <div>
