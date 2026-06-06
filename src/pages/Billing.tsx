@@ -188,7 +188,9 @@ const Billing = () => {
     page: invoicePage,
     pageSize: invoicePageSize,
     search: debouncedSearch,
-    centerId,
+    // When searching, ignore center filter so invoices for students without
+    // an assigned property (or in another center) still surface.
+    centerId: debouncedSearch.trim() ? "all" : centerId,
   });
   const pagedInvoices = paginatedQuery.data?.rows ?? [];
   const pagedTotal = paginatedQuery.data?.totalCount ?? 0;
