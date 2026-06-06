@@ -1758,7 +1758,7 @@ const Students = () => {
                 <Input value={editForm.emergency_contact} onChange={(e) => setEditForm(f => ({ ...f, emergency_contact: e.target.value }))} />
               </div>
               <div>
-                <Label className="text-xs font-semibold">Roll Number</Label>
+                <Label className="text-xs font-semibold">Form Number</Label>
                 <Input value={editForm.roll_number} onChange={(e) => setEditForm(f => ({ ...f, roll_number: e.target.value }))} />
               </div>
               <div>
