@@ -1404,7 +1404,7 @@ const Students = () => {
                     <Input placeholder="e.g. Rahul Sharma" value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Form No (Enrollment Number) *</Label>
+                    <Label className="text-xs font-semibold">Form Number *</Label>
                     <Input placeholder="CS2026001" value={form.roll_number} onChange={(e) => setForm(f => ({ ...f, roll_number: e.target.value }))} />
                   </div>
                   <div>
