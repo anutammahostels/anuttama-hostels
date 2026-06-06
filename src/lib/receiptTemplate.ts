@@ -116,7 +116,7 @@ function copyHtml(data: ReceiptData, label: "INSTITUTE COPY" | "STUDENT COPY"): 
           ${data.gender ? `${data.gender} &nbsp;•&nbsp; ` : ""}
           ${data.course ? `${data.course} &nbsp;•&nbsp; ` : ""}
           Form No: ${data.rollNumber || "—"}
-          ${data.enrollNumber ? ` &nbsp;•&nbsp; Enroll No: ${data.enrollNumber}` : ""}
+          ${data.enrollNumber ? ` &nbsp;•&nbsp; Form Number: ${data.enrollNumber}` : ""}
         </div>
       </div>
       <div>
