@@ -467,10 +467,13 @@ const Billing = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search by invoice # or Form Number..." 
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {(searchQuery !== debouncedSearch || (debouncedSearch && paginatedQuery.isFetching)) && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Searching invoices" />
+                )}
               </div>
               <CenterFilter />
               <Button variant="outline" onClick={() => handleSendReminder()}>
@@ -481,7 +484,14 @@ const Billing = () => {
 
             <Card className="border-border/50">
               <CardContent className="p-0">
-                {pagedTotal === 0 && !paginatedQuery.isLoading ? (
+                {paginatedQuery.isFetching && pagedInvoices.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center" role="status" aria-live="polite">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      {debouncedSearch ? `Searching invoices for "${debouncedSearch}"...` : "Loading invoices..."}
+                    </p>
+                  </div>
+                ) : pagedTotal === 0 && !paginatedQuery.isLoading ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium mb-2">No Invoices Found</h3>
