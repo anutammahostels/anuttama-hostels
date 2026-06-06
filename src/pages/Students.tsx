@@ -1607,7 +1607,7 @@ const Students = () => {
               <div className="space-y-3 py-4">
                 <div className="bg-muted rounded-lg p-4 space-y-3">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Enrollment Number (Login ID)</p>
+                    <p className="text-xs text-muted-foreground mb-1">Form Number (Login ID)</p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-sm font-mono bg-background rounded px-2 py-1">{createdCredentials.enrollmentNumber}</code>
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCopy(createdCredentials.enrollmentNumber, "enrollment")}>
