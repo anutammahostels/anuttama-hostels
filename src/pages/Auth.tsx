@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Please enter a valid email address');
-const enrollmentSchema = z.string().min(1, 'Please enter your enrollment number');
+const enrollmentSchema = z.string().min(1, 'Please enter your Form Number');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
 const adminFeatures = [
