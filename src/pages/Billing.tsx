@@ -163,7 +163,7 @@ const Billing = () => {
 
   const [invoicePage, setInvoicePage] = useState(1);
   const invoicePageSize = 10;
-  useEffect(() => { setInvoicePage(1); }, [searchQuery, centerId]);
+  useEffect(() => { setInvoicePage(1); }, [debouncedSearch, centerId]);
 
   // Client-side pagination for the other tabs (10 per page each)
   const TAB_PAGE_SIZE = 10;
