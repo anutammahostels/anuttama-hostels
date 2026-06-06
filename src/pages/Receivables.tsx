@@ -70,7 +70,7 @@ const Receivables = () => {
   const handleExportExcel = () => {
     exportToExcel(rows.map(r => ({
       "Student Name": r.name,
-      "Roll No": r.rollNo,
+      "Form Number": r.rollNo,
       "Gross Receivable": r.gross,
       "Discounts": r.discounts,
       "Amount Received": r.received,
