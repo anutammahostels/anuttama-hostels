@@ -263,7 +263,7 @@ export default function Auth() {
                 <form onSubmit={handleSignIn} className="space-y-5">
                   {isStudent ? (
                     <div className="space-y-2">
-                      <Label>Enrollment Number</Label>
+                      <Label>Form Number</Label>
                       <div className="relative group">
                         <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
