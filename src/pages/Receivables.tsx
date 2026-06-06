@@ -88,7 +88,7 @@ const Receivables = () => {
     table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:13px}
     th{background:#0f3460;color:#fff}.total td{font-weight:bold;background:#f0f4ff}@media print{body{padding:15px}}</style></head><body>
     <h1>Student Receivables Report</h1><p>Generated: ${format(new Date(), "dd MMM yyyy")}</p>
-    <table><tr><th>Student</th><th>Roll No</th><th>Gross Receivable</th><th>Discounts</th><th>Received</th><th>Refunds</th><th>Payment Mode</th><th>Net Receivable</th></tr>
+    <table><tr><th>Student</th><th>Form Number</th><th>Gross Receivable</th><th>Discounts</th><th>Received</th><th>Refunds</th><th>Payment Mode</th><th>Net Receivable</th></tr>
     ${rows.map(r => `<tr><td>${r.name}</td><td>${r.rollNo}</td><td>${formatCurrency(r.gross)}</td><td>${formatCurrency(r.discounts)}</td><td>${formatCurrency(r.received)}</td><td>${formatCurrency(r.refunds)}</td><td>${r.paymentModes}</td><td>${formatCurrency(r.net)}</td></tr>`).join("")}
     <tr class="total"><td colspan="2">TOTAL</td><td>${formatCurrency(totals.gross)}</td><td>${formatCurrency(totals.discounts)}</td><td>${formatCurrency(totals.received)}</td><td>${formatCurrency(totals.refunds)}</td><td></td><td>${formatCurrency(totals.net)}</td></tr>
     </table></body></html>`);
