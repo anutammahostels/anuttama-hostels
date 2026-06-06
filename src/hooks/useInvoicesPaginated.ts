@@ -36,11 +36,26 @@ export function useInvoicesPaginated({ page, pageSize, search, centerId, enabled
 
       const term = search.trim();
       if (term) {
-        // Search across invoice_number and roll_number (server-side).
         const escaped = term.replace(/[%,()]/g, "");
-        query = query.or(
-          `invoice_number.ilike.%${escaped}%,students.roll_number.ilike.%${escaped}%`
-        );
+        // Resolve matching student IDs by Form Number (roll_number) first,
+        // then OR with invoice_number on the invoices table. Filtering on a
+        // joined table inside .or() does not filter parent rows reliably.
+        let studentQuery = supabase
+          .from("students")
+          .select("id")
+          .ilike("roll_number", `%${escaped}%`)
+          .limit(1000);
+        if (useInner) {
+          studentQuery = studentQuery.eq("property_id", centerId);
+        }
+        const { data: matchedStudents, error: sErr } = await studentQuery;
+        if (sErr) throw sErr;
+        const ids = (matchedStudents || []).map((s: any) => s.id);
+        const orParts = [`invoice_number.ilike.%${escaped}%`];
+        if (ids.length) {
+          orParts.push(`student_id.in.(${ids.join(",")})`);
+        }
+        query = query.or(orParts.join(","));
       }
 
       query = query.range(from, to);
