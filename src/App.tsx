@@ -34,6 +34,8 @@ import Receivables from "./pages/Receivables";
 import NotFound from "./pages/NotFound";
 import PaymentStatus from "./pages/PaymentStatus";
 import PaymentCallback from "./pages/PaymentCallback";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 
 // Student pages
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -67,7 +69,10 @@ const App = () => (
             {/* Landing pages - shared Navbar/Footer layout */}
             <Route element={<LandingLayout />}>
               <Route path="/" element={<Index />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
             </Route>
+
 
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
