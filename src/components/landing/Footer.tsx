@@ -36,7 +36,25 @@ export const Footer = () => {
               </a>
             </div>
           </div>
+
+          <div className="col-span-2 md:col-span-2 md:col-start-5">
+            <h4 className="text-white/80 font-semibold text-sm mb-3 md:mb-4">Legal</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/terms" className="text-white/50 hover:text-white transition-colors text-xs md:text-sm">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="text-white/50 hover:text-white transition-colors text-xs md:text-sm">
+                  Privacy Policy
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
+
+
 
 
 
