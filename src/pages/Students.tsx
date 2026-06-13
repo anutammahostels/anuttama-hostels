@@ -348,7 +348,14 @@ const Students = () => {
         emergency_contact: map.contact_no_2 || map.emergency_contact || "",
         father_name: map.father_name || "",
         mother_name: map.mother_name || "",
-        gender: map.gender || "",
+        gender: (() => {
+          const raw = (map.gender || map.gen || map.sex || "").toString().trim().toUpperCase();
+          if (!raw) return "";
+          if (raw === "M" || raw.startsWith("MALE")) return "Male";
+          if (raw === "F" || raw.startsWith("FEMALE")) return "Female";
+          if (raw === "O" || raw.startsWith("OTHER")) return "Other";
+          return raw.charAt(0) + raw.slice(1).toLowerCase();
+        })(),
         // Finance fields — payment_date kept for backward compat (= installment-1 date)
         payment_date: date1,
         final_fee: String(parseAmount(findCol(["final_fee"]))),
