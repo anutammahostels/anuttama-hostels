@@ -427,7 +427,31 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border-destructive/50">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                </div>
+                <CardDescription>
+                  Permanently delete all student and billing records. Property, blocks, rooms, beds, and staff are preserved.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-destructive/30 bg-destructive/5">
+                  <div>
+                    <p className="font-medium">Wipe Students & Billing Data</p>
+                    <p className="text-sm text-muted-foreground">
+                      Removes students, invoices, payments, refunds, gate passes, complaints, tickets, attendance, mess, notices, admissions, notifications and resets beds to vacant.
+                    </p>
+                  </div>
+                  <WipeDataButton />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
+
         </Tabs>
       </div>
     </>
