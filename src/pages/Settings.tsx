@@ -459,3 +459,65 @@ const Settings = () => {
 };
 
 export default Settings;
+
+function WipeDataButton() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+
+  const handleWipe = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("wipe-student-billing");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "Data wiped",
+        description: `Removed all students and billing records. Auth users deleted: ${data?.deletedUsers ?? 0}.`,
+      });
+      setConfirmText("");
+    } catch (e: any) {
+      toast({ title: "Wipe failed", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="destructive" disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          Wipe Data
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Permanently wipe student & billing data?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. All student records, invoices, payments, refunds, gate passes, complaints, tickets, attendance, mess, notices, admissions and notifications will be permanently deleted. Beds will be reset to vacant.
+            <br /><br />
+            Type <strong>WIPE</strong> below to confirm.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Input
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder="Type WIPE to confirm"
+          autoFocus
+        />
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={confirmText !== "WIPE" || loading}
+            onClick={(e) => { e.preventDefault(); handleWipe(); }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {loading ? "Wiping..." : "Yes, wipe everything"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
