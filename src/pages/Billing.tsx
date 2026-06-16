@@ -1077,7 +1077,7 @@ const Billing = () => {
             <DialogHeader>
               <DialogTitle>Generate Invoices</DialogTitle>
               <DialogDescription>
-                Create invoices for selected students with default charge amounts.
+                Record an installment / transaction-based invoice for the selected students.
               </DialogDescription>
             </DialogHeader>
 
