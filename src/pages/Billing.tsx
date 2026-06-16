@@ -67,11 +67,12 @@ const Billing = () => {
     d.setDate(d.getDate() + 15);
     return format(d, 'yyyy-MM-dd');
   });
-  const [defaultRoomRent, setDefaultRoomRent] = useState("5000");
-  const [defaultMessCharges, setDefaultMessCharges] = useState("3000");
-  const [defaultElectricity, setDefaultElectricity] = useState("500");
-  const [defaultOtherCharges, setDefaultOtherCharges] = useState("0");
-  const [defaultDiscount, setDefaultDiscount] = useState("0");
+  const [txnAmount, setTxnAmount] = useState("0");
+  const [txnDate, setTxnDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [txnMode, setTxnMode] = useState("Cash");
+  const [txnDetails, setTxnDetails] = useState("");
+  const [txnUtr, setTxnUtr] = useState("");
+  const [txnRemarks, setTxnRemarks] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
