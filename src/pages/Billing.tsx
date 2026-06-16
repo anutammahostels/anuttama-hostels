@@ -628,7 +628,7 @@ const Billing = () => {
                     <p className="text-muted-foreground mb-4">
                       {searchQuery ? "Try adjusting your search" : "Generate your first invoice to get started"}
                     </p>
-                    <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
+                    <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds([]); setGenerateDialog(true); }}>
                       <Plus className="h-4 w-4 mr-2" />
                       Generate Invoices
                     </Button>
