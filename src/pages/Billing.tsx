@@ -251,11 +251,30 @@ const Billing = () => {
     setIsGenerating(false);
     setGenerateProgress(0);
     setGenerateResults(null);
+    setTxnAmount("0");
+    setTxnDate(format(new Date(), 'yyyy-MM-dd'));
+    setTxnMode("Cash");
+    setTxnDetails("");
+    setTxnUtr("");
+    setTxnRemarks("");
   };
 
   const handleGenerateInvoices = async () => {
     if (selectedStudentIds.length === 0) {
       toast({ title: "No students selected", description: "Please select at least one student.", variant: "destructive" });
+      return;
+    }
+    const amount = parseFloat(txnAmount) || 0;
+    if (amount <= 0) {
+      toast({ title: "Invalid amount", description: "Enter an amount greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (!txnDate) {
+      toast({ title: "Missing date", description: "Please choose a payment date.", variant: "destructive" });
+      return;
+    }
+    if (!txnMode) {
+      toast({ title: "Missing mode", description: "Please choose a payment mode.", variant: "destructive" });
       return;
     }
 
@@ -266,31 +285,78 @@ const Billing = () => {
 
     for (let i = 0; i < selectedStudentIds.length; i++) {
       const studentId = selectedStudentIds[i];
-      const roomRent = parseFloat(defaultRoomRent) || 0;
-      const messCharges = parseFloat(defaultMessCharges) || 0;
-      const electricity = parseFloat(defaultElectricity) || 0;
-      const otherCharges = parseFloat(defaultOtherCharges) || 0;
-      const discount = parseFloat(defaultDiscount) || 0;
-      const totalAmount = roomRent + messCharges + electricity + otherCharges - discount;
 
-      const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${(i + 1 + invoices.length).toString().padStart(4, '0')}`;
+      const stamp = Date.now().toString(36).toUpperCase();
+      const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+      const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${stamp}-${rand}-${i + 1}`;
+
+      const notesBlob = [
+        txnDetails ? `Transaction: ${txnDetails}` : null,
+        txnUtr ? `UTR: ${txnUtr}` : null,
+        txnRemarks ? `Remarks: ${txnRemarks}` : null,
+      ].filter(Boolean).join(" | ");
 
       try {
-        await createInvoice.mutateAsync({
-          student_id: studentId,
-          invoice_number: invoiceNumber,
-          billing_month: `${billingMonth}-01`,
-          due_date: dueDate,
-          room_rent: roomRent,
-          mess_charges: messCharges,
-          electricity_charges: electricity,
-          other_charges: otherCharges,
-          discounts: discount,
-          total_amount: totalAmount,
-          status: 'pending',
-        });
+        const { data: inv, error: invErr } = await supabase
+          .from('invoices')
+          .insert({
+            student_id: studentId,
+            invoice_number: invoiceNumber,
+            billing_month: `${billingMonth}-01`,
+            due_date: dueDate,
+            room_rent: 0,
+            mess_charges: 0,
+            electricity_charges: 0,
+            other_charges: 0,
+            discounts: 0,
+            total_amount: amount,
+            paid_amount: amount,
+            status: 'paid',
+            payment_method: txnMode,
+            payment_date: new Date(txnDate).toISOString(),
+            notes: notesBlob || null,
+          })
+          .select()
+          .single();
+
+        if (invErr) throw invErr;
+
+        // Lookup student's property via bed → room → floor → block
+        let propertyId: string | null = null;
+        const { data: bedData } = await supabase
+          .from('beds')
+          .select('rooms(floors(blocks(property_id)))')
+          .eq('student_id', studentId)
+          .limit(1)
+          .maybeSingle();
+        propertyId = (bedData as any)?.rooms?.floors?.blocks?.property_id || null;
+        if (!propertyId) {
+          const { data: stu } = await supabase
+            .from('students')
+            .select('property_id')
+            .eq('id', studentId)
+            .maybeSingle();
+          propertyId = (stu as any)?.property_id || null;
+        }
+
+        if (propertyId) {
+          await supabase.from('payments').insert({
+            invoice_id: inv.id,
+            student_id: studentId,
+            property_id: propertyId,
+            amount,
+            payment_method: txnMode,
+            payment_mode_label: txnMode,
+            payment_label: txnDetails || null,
+            transaction_reference: txnUtr || null,
+            status: 'completed',
+            paid_at: new Date(txnDate).toISOString(),
+            recorded_by: user?.id || null,
+          } as any);
+        }
         success++;
-      } catch {
+      } catch (e) {
+        console.error('Invoice generation failed', e);
         failed++;
       }
 
@@ -304,6 +370,7 @@ const Billing = () => {
       toast({ title: "Invoices Generated", description: `${success} invoice(s) created successfully.${failed > 0 ? ` ${failed} failed.` : ''}` });
     }
   };
+
 
   const statsData = [
     { 
