@@ -20,6 +20,7 @@ import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertT
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
 import { useInvoicesPaginated } from "@/hooks/useInvoicesPaginated";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/hooks/useStudents";
 import { useProperties } from "@/hooks/useProperties";
 import { useCenter } from "@/contexts/CenterContext";
