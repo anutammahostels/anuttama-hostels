@@ -1105,44 +1105,48 @@ const Billing = () => {
                   </div>
                 </div>
 
-                {/* Default Charges */}
+                {/* Installment / Transaction Details */}
                 <div>
-                  <h4 className="font-medium mb-3">Default Charges (₹)</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h4 className="font-medium mb-3">Installment / Transaction Details</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Room Rent</Label>
-                      <Input type="number" value={defaultRoomRent} onChange={(e) => setDefaultRoomRent(e.target.value)} />
+                      <Label>Amount (₹)</Label>
+                      <Input type="number" min="0" value={txnAmount} onChange={(e) => setTxnAmount(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Mess Charges</Label>
-                      <Input type="number" value={defaultMessCharges} onChange={(e) => setDefaultMessCharges(e.target.value)} />
+                      <Label>Payment Date</Label>
+                      <Input type="date" value={txnDate} onChange={(e) => setTxnDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Electricity</Label>
-                      <Input type="number" value={defaultElectricity} onChange={(e) => setDefaultElectricity(e.target.value)} />
+                      <Label>Payment Mode</Label>
+                      <Select value={txnMode} onValueChange={setTxnMode}>
+                        <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                        <SelectContent>
+                          {["Cash", "UPI", "RTGS", "NEFT", "Cheque", "DD", "Online"].map(m => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Other Charges</Label>
-                      <Input type="number" value={defaultOtherCharges} onChange={(e) => setDefaultOtherCharges(e.target.value)} />
+                      <Label>UTR ID</Label>
+                      <Input placeholder="UTR / Bank ref" value={txnUtr} onChange={(e) => setTxnUtr(e.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Discount (₹)</Label>
-                      <Input type="number" value={defaultDiscount} onChange={(e) => setDefaultDiscount(e.target.value)} />
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Transaction Details</Label>
+                      <Input placeholder="Receipt / Ref note" value={txnDetails} onChange={(e) => setTxnDetails(e.target.value)} />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Remarks</Label>
+                      <Input placeholder="Optional remarks" value={txnRemarks} onChange={(e) => setTxnRemarks(e.target.value)} />
                     </div>
                   </div>
                   <div className="mt-3 p-3 bg-muted/50 rounded-lg flex justify-between">
-                    <span className="text-sm text-muted-foreground">Total per student:</span>
-                    <span className="font-bold">
-                      {formatCurrency(
-                        (parseFloat(defaultRoomRent) || 0) +
-                        (parseFloat(defaultMessCharges) || 0) +
-                        (parseFloat(defaultElectricity) || 0) +
-                        (parseFloat(defaultOtherCharges) || 0) -
-                        (parseFloat(defaultDiscount) || 0)
-                      )}
-                    </span>
+                    <span className="text-sm text-muted-foreground">Amount per student:</span>
+                    <span className="font-bold">{formatCurrency(parseFloat(txnAmount) || 0)}</span>
                   </div>
                 </div>
+
 
                 {/* Student Selection */}
                 {(() => {
