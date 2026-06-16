@@ -20,6 +20,7 @@ import { Receipt, Plus, Search, Download, IndianRupee, TrendingUp, Clock, AlertT
 import { useInvoices, type InvoiceWithStudent } from "@/hooks/useInvoices";
 import { useInvoicesPaginated } from "@/hooks/useInvoicesPaginated";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/hooks/useStudents";
 import { useProperties } from "@/hooks/useProperties";
 import { useCenter } from "@/contexts/CenterContext";
@@ -66,11 +67,12 @@ const Billing = () => {
     d.setDate(d.getDate() + 15);
     return format(d, 'yyyy-MM-dd');
   });
-  const [defaultRoomRent, setDefaultRoomRent] = useState("5000");
-  const [defaultMessCharges, setDefaultMessCharges] = useState("3000");
-  const [defaultElectricity, setDefaultElectricity] = useState("500");
-  const [defaultOtherCharges, setDefaultOtherCharges] = useState("0");
-  const [defaultDiscount, setDefaultDiscount] = useState("0");
+  const [txnAmount, setTxnAmount] = useState("0");
+  const [txnDate, setTxnDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [txnMode, setTxnMode] = useState("Cash");
+  const [txnDetails, setTxnDetails] = useState("");
+  const [txnUtr, setTxnUtr] = useState("");
+  const [txnRemarks, setTxnRemarks] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -84,6 +86,7 @@ const Billing = () => {
   const [refundMethod, setRefundMethod] = useState("cash");
 
   const { invoices: allInvoices, stats: rawStats, isLoading, recordPayment, createInvoice, processRefund, deleteInvoice } = useInvoices();
+  const { user } = useAuth();
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const { students } = useStudents();
   const { properties } = useProperties();
@@ -248,11 +251,30 @@ const Billing = () => {
     setIsGenerating(false);
     setGenerateProgress(0);
     setGenerateResults(null);
+    setTxnAmount("0");
+    setTxnDate(format(new Date(), 'yyyy-MM-dd'));
+    setTxnMode("Cash");
+    setTxnDetails("");
+    setTxnUtr("");
+    setTxnRemarks("");
   };
 
   const handleGenerateInvoices = async () => {
     if (selectedStudentIds.length === 0) {
       toast({ title: "No students selected", description: "Please select at least one student.", variant: "destructive" });
+      return;
+    }
+    const amount = parseFloat(txnAmount) || 0;
+    if (amount <= 0) {
+      toast({ title: "Invalid amount", description: "Enter an amount greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (!txnDate) {
+      toast({ title: "Missing date", description: "Please choose a payment date.", variant: "destructive" });
+      return;
+    }
+    if (!txnMode) {
+      toast({ title: "Missing mode", description: "Please choose a payment mode.", variant: "destructive" });
       return;
     }
 
@@ -263,31 +285,78 @@ const Billing = () => {
 
     for (let i = 0; i < selectedStudentIds.length; i++) {
       const studentId = selectedStudentIds[i];
-      const roomRent = parseFloat(defaultRoomRent) || 0;
-      const messCharges = parseFloat(defaultMessCharges) || 0;
-      const electricity = parseFloat(defaultElectricity) || 0;
-      const otherCharges = parseFloat(defaultOtherCharges) || 0;
-      const discount = parseFloat(defaultDiscount) || 0;
-      const totalAmount = roomRent + messCharges + electricity + otherCharges - discount;
 
-      const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${(i + 1 + invoices.length).toString().padStart(4, '0')}`;
+      const stamp = Date.now().toString(36).toUpperCase();
+      const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+      const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${stamp}-${rand}-${i + 1}`;
+
+      const notesBlob = [
+        txnDetails ? `Transaction: ${txnDetails}` : null,
+        txnUtr ? `UTR: ${txnUtr}` : null,
+        txnRemarks ? `Remarks: ${txnRemarks}` : null,
+      ].filter(Boolean).join(" | ");
 
       try {
-        await createInvoice.mutateAsync({
-          student_id: studentId,
-          invoice_number: invoiceNumber,
-          billing_month: `${billingMonth}-01`,
-          due_date: dueDate,
-          room_rent: roomRent,
-          mess_charges: messCharges,
-          electricity_charges: electricity,
-          other_charges: otherCharges,
-          discounts: discount,
-          total_amount: totalAmount,
-          status: 'pending',
-        });
+        const { data: inv, error: invErr } = await supabase
+          .from('invoices')
+          .insert({
+            student_id: studentId,
+            invoice_number: invoiceNumber,
+            billing_month: `${billingMonth}-01`,
+            due_date: dueDate,
+            room_rent: 0,
+            mess_charges: 0,
+            electricity_charges: 0,
+            other_charges: 0,
+            discounts: 0,
+            total_amount: amount,
+            paid_amount: amount,
+            status: 'paid',
+            payment_method: txnMode,
+            payment_date: new Date(txnDate).toISOString(),
+            notes: notesBlob || null,
+          })
+          .select()
+          .single();
+
+        if (invErr) throw invErr;
+
+        // Lookup student's property via bed → room → floor → block
+        let propertyId: string | null = null;
+        const { data: bedData } = await supabase
+          .from('beds')
+          .select('rooms(floors(blocks(property_id)))')
+          .eq('student_id', studentId)
+          .limit(1)
+          .maybeSingle();
+        propertyId = (bedData as any)?.rooms?.floors?.blocks?.property_id || null;
+        if (!propertyId) {
+          const { data: stu } = await supabase
+            .from('students')
+            .select('property_id')
+            .eq('id', studentId)
+            .maybeSingle();
+          propertyId = (stu as any)?.property_id || null;
+        }
+
+        if (propertyId) {
+          await supabase.from('payments').insert({
+            invoice_id: inv.id,
+            student_id: studentId,
+            property_id: propertyId,
+            amount,
+            payment_method: txnMode,
+            payment_mode_label: txnMode,
+            payment_label: txnDetails || null,
+            transaction_reference: txnUtr || null,
+            status: 'completed',
+            paid_at: new Date(txnDate).toISOString(),
+            recorded_by: user?.id || null,
+          } as any);
+        }
         success++;
-      } catch {
+      } catch (e) {
+        console.error('Invoice generation failed', e);
         failed++;
       }
 
@@ -301,6 +370,7 @@ const Billing = () => {
       toast({ title: "Invoices Generated", description: `${success} invoice(s) created successfully.${failed > 0 ? ` ${failed} failed.` : ''}` });
     }
   };
+
 
   const statsData = [
     { 
@@ -409,7 +479,8 @@ const Billing = () => {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
-            <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
+            <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds([]); setGenerateDialog(true); }}>
+
               <Plus className="h-4 w-4 mr-2" />
               Generate Invoices
             </Button>
@@ -557,7 +628,7 @@ const Billing = () => {
                     <p className="text-muted-foreground mb-4">
                       {searchQuery ? "Try adjusting your search" : "Generate your first invoice to get started"}
                     </p>
-                    <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
+                    <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds([]); setGenerateDialog(true); }}>
                       <Plus className="h-4 w-4 mr-2" />
                       Generate Invoices
                     </Button>
@@ -1006,7 +1077,7 @@ const Billing = () => {
             <DialogHeader>
               <DialogTitle>Generate Invoices</DialogTitle>
               <DialogDescription>
-                Create invoices for selected students with default charge amounts.
+                Record an installment / transaction-based invoice for the selected students.
               </DialogDescription>
             </DialogHeader>
 
@@ -1035,44 +1106,48 @@ const Billing = () => {
                   </div>
                 </div>
 
-                {/* Default Charges */}
+                {/* Installment / Transaction Details */}
                 <div>
-                  <h4 className="font-medium mb-3">Default Charges (₹)</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h4 className="font-medium mb-3">Installment / Transaction Details</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Room Rent</Label>
-                      <Input type="number" value={defaultRoomRent} onChange={(e) => setDefaultRoomRent(e.target.value)} />
+                      <Label>Amount (₹)</Label>
+                      <Input type="number" min="0" value={txnAmount} onChange={(e) => setTxnAmount(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Mess Charges</Label>
-                      <Input type="number" value={defaultMessCharges} onChange={(e) => setDefaultMessCharges(e.target.value)} />
+                      <Label>Payment Date</Label>
+                      <Input type="date" value={txnDate} onChange={(e) => setTxnDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Electricity</Label>
-                      <Input type="number" value={defaultElectricity} onChange={(e) => setDefaultElectricity(e.target.value)} />
+                      <Label>Payment Mode</Label>
+                      <Select value={txnMode} onValueChange={setTxnMode}>
+                        <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                        <SelectContent>
+                          {["Cash", "UPI", "RTGS", "NEFT", "Cheque", "DD", "Online"].map(m => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Other Charges</Label>
-                      <Input type="number" value={defaultOtherCharges} onChange={(e) => setDefaultOtherCharges(e.target.value)} />
+                      <Label>UTR ID</Label>
+                      <Input placeholder="UTR / Bank ref" value={txnUtr} onChange={(e) => setTxnUtr(e.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Discount (₹)</Label>
-                      <Input type="number" value={defaultDiscount} onChange={(e) => setDefaultDiscount(e.target.value)} />
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Transaction Details</Label>
+                      <Input placeholder="Receipt / Ref note" value={txnDetails} onChange={(e) => setTxnDetails(e.target.value)} />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Remarks</Label>
+                      <Input placeholder="Optional remarks" value={txnRemarks} onChange={(e) => setTxnRemarks(e.target.value)} />
                     </div>
                   </div>
                   <div className="mt-3 p-3 bg-muted/50 rounded-lg flex justify-between">
-                    <span className="text-sm text-muted-foreground">Total per student:</span>
-                    <span className="font-bold">
-                      {formatCurrency(
-                        (parseFloat(defaultRoomRent) || 0) +
-                        (parseFloat(defaultMessCharges) || 0) +
-                        (parseFloat(defaultElectricity) || 0) +
-                        (parseFloat(defaultOtherCharges) || 0) -
-                        (parseFloat(defaultDiscount) || 0)
-                      )}
-                    </span>
+                    <span className="text-sm text-muted-foreground">Amount per student:</span>
+                    <span className="font-bold">{formatCurrency(parseFloat(txnAmount) || 0)}</span>
                   </div>
                 </div>
+
 
                 {/* Student Selection */}
                 {(() => {
