@@ -1095,11 +1095,7 @@ const Billing = () => {
             ) : (
               <div className="space-y-6 py-4">
                 {/* Billing Period */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Billing Month</Label>
-                    <Input type="month" value={billingMonth} onChange={(e) => setBillingMonth(e.target.value)} />
-                  </div>
+                <div>
                   <div className="space-y-2">
                     <Label>Due Date</Label>
                     <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
