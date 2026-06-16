@@ -1191,11 +1191,17 @@ const Billing = () => {
                           </p>
                         ) : (
                           filteredStudents.map(student => (
-                            <div key={student.id} className="flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors">
-                              <Checkbox
-                                checked={selectedStudentIds.includes(student.id)}
-                                onCheckedChange={() => toggleStudentSelection(student.id)}
-                              />
+                            <div
+                              key={student.id}
+                              className="flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                              onClick={() => toggleStudentSelection(student.id)}
+                            >
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedStudentIds.includes(student.id)}
+                                  onCheckedChange={() => toggleStudentSelection(student.id)}
+                                />
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{student.profile?.full_name || "Unknown"}</p>
                                 <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"} • {student.course || "N/A"}</p>
