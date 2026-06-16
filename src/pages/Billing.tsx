@@ -479,7 +479,8 @@ const Billing = () => {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
-            <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds(activeStudents.map(s => s.id)); setGenerateDialog(true); }}>
+            <Button className="gradient-primary text-white" onClick={() => { setSelectedStudentIds([]); setGenerateDialog(true); }}>
+
               <Plus className="h-4 w-4 mr-2" />
               Generate Invoices
             </Button>
