@@ -574,11 +574,12 @@ const Students = () => {
     try {
       // Update profile (name, email, phone)
       if (editingStudent.user_id) {
-        await supabase.from("profiles").update({
+        const { error: profileError } = await supabase.from("profiles").update({
           full_name: editForm.full_name || null,
           email: editForm.email || null,
           phone: editForm.phone || null,
         }).eq("id", editingStudent.user_id);
+        if (profileError) throw profileError;
       }
       await updateStudent.mutateAsync({
         id: editingStudent.id,
@@ -602,7 +603,7 @@ const Students = () => {
       setEditDialogOpen(false);
       setEditingStudent(null);
     } catch (err: any) {
-      // toast handled by hook
+      toast({ title: "Update failed", description: err.message || "Could not update student", variant: "destructive" });
     } finally {
       setIsUpdating(false);
     }
