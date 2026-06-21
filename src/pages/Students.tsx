@@ -603,7 +603,7 @@ const Students = () => {
       setEditDialogOpen(false);
       setEditingStudent(null);
     } catch (err: any) {
-      // toast handled by hook
+      toast({ title: "Update failed", description: err.message || "Could not update student", variant: "destructive" });
     } finally {
       setIsUpdating(false);
     }
