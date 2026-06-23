@@ -229,10 +229,20 @@ const Billing = () => {
         .select('id', { count: 'exact', head: true })
         .eq('invoice_id', paymentDialog.invoice.id)
         .eq('status', 'completed');
-      if (!cancelled) setPaymentCount(count || 0);
+      if (!cancelled) {
+        const used = count || 0;
+        setPaymentCount(used);
+        // Auto-fill amount with balance on the final allowed payment
+        const inv = paymentDialog.invoice;
+        const balance = Math.max(0, (inv.total_amount || 0) - (inv.paid_amount || 0));
+        if (used === 2) setPaymentAmount(String(balance));
+        else if (!paymentAmount) setPaymentAmount(String(balance));
+      }
     })();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentDialog.open, paymentDialog.invoice?.id]);
+
 
 
   const handleDownloadPdf = (invoice: InvoiceWithStudent) => {
