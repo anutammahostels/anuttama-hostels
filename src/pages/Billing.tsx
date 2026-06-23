@@ -1024,7 +1024,7 @@ const Billing = () => {
         </Tabs>
 
         {/* Payment Dialog */}
-        <Dialog open={paymentDialog.open} onOpenChange={(open) => { if (!open) { setPaymentDialog({ open: false, invoice: null }); } }}>
+        <Dialog open={paymentDialog.open} onOpenChange={(open) => { if (!open) { setPaymentDialog({ open: false, invoice: null }); setPaymentReference(""); setPaymentAmount(""); } }}>
           <DialogContent className="bg-background">
             <DialogHeader>
               <DialogTitle>Record Payment</DialogTitle>
@@ -1032,68 +1032,111 @@ const Billing = () => {
                 Recording payment for invoice {paymentDialog.invoice?.invoice_number}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Student:</span>
-                  <span className="font-medium">{paymentDialog.invoice?.student?.profile?.full_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Amount:</span>
-                  <span className="font-medium">{formatCurrency(paymentDialog.invoice?.total_amount || 0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Already Paid:</span>
-                  <span className="text-green-600">{formatCurrency(paymentDialog.invoice?.paid_amount || 0)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground">Balance Due:</span>
-                  <span className="font-bold text-red-500">
-                    {formatCurrency((paymentDialog.invoice?.total_amount || 0) - (paymentDialog.invoice?.paid_amount || 0))}
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const inv = paymentDialog.invoice;
+              const total = inv?.total_amount || 0;
+              const paid = inv?.paid_amount || 0;
+              const balance = Math.max(0, total - paid);
+              const used = paymentCount ?? 0;
+              const remaining = Math.max(0, 3 - used);
+              const isFinal = used === 2;
+              const isExhausted = used >= 3;
+              return (
+                <>
+                  <div className="space-y-4 py-4">
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Student:</span>
+                        <span className="font-medium">{inv?.student?.profile?.full_name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Amount:</span>
+                        <span className="font-medium">{formatCurrency(total)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Already Paid:</span>
+                        <span className="text-green-600">{formatCurrency(paid)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-muted-foreground">Balance Due:</span>
+                        <span className="font-bold text-red-500">{formatCurrency(balance)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-muted-foreground">Partial payments used:</span>
+                        <Badge variant={isFinal || isExhausted ? "destructive" : "secondary"}>
+                          {used} of 3 {remaining > 0 ? `(${remaining} left)` : "(none left)"}
+                        </Badge>
+                      </div>
+                    </div>
 
-              <div className="space-y-2">
-                <Label>Payment Amount</Label>
-                <Input 
-                  type="number"
-                  placeholder="Enter amount..." 
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                />
-              </div>
+                    {isExhausted && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                        This invoice has already used all 3 allowed partial payments. No more partial entries can be recorded.
+                      </div>
+                    )}
+                    {isFinal && !isExhausted && (
+                      <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700">
+                        This is the final allowed payment — it must clear the full remaining balance of {formatCurrency(balance)}.
+                      </div>
+                    )}
 
-              <div className="space-y-2">
-                <Label>Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="cheque">Cheque</SelectItem>
-                    <SelectItem value="online">Online Payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setPaymentDialog({ open: false, invoice: null })}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleRecordPayment}
-                disabled={!paymentAmount || recordPayment.isPending}
-                className="gradient-primary text-white"
-              >
-                {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Record Payment"}
-              </Button>
-            </DialogFooter>
+                    <div className="space-y-2">
+                      <Label>Payment Amount</Label>
+                      <Input
+                        type="number"
+                        placeholder="Enter amount..."
+                        value={paymentAmount}
+                        disabled={isExhausted || isFinal}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                      />
+                      {isFinal && (
+                        <p className="text-xs text-muted-foreground">Locked to remaining balance.</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Payment Method</Label>
+                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select method..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="upi">UPI</SelectItem>
+                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="cheque">Cheque</SelectItem>
+                          <SelectItem value="online">Online Payment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Transaction Reference / UTR (optional)</Label>
+                      <Input
+                        placeholder="UTR, cheque #, txn ID..."
+                        value={paymentReference}
+                        onChange={(e) => setPaymentReference(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setPaymentDialog({ open: false, invoice: null }); setPaymentReference(""); setPaymentAmount(""); }}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleRecordPayment}
+                      disabled={!paymentAmount || recordPayment.isPending || isExhausted}
+                      className="gradient-primary text-white"
+                    >
+                      {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Record Payment"}
+                    </Button>
+                  </DialogFooter>
+                </>
+              );
+            })()}
           </DialogContent>
         </Dialog>
+
 
         {/* Generate Invoices Dialog */}
         <Dialog open={generateDialog} onOpenChange={(open) => { if (!open) resetGenerateDialog(); }}>
