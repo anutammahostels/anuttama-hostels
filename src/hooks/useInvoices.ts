@@ -248,7 +248,7 @@ export function useInvoices(studentId?: string) {
       reason: string;
       refundMethod: string;
     }) => {
-      // Insert refund record
+      // Insert refund record. The DB trigger will recompute invoice.paid_amount/status.
       const { error: refundError } = await supabase.from('refunds').insert({
         invoice_id: invoiceId,
         student_id: refundStudentId,
@@ -260,23 +260,6 @@ export function useInvoices(studentId?: string) {
         processed_by: user?.id || null,
       });
       if (refundError) throw refundError;
-
-      // Update invoice paid_amount (reduce)
-      const { data: current, error: fetchError } = await supabase
-        .from('invoices')
-        .select('paid_amount, total_amount')
-        .eq('id', invoiceId)
-        .single();
-      if (fetchError) throw fetchError;
-
-      const newPaid = Math.max(0, (current.paid_amount || 0) - amount);
-      const newStatus = newPaid <= 0 ? 'pending' : newPaid >= current.total_amount ? 'paid' : 'partial';
-      
-      const { error: updateError } = await supabase
-        .from('invoices')
-        .update({ paid_amount: newPaid, status: newStatus })
-        .eq('id', invoiceId);
-      if (updateError) throw updateError;
     },
     onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
