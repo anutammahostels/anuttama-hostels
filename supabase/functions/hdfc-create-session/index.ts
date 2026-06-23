@@ -74,8 +74,10 @@ Deno.serve(async (req) => {
     if (userErr || !user) return jsonResponse({ error: "Unauthorized" }, 401);
     const userId = user.id;
 
-    // --- Request body (amount IGNORED — server computes it) ---
-    const { invoice_id, return_url } = await req.json();
+    // --- Request body ---
+    // amount is optional: caller may request a partial payment.
+    // Server still validates against the invoice balance + 3-payment rule.
+    const { invoice_id, return_url, amount: requestedAmountRaw } = await req.json();
     if (!invoice_id) return jsonResponse({ error: "invoice_id required" }, 400);
 
     const adminClient = createClient(
@@ -101,6 +103,41 @@ Deno.serve(async (req) => {
     // --- SERVER-SIDE amount computation (tamper-proof) ---
     const balance = Number(invoice.total_amount) - Number(invoice.paid_amount || 0);
     if (balance <= 0) return jsonResponse({ error: "Invoice already paid" }, 400);
+
+    // Enforce 3-partial-payments-per-invoice rule (matches DB trigger)
+    const { count: completedCount } = await adminClient
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("invoice_id", invoice.id)
+      .eq("status", "completed");
+
+    const used = completedCount || 0;
+    if (used >= 3) {
+      return jsonResponse({
+        error: "This invoice has already used all 3 allowed partial payments. Please contact the hostel office to clear any remaining balance.",
+      }, 400);
+    }
+
+    // Validate requested amount
+    const requestedAmount = requestedAmountRaw == null
+      ? balance
+      : Number(requestedAmountRaw);
+
+    if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      return jsonResponse({ error: "Invalid payment amount" }, 400);
+    }
+    if (requestedAmount > balance + 0.01) {
+      return jsonResponse({ error: `Amount cannot exceed the outstanding balance of ₹${balance.toFixed(2)}` }, 400);
+    }
+
+    // The 3rd (final) partial payment must clear the remaining balance
+    if (used === 2 && requestedAmount < balance - 0.01) {
+      return jsonResponse({
+        error: `This is the final allowed payment for this invoice — it must clear the full remaining balance of ₹${balance.toFixed(2)}.`,
+      }, 400);
+    }
+
+    const chargeAmount = Math.min(requestedAmount, balance);
 
     const { data: profile } = await adminClient
       .from("profiles")
@@ -180,7 +217,7 @@ Deno.serve(async (req) => {
       order_id: orderId,
       invoice_id: invoice.id,
       customer_id: customerId,
-      amount: balance,
+      amount: chargeAmount,
       currency: "INR",
       status: "INITIATED",
     });
@@ -196,7 +233,7 @@ Deno.serve(async (req) => {
         invoice_id: invoice.id,
         student_id: student.id,
         property_id: propertyId,
-        amount: balance,
+        amount: chargeAmount,
         payment_method: "online",
         status: "pending",
         transaction_id: orderId,
@@ -237,7 +274,7 @@ Deno.serve(async (req) => {
 
     const sessionPayload: Record<string, unknown> = {
       order_id: orderId,
-      amount: String(balance.toFixed(2)),
+      amount: String(chargeAmount.toFixed(2)),
       customer_id: customerId,
       customer_email: profile!.email,
       customer_phone: phone10,
@@ -327,7 +364,7 @@ Deno.serve(async (req) => {
       payment_links: hdfcData.payment_links || null,
       status: hdfcData.status || "CREATED",
       sdk_payload: hdfcData.sdk_payload || null,
-      amount: balance,
+      amount: chargeAmount,
     });
   } catch (err) {
     console.error("hdfc-create-session error:", err);

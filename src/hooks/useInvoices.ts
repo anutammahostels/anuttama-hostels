@@ -144,77 +144,84 @@ export function useInvoices(studentId?: string) {
   });
 
   const recordPayment = useMutation({
-    mutationFn: async ({ 
-      id, 
-      amount, 
+    mutationFn: async ({
+      id,
+      amount,
       method,
       studentId: payStudentId,
       propertyId,
-    }: { 
-      id: string; 
-      amount: number; 
+      reference,
+      modeLabel,
+      paidAt,
+    }: {
+      id: string;
+      amount: number;
       method: string;
       studentId?: string;
       propertyId?: string;
+      reference?: string;
+      modeLabel?: string;
+      paidAt?: string;
     }) => {
+      // Resolve student & property if not supplied. The DB trigger will
+      // recompute invoice.paid_amount / status from this payments row, and
+      // enforce the 3-partial-payments-per-invoice rule.
       const { data: current, error: fetchError } = await supabase
         .from('invoices')
-        .select('paid_amount, total_amount, student_id')
+        .select('student_id, total_amount, paid_amount')
         .eq('id', id)
         .single();
-      
       if (fetchError) throw fetchError;
 
-      const newPaidAmount = (current.paid_amount || 0) + amount;
-      const newStatus = newPaidAmount >= current.total_amount ? 'paid' : 'partial';
-
-      const { data, error } = await supabase
-        .from('invoices')
-        .update({
-          paid_amount: newPaidAmount,
-          payment_method: method,
-          payment_date: new Date().toISOString(),
-          status: newStatus,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-
       const sId = payStudentId || current.student_id;
-      if (sId) {
-        let pId = propertyId;
-        if (!pId) {
-          const { data: bedData } = await supabase
-            .from('beds')
-            .select('room_id, rooms(floor_id, floors(block_id, blocks(property_id)))')
-            .eq('student_id', sId)
-            .limit(1)
-            .maybeSingle();
-          pId = (bedData as any)?.rooms?.floors?.blocks?.property_id;
-        }
+      if (!sId) throw new Error('Invoice has no associated student');
 
-        if (pId) {
-          await supabase.from('payments').insert({
-            invoice_id: id,
-            student_id: sId,
-            property_id: pId,
-            amount,
-            payment_method: method,
-            status: 'completed',
-            recorded_by: user?.id || null,
-          } as any);
-        }
+      let pId = propertyId;
+      if (!pId) {
+        const { data: bedData } = await supabase
+          .from('beds')
+          .select('room_id, rooms(floor_id, floors(block_id, blocks(property_id)))')
+          .eq('student_id', sId)
+          .limit(1)
+          .maybeSingle();
+        pId = (bedData as any)?.rooms?.floors?.blocks?.property_id;
       }
+      if (!pId) {
+        const { data: stu } = await supabase
+          .from('students')
+          .select('property_id')
+          .eq('id', sId)
+          .maybeSingle();
+        pId = (stu as any)?.property_id || undefined;
+      }
+      if (!pId) throw new Error('Could not resolve a property for this student');
 
-      return data as Invoice;
+      const { error: payErr } = await supabase.from('payments').insert({
+        invoice_id: id,
+        student_id: sId,
+        property_id: pId,
+        amount,
+        payment_method: method,
+        payment_mode_label: modeLabel || method,
+        transaction_reference: reference || null,
+        status: 'completed',
+        recorded_by: user?.id || null,
+        paid_at: paidAt || new Date().toISOString(),
+      } as any);
+      if (payErr) throw payErr;
+
+      // Return the freshly-reconciled invoice
+      const { data: updated } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', id)
+        .single();
+      return updated as Invoice;
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast({ title: 'Payment Recorded', description: 'Payment has been recorded successfully.' });
-      // Notify student
       const userId = await getStudentUserId(data.student_id);
       if (userId) {
         createNotification(userId, "Payment Received", `Your payment has been recorded. Thank you!`, "billing", "/student/invoices");
@@ -241,7 +248,7 @@ export function useInvoices(studentId?: string) {
       reason: string;
       refundMethod: string;
     }) => {
-      // Insert refund record
+      // Insert refund record. The DB trigger will recompute invoice.paid_amount/status.
       const { error: refundError } = await supabase.from('refunds').insert({
         invoice_id: invoiceId,
         student_id: refundStudentId,
@@ -253,23 +260,6 @@ export function useInvoices(studentId?: string) {
         processed_by: user?.id || null,
       });
       if (refundError) throw refundError;
-
-      // Update invoice paid_amount (reduce)
-      const { data: current, error: fetchError } = await supabase
-        .from('invoices')
-        .select('paid_amount, total_amount')
-        .eq('id', invoiceId)
-        .single();
-      if (fetchError) throw fetchError;
-
-      const newPaid = Math.max(0, (current.paid_amount || 0) - amount);
-      const newStatus = newPaid <= 0 ? 'pending' : newPaid >= current.total_amount ? 'paid' : 'partial';
-      
-      const { error: updateError } = await supabase
-        .from('invoices')
-        .update({ paid_amount: newPaid, status: newStatus })
-        .eq('id', invoiceId);
-      if (updateError) throw updateError;
     },
     onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });

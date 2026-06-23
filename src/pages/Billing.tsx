@@ -58,6 +58,8 @@ const Billing = () => {
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentCount, setPaymentCount] = useState<number | null>(null);
 
   // Generate Invoices dialog state
   const [generateDialog, setGenerateDialog] = useState(false);
@@ -204,11 +206,44 @@ const Billing = () => {
       id: paymentDialog.invoice.id,
       amount: parseFloat(paymentAmount),
       method: paymentMethod,
+      modeLabel: paymentMethod,
+      reference: paymentReference || undefined,
     });
     setPaymentDialog({ open: false, invoice: null });
     setPaymentAmount("");
     setPaymentMethod("upi");
+    setPaymentReference("");
+    setPaymentCount(null);
   };
+
+  // Load count of completed payments whenever the payment dialog opens
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!paymentDialog.open || !paymentDialog.invoice) {
+        setPaymentCount(null);
+        return;
+      }
+      const { count } = await supabase
+        .from('payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('invoice_id', paymentDialog.invoice.id)
+        .eq('status', 'completed');
+      if (!cancelled) {
+        const used = count || 0;
+        setPaymentCount(used);
+        // Auto-fill amount with balance on the final allowed payment
+        const inv = paymentDialog.invoice;
+        const balance = Math.max(0, (inv.total_amount || 0) - (inv.paid_amount || 0));
+        if (used === 2) setPaymentAmount(String(balance));
+        else if (!paymentAmount) setPaymentAmount(String(balance));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentDialog.open, paymentDialog.invoice?.id]);
+
+
 
   const handleDownloadPdf = (invoice: InvoiceWithStudent) => {
     const printWindow = window.open("", "_blank");
@@ -310,10 +345,8 @@ const Billing = () => {
             other_charges: 0,
             discounts: 0,
             total_amount: amount,
-            paid_amount: amount,
-            status: 'paid',
-            payment_method: txnMode,
-            payment_date: new Date(txnDate).toISOString(),
+            paid_amount: 0,
+            status: 'pending',
             notes: notesBlob || null,
           })
           .select()
@@ -340,6 +373,7 @@ const Billing = () => {
         }
 
         if (propertyId) {
+          // Insert the payment — the DB trigger will reconcile paid_amount + status.
           await supabase.from('payments').insert({
             invoice_id: inv.id,
             student_id: studentId,
@@ -540,7 +574,7 @@ const Billing = () => {
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search by invoice # or Form Number..." 
+                  placeholder="Search by Form Number, name, phone, email, or invoice #..." 
                   className="pl-10 pr-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -1000,7 +1034,7 @@ const Billing = () => {
         </Tabs>
 
         {/* Payment Dialog */}
-        <Dialog open={paymentDialog.open} onOpenChange={(open) => { if (!open) { setPaymentDialog({ open: false, invoice: null }); } }}>
+        <Dialog open={paymentDialog.open} onOpenChange={(open) => { if (!open) { setPaymentDialog({ open: false, invoice: null }); setPaymentReference(""); setPaymentAmount(""); } }}>
           <DialogContent className="bg-background">
             <DialogHeader>
               <DialogTitle>Record Payment</DialogTitle>
@@ -1008,68 +1042,111 @@ const Billing = () => {
                 Recording payment for invoice {paymentDialog.invoice?.invoice_number}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Student:</span>
-                  <span className="font-medium">{paymentDialog.invoice?.student?.profile?.full_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Amount:</span>
-                  <span className="font-medium">{formatCurrency(paymentDialog.invoice?.total_amount || 0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Already Paid:</span>
-                  <span className="text-green-600">{formatCurrency(paymentDialog.invoice?.paid_amount || 0)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground">Balance Due:</span>
-                  <span className="font-bold text-red-500">
-                    {formatCurrency((paymentDialog.invoice?.total_amount || 0) - (paymentDialog.invoice?.paid_amount || 0))}
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const inv = paymentDialog.invoice;
+              const total = inv?.total_amount || 0;
+              const paid = inv?.paid_amount || 0;
+              const balance = Math.max(0, total - paid);
+              const used = paymentCount ?? 0;
+              const remaining = Math.max(0, 3 - used);
+              const isFinal = used === 2;
+              const isExhausted = used >= 3;
+              return (
+                <>
+                  <div className="space-y-4 py-4">
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Student:</span>
+                        <span className="font-medium">{inv?.student?.profile?.full_name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Amount:</span>
+                        <span className="font-medium">{formatCurrency(total)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Already Paid:</span>
+                        <span className="text-green-600">{formatCurrency(paid)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-muted-foreground">Balance Due:</span>
+                        <span className="font-bold text-red-500">{formatCurrency(balance)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-muted-foreground">Partial payments used:</span>
+                        <Badge variant={isFinal || isExhausted ? "destructive" : "secondary"}>
+                          {used} of 3 {remaining > 0 ? `(${remaining} left)` : "(none left)"}
+                        </Badge>
+                      </div>
+                    </div>
 
-              <div className="space-y-2">
-                <Label>Payment Amount</Label>
-                <Input 
-                  type="number"
-                  placeholder="Enter amount..." 
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                />
-              </div>
+                    {isExhausted && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                        This invoice has already used all 3 allowed partial payments. No more partial entries can be recorded.
+                      </div>
+                    )}
+                    {isFinal && !isExhausted && (
+                      <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700">
+                        This is the final allowed payment — it must clear the full remaining balance of {formatCurrency(balance)}.
+                      </div>
+                    )}
 
-              <div className="space-y-2">
-                <Label>Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="cheque">Cheque</SelectItem>
-                    <SelectItem value="online">Online Payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setPaymentDialog({ open: false, invoice: null })}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleRecordPayment}
-                disabled={!paymentAmount || recordPayment.isPending}
-                className="gradient-primary text-white"
-              >
-                {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Record Payment"}
-              </Button>
-            </DialogFooter>
+                    <div className="space-y-2">
+                      <Label>Payment Amount</Label>
+                      <Input
+                        type="number"
+                        placeholder="Enter amount..."
+                        value={paymentAmount}
+                        disabled={isExhausted || isFinal}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                      />
+                      {isFinal && (
+                        <p className="text-xs text-muted-foreground">Locked to remaining balance.</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Payment Method</Label>
+                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select method..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="upi">UPI</SelectItem>
+                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="cheque">Cheque</SelectItem>
+                          <SelectItem value="online">Online Payment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Transaction Reference / UTR (optional)</Label>
+                      <Input
+                        placeholder="UTR, cheque #, txn ID..."
+                        value={paymentReference}
+                        onChange={(e) => setPaymentReference(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setPaymentDialog({ open: false, invoice: null }); setPaymentReference(""); setPaymentAmount(""); }}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleRecordPayment}
+                      disabled={!paymentAmount || recordPayment.isPending || isExhausted}
+                      className="gradient-primary text-white"
+                    >
+                      {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Record Payment"}
+                    </Button>
+                  </DialogFooter>
+                </>
+              );
+            })()}
           </DialogContent>
         </Dialog>
+
 
         {/* Generate Invoices Dialog */}
         <Dialog open={generateDialog} onOpenChange={(open) => { if (!open) resetGenerateDialog(); }}>

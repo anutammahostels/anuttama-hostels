@@ -1729,6 +1729,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      reconcile_invoice: { Args: { _invoice_id: string }; Returns: undefined }
       staff_has_property_access: {
         Args: { _property_id: string; _user_id: string }
         Returns: boolean

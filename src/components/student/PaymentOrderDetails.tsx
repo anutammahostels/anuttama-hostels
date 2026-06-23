@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getOrderStatus } from "@/lib/hdfc";
+import { buildReceiptHtml, invoiceToReceipt } from "@/lib/receiptTemplate";
 import {
   Loader2,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   Hash,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -70,6 +72,20 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
     },
   });
 
+  // All completed payments for this invoice (online + offline) — for receipts
+  const { data: payments = [] } = useQuery({
+    queryKey: ["invoice-payments", invoiceId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("invoice_id", invoiceId)
+        .eq("status", "completed")
+        .order("paid_at", { ascending: true });
+      return data || [];
+    },
+  });
+
   // Live HDFC details (only when expanded and order exists)
   const {
     data: order,
@@ -82,6 +98,42 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
     staleTime: 30_000,
   });
 
+  const downloadPaymentReceipt = async (payment: any) => {
+    // Fetch full invoice + student for the receipt
+    const { data: inv } = await supabase.from("invoices").select("*").eq("id", invoiceId).single();
+    if (!inv) return;
+    const { data: stu } = await supabase
+      .from("students")
+      .select("id, roll_number, user_id, father_name, mother_name, gender, course")
+      .eq("id", inv.student_id)
+      .maybeSingle();
+    const { data: prof } = stu?.user_id
+      ? await supabase.from("profiles").select("full_name").eq("id", stu.user_id).single()
+      : { data: null as any };
+
+    // Override invoice fields so the receipt represents THIS payment
+    const receiptInvoice = {
+      ...inv,
+      paid_amount: Number(payment.amount || 0),
+      payment_method: payment.payment_method || inv.payment_method || "cash",
+      payment_date: payment.paid_at || inv.payment_date,
+      invoice_number: `${inv.invoice_number} · RCPT-${String(payment.id).slice(0, 8).toUpperCase()}`,
+    };
+
+    const data = invoiceToReceipt(receiptInvoice, {
+      studentName: prof?.full_name || "Student",
+      rollNumber: stu?.roll_number || undefined,
+      fatherName: stu?.father_name || undefined,
+      motherName: stu?.mother_name || undefined,
+      gender: stu?.gender || undefined,
+      course: stu?.course || undefined,
+    });
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(buildReceiptHtml(data));
+    w.document.close();
+  };
+
   if (txnLoading) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -90,16 +142,60 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
     );
   }
 
-  if (!txn) {
+  if (!txn && payments.length === 0) {
     return (
       <p className="text-xs text-muted-foreground italic">
-        No online payment attempts yet for this invoice.
+        No payment activity yet for this invoice.
       </p>
     );
   }
 
   return (
     <div className="border-t border-border/50 pt-3 mt-3 space-y-3">
+      {/* Per-payment receipts (online + offline) */}
+      {payments.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Payments ({payments.length}{payments.length >= 3 ? " — final" : `, ${3 - payments.length} left`})
+          </p>
+          <div className="space-y-1.5">
+            {payments.map((p: any, idx: number) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-background/50 p-2 text-xs"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-foreground">
+                      ₹{Number(p.amount).toLocaleString("en-IN")}
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">
+                      {(p.payment_method || "cash").toUpperCase()}
+                    </Badge>
+                    <span className="text-muted-foreground">#{idx + 1}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {p.paid_at ? format(new Date(p.paid_at), "dd MMM yyyy, HH:mm") : "—"}
+                    {p.transaction_reference ? ` · Ref: ${p.transaction_reference}` : ""}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs shrink-0"
+                  onClick={() => downloadPaymentReceipt(p)}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Receipt
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {txn && (<>
+
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -350,6 +446,7 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
           </CardContent>
         </Card>
       )}
+      </>)}
     </div>
   );
 }
