@@ -110,6 +110,8 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       toast({ title: 'Invoice Created', description: 'New invoice has been generated.' });
       // Notify student
       const userId = await getStudentUserId(data.student_id);
@@ -136,6 +138,8 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       toast({ title: 'Invoice Updated', description: 'Invoice has been updated.' });
     },
     onError: (error: Error) => {
@@ -220,7 +224,11 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['latest-txn'] });
       toast({ title: 'Payment Recorded', description: 'Payment has been recorded successfully.' });
       const userId = await getStudentUserId(data.student_id);
       if (userId) {
@@ -263,6 +271,8 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       toast({ title: 'Refund Processed', description: 'Refund has been processed successfully.' });
       // Notify student
@@ -287,7 +297,10 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payments'] });
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       toast({ title: 'Invoice Deleted', description: 'The invoice and related payment records have been removed.' });
     },
