@@ -310,10 +310,8 @@ const Billing = () => {
             other_charges: 0,
             discounts: 0,
             total_amount: amount,
-            paid_amount: amount,
-            status: 'paid',
-            payment_method: txnMode,
-            payment_date: new Date(txnDate).toISOString(),
+            paid_amount: 0,
+            status: 'pending',
             notes: notesBlob || null,
           })
           .select()
@@ -340,6 +338,7 @@ const Billing = () => {
         }
 
         if (propertyId) {
+          // Insert the payment — the DB trigger will reconcile paid_amount + status.
           await supabase.from('payments').insert({
             invoice_id: inv.id,
             student_id: studentId,
