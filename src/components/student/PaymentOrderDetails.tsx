@@ -446,6 +446,7 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
           </CardContent>
         </Card>
       )}
+      </>)}
     </div>
   );
 }
