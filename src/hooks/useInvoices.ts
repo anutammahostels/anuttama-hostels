@@ -224,7 +224,11 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['latest-txn'] });
       toast({ title: 'Payment Recorded', description: 'Payment has been recorded successfully.' });
       const userId = await getStudentUserId(data.student_id);
       if (userId) {
