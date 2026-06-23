@@ -48,12 +48,6 @@ const Students = () => {
     email: "",
     phone: "",
     roll_number: "",
-    course: "",
-    department: "",
-    year: "",
-    date_of_birth: "",
-    blood_group: "",
-    emergency_contact: "",
     status: "",
     father_name: "",
     mother_name: "",
@@ -76,8 +70,6 @@ const Students = () => {
 
   // Filter state
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterCourse, setFilterCourse] = useState("all");
-  const [filterYear, setFilterYear] = useState("all");
   const [filterRoom, setFilterRoom] = useState("all");
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<StudentWithProfile | null>(null);
   const [paymentDetailsStudent, setPaymentDetailsStudent] = useState<StudentWithProfile | null>(null);
@@ -113,11 +105,6 @@ const Students = () => {
   const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p.name])), [properties]);
   const sarjapurId = useMemo(() => properties.find(p => p.name.toLowerCase() === "sarjapur")?.id || "", [properties]);
 
-  // Derive unique courses for filter
-  const uniqueCourses = useMemo(() => {
-    const courses = students.map(s => s.course).filter((c): c is string => !!c);
-    return [...new Set(courses)].sort();
-  }, [students]);
 
   // Derive cascading data for assign room dialog - extract unique blocks from rooms data
   const assignBlocks = rooms
@@ -462,12 +449,6 @@ const Students = () => {
     email: "",
     phone: "",
     roll_number: "",
-    course: "",
-    department: "",
-    year: "",
-    date_of_birth: "",
-    blood_group: "",
-    emergency_contact: "",
     father_name: "",
     mother_name: "",
     gender: "",
@@ -549,12 +530,6 @@ const Students = () => {
       email: student.profile?.email || "",
       phone: student.profile?.phone || "",
       roll_number: student.roll_number || "",
-      course: student.course || "",
-      department: student.department || "",
-      year: student.year?.toString() || "",
-      date_of_birth: student.date_of_birth || "",
-      blood_group: student.blood_group || "",
-      emergency_contact: student.emergency_contact || "",
       status: student.status || "active",
       father_name: (student as any).father_name || "",
       mother_name: (student as any).mother_name || "",
@@ -584,12 +559,6 @@ const Students = () => {
       await updateStudent.mutateAsync({
         id: editingStudent.id,
         roll_number: editForm.roll_number || null,
-        course: editForm.course || null,
-        department: editForm.department || null,
-        year: editForm.year ? parseInt(editForm.year) : null,
-        date_of_birth: editForm.date_of_birth || null,
-        blood_group: editForm.blood_group || null,
-        emergency_contact: editForm.emergency_contact || null,
         status: editForm.status || "active",
         father_name: editForm.father_name || null,
         mother_name: editForm.mother_name || null,
@@ -775,7 +744,7 @@ const Students = () => {
   };
 
   // Filter students based on search and filters
-  const activeFilterCount = [filterStatus, filterCourse, filterYear, filterRoom].filter(f => f !== "all").length;
+  const activeFilterCount = [filterStatus, filterRoom].filter(f => f !== "all").length;
 
   const filteredStudents = students.filter(student => {
     const name = student.profile?.full_name?.toLowerCase() || "";
@@ -783,17 +752,15 @@ const Students = () => {
     const query = searchQuery.toLowerCase();
     const matchesSearch = name.includes(query) || rollNumber.includes(query);
     const matchesStatus = filterStatus === "all" || student.status === filterStatus;
-    const matchesCourse = filterCourse === "all" || student.course === filterCourse;
-    const matchesYear = filterYear === "all" || student.year?.toString() === filterYear;
     const matchesRoom = filterRoom === "all" || 
       (filterRoom === "allocated" ? !!student.bed : !student.bed);
     const matchesCenter = centerId === "all" || (student as any).property_id === centerId;
-    return matchesSearch && matchesStatus && matchesCourse && matchesYear && matchesRoom && matchesCenter;
+    return matchesSearch && matchesStatus && matchesRoom && matchesCenter;
   });
 
   const [page, setPage] = useState(1);
   const pageSize = 25;
-  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterCourse, filterYear, filterRoom, centerId]);
+  useEffect(() => { setPage(1); }, [searchQuery, filterStatus, filterRoom, centerId]);
   const pagedStudents = useMemo(() => filteredStudents.slice((page - 1) * pageSize, page * pageSize), [filteredStudents, page]);
 
   // Bulk selection helpers
@@ -1002,31 +969,6 @@ const Students = () => {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Course</Label>
-                    <Select value={filterCourse} onValueChange={setFilterCourse}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Courses</SelectItem>
-                        {uniqueCourses.map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Year</Label>
-                    <Select value={filterYear} onValueChange={setFilterYear}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Years</SelectItem>
-                        <SelectItem value="1">1st Year</SelectItem>
-                        <SelectItem value="2">2nd Year</SelectItem>
-                        <SelectItem value="3">3rd Year</SelectItem>
-                        <SelectItem value="4">4th Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Room Status</Label>
                     <Select value={filterRoom} onValueChange={setFilterRoom}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -1040,8 +982,6 @@ const Students = () => {
                   {activeFilterCount > 0 && (
                     <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => {
                       setFilterStatus("all");
-                      setFilterCourse("all");
-                      setFilterYear("all");
                       setFilterRoom("all");
                     }}>
                       Clear All Filters
@@ -1097,7 +1037,7 @@ const Students = () => {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm truncate">{student.profile?.full_name || "Unknown"}</p>
-                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"} • {student.course || "-"}</p>
+                            <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"}</p>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1150,8 +1090,6 @@ const Students = () => {
                           {(student as any).father_name && <p>Father: {(student as any).father_name}</p>}
                           {student.gender && <p>Gender: {student.gender}</p>}
                           {student.profile?.phone && <p>Phone: {student.profile.phone}</p>}
-                          {student.emergency_contact && <p>Contact 2: {student.emergency_contact}</p>}
-                          {student.department && <p>Stream: {student.department}</p>}
                           {(student as any).remarks && <p className="col-span-2">Remarks: {(student as any).remarks}</p>}
                         </div>
                       </CardContent>
@@ -1175,10 +1113,7 @@ const Students = () => {
                         <TableHead>Father Name</TableHead>
                         <TableHead>Gender</TableHead>
                         <TableHead>Phone</TableHead>
-                        <TableHead>Contact 2</TableHead>
                         <TableHead>Room</TableHead>
-                        <TableHead>Course</TableHead>
-                        <TableHead>Stream</TableHead>
                         <TableHead>Final Fee</TableHead>
                         <TableHead>Paid</TableHead>
                         <TableHead>Pending</TableHead>
@@ -1226,20 +1161,10 @@ const Students = () => {
                             <p className="text-sm">{student.profile?.phone || "-"}</p>
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm">{student.emergency_contact || "-"}</p>
-                          </TableCell>
-                          <TableCell>
                             <p className="text-sm">{getRoomDisplay(student)}</p>
                             {(student as any).alloted_room_no && !student.bed?.room && (
                               <p className="text-xs text-muted-foreground">Allotted: {(student as any).alloted_room_no}</p>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <p className="text-sm">{student.course || "-"}</p>
-                            <p className="text-xs text-muted-foreground">{student.year ? `Year ${student.year}` : ""}</p>
-                          </TableCell>
-                          <TableCell>
-                            <p className="text-sm">{student.department || "-"}</p>
                           </TableCell>
                           <TableCell>
                             {(student as any).final_fee > 0 ? (
@@ -1439,48 +1364,8 @@ const Students = () => {
                     <Input placeholder="+91 9876543210" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Contact No 2</Label>
-                    <Input placeholder="+91 9876543210" value={form.emergency_contact} onChange={(e) => setForm(f => ({ ...f, emergency_contact: e.target.value }))} />
-                  </div>
-                  <div>
                     <Label className="text-xs font-semibold">Email</Label>
                     <Input type="email" placeholder="student@email.com (optional)" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Grade</Label>
-                    <Input placeholder="B.Tech CSE" value={form.course} onChange={(e) => setForm(f => ({ ...f, course: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Stream</Label>
-                    <Input placeholder="Computer Science" value={form.department} onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Year</Label>
-                    <Select value={form.year} onValueChange={(v) => setForm(f => ({ ...f, year: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1st Year</SelectItem>
-                        <SelectItem value="2">2nd Year</SelectItem>
-                        <SelectItem value="3">3rd Year</SelectItem>
-                        <SelectItem value="4">4th Year</SelectItem>
-                        <SelectItem value="5">5th Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Date of Birth</Label>
-                    <Input type="date" value={form.date_of_birth} onChange={(e) => setForm(f => ({ ...f, date_of_birth: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-semibold">Blood Group</Label>
-                    <Select value={form.blood_group} onValueChange={(v) => setForm(f => ({ ...f, blood_group: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => (
-                          <SelectItem key={bg} value={bg}>{bg}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
 
@@ -1762,48 +1647,8 @@ const Students = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Emergency Contact (Contact 2)</Label>
-                <Input value={editForm.emergency_contact} onChange={(e) => setEditForm(f => ({ ...f, emergency_contact: e.target.value }))} />
-              </div>
-              <div>
                 <Label className="text-xs font-semibold">Form Number</Label>
                 <Input value={editForm.roll_number} onChange={(e) => setEditForm(f => ({ ...f, roll_number: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Course</Label>
-                <Input value={editForm.course} onChange={(e) => setEditForm(f => ({ ...f, course: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Stream (Department)</Label>
-                <Input value={editForm.department} onChange={(e) => setEditForm(f => ({ ...f, department: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Year</Label>
-                <Select value={editForm.year} onValueChange={(v) => setEditForm(f => ({ ...f, year: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1st Year</SelectItem>
-                    <SelectItem value="2">2nd Year</SelectItem>
-                    <SelectItem value="3">3rd Year</SelectItem>
-                    <SelectItem value="4">4th Year</SelectItem>
-                    <SelectItem value="5">5th Year</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Date of Birth</Label>
-                <Input type="date" value={editForm.date_of_birth} onChange={(e) => setEditForm(f => ({ ...f, date_of_birth: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Blood Group</Label>
-                <Select value={editForm.blood_group} onValueChange={(v) => setEditForm(f => ({ ...f, blood_group: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => (
-                      <SelectItem key={bg} value={bg}>{bg}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label className="text-xs font-semibold">Allotted Room No</Label>
