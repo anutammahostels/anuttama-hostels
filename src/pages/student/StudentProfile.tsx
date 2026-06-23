@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { User, Phone, Mail, BookOpen, Calendar, Droplets, AlertCircle, Save } from "lucide-react";
+import { User, Phone, Mail, BookOpen, Save } from "lucide-react";
 
 export default function StudentProfile() {
   const { user, profile } = useAuth();
@@ -84,18 +84,6 @@ export default function StudentProfile() {
                   </Button>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground flex items-center gap-1"><Droplets className="h-3 w-3" /> Blood Group</Label>
-                <p className="font-medium text-foreground">{student?.blood_group || "—"}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Date of Birth</Label>
-                <p className="font-medium text-foreground">{student?.date_of_birth || "—"}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Emergency Contact</Label>
-                <p className="font-medium text-foreground">{student?.emergency_contact || "—"}</p>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -110,18 +98,6 @@ export default function StudentProfile() {
               <div>
                 <Label className="text-xs text-muted-foreground">Form Number</Label>
                 <p className="font-medium text-foreground">{student?.roll_number || "—"}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Course</Label>
-                <p className="font-medium text-foreground">{student?.course || "—"}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Department</Label>
-                <p className="font-medium text-foreground">{student?.department || "—"}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Year</Label>
-                <p className="font-medium text-foreground">{student?.year || "—"}</p>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Admission Date</Label>

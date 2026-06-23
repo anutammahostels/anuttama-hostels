@@ -95,9 +95,7 @@ export default function StudentDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Welcome, {profile?.full_name || "Student"} 👋</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {studentData?.roll_number && <span>Roll: {studentData.roll_number} • </span>}
-            {studentData?.course && <span>{studentData.course} • </span>}
-            {studentData?.department && <span>{studentData.department}</span>}
+            {studentData?.roll_number && <span>Form No: {studentData.roll_number}</span>}
           </p>
         </div>
 
