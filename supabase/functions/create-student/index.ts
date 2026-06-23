@@ -385,11 +385,9 @@ serve(async (req) => {
             billing_month: billingDate,
             due_date: billingDate,
             total_amount: inst.amt,
-            paid_amount: inst.amt,
+            paid_amount: 0,
             room_rent: inst.amt,
-            status: "paid",
-            payment_method: (inst.mode || "cash").toLowerCase(),
-            payment_date: toIsoTimestamp(inst.date, toIsoTimestamp(billingDate)),
+            status: "pending",
             notes: noteParts.join(" | "),
           }).select().single();
 
