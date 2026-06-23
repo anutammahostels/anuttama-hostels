@@ -271,6 +271,8 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       toast({ title: 'Refund Processed', description: 'Refund has been processed successfully.' });
       // Notify student
