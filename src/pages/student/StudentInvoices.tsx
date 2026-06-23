@@ -13,7 +13,7 @@ import { Receipt, Download, IndianRupee, Loader2, CreditCard } from "lucide-reac
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { createPaymentSession, openPaymentCheckout } from "@/lib/hdfc";
+import { openPaymentCheckout } from "@/lib/hdfc";
 import { PaymentOrderDetails } from "@/components/student/PaymentOrderDetails";
 import { buildReceiptHtml, invoiceToReceipt } from "@/lib/receiptTemplate";
 
