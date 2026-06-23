@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
       order_id: orderId,
       invoice_id: invoice.id,
       customer_id: customerId,
-      amount: balance,
+      amount: chargeAmount,
       currency: "INR",
       status: "INITIATED",
     });
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
         invoice_id: invoice.id,
         student_id: student.id,
         property_id: propertyId,
-        amount: balance,
+        amount: chargeAmount,
         payment_method: "online",
         status: "pending",
         transaction_id: orderId,
@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
 
     const sessionPayload: Record<string, unknown> = {
       order_id: orderId,
-      amount: String(balance.toFixed(2)),
+      amount: String(chargeAmount.toFixed(2)),
       customer_id: customerId,
       customer_email: profile!.email,
       customer_phone: phone10,
@@ -364,7 +364,7 @@ Deno.serve(async (req) => {
       payment_links: hdfcData.payment_links || null,
       status: hdfcData.status || "CREATED",
       sdk_payload: hdfcData.sdk_payload || null,
-      amount: balance,
+      amount: chargeAmount,
     });
   } catch (err) {
     console.error("hdfc-create-session error:", err);
