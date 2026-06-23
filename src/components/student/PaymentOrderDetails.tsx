@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getOrderStatus } from "@/lib/hdfc";
+import { buildReceiptHtml, invoiceToReceipt } from "@/lib/receiptTemplate";
 import {
   Loader2,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   Hash,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 
