@@ -138,6 +138,8 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       toast({ title: 'Invoice Updated', description: 'Invoice has been updated.' });
     },
     onError: (error: Error) => {
