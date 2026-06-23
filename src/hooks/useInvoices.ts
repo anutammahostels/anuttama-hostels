@@ -110,6 +110,8 @@ export function useInvoices(studentId?: string) {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['student-all-invoices'] });
       toast({ title: 'Invoice Created', description: 'New invoice has been generated.' });
       // Notify student
       const userId = await getStudentUserId(data.student_id);
