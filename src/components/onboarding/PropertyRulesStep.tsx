@@ -31,7 +31,6 @@ const attendanceOptions = [
 ];
 
 const attendanceMarkers = [
-  { id: 'warden', label: 'Warden' },
   { id: 'property_manager', label: 'Manager' },
   { id: 'security', label: 'Security' },
 ];

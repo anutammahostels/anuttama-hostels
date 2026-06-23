@@ -37,7 +37,7 @@ const contactMethods = [
 
 const faqs = [
   { q: "Is this a SaaS product I can buy?", a: "No. This platform is built and used exclusively by Anuttama Hostels for our own hostel operations. It is not offered as software to other hostels, schools or institutions." },
-  { q: "Who can sign in?", a: "Sign-in is restricted to Anuttama staff (administrators, wardens, accountants) and Anuttama residents." },
+  { q: "Who can sign in?", a: "Sign-in is restricted to Anuttama staff (administrators, accountants) and Anuttama residents." },
   { q: "I’m a parent — how do I check my child’s details?", a: "Parents receive updates from the hostel directly. For specific queries please contact us using the details above." },
   { q: "How is my data handled?", a: "All data is internal to Anuttama Hostels and is used only for our hostel operations. Access is role-based and audited." },
 ];

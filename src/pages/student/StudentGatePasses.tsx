@@ -67,7 +67,7 @@ export default function StudentGatePasses() {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Gate pass requested", description: "Waiting for warden approval." });
+      toast({ title: "Gate pass requested", description: "Waiting for admin approval." });
       queryClient.invalidateQueries({ queryKey: ["student-gate-passes"] });
       setOpen(false);
       setForm({ pass_type: "day_out", reason: "", destination: "", out_date: "", expected_return: "" });

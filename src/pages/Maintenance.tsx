@@ -203,7 +203,7 @@ const Maintenance = () => {
               <div>
                 <p className="font-medium">Auto-Escalation Rule</p>
                 <p className="text-sm text-muted-foreground">
-                  Tickets not closed within 48 hours are automatically escalated to the Warden
+                  Tickets not closed within 48 hours are automatically escalated to the Admin
                 </p>
               </div>
             </div>

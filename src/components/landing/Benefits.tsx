@@ -46,7 +46,7 @@ const benefits = [
   {
     icon: Smartphone,
     title: "Mobile Friendly",
-    description: "Wardens, accountants and residents can access their workspace from any device.",
+    description: "Admins, accountants and residents can access their workspace from any device.",
     stat: "24/7",
     statLabel: "Access",
     gradient: "from-pink-500 to-rose-500",

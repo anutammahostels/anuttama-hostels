@@ -139,7 +139,7 @@ const GatePasses = () => {
               <span className="text-muted-foreground">→</span>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium">2</div>
-                <span>Warden Approval</span>
+                <span>Admin Approval</span>
               </div>
               <span className="text-muted-foreground">→</span>
               <div className="flex items-center gap-2">

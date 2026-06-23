@@ -29,16 +29,16 @@ serve(async (req) => {
       });
     }
 
-    // Check admin/warden role
+    // Check admin role
     const { data: roleData } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", callingUser.id)
-      .in("role", ["super_admin", "tenant_admin", "warden"])
+      .in("role", ["super_admin", "tenant_admin"])
       .maybeSingle();
 
     if (!roleData) {
-      return new Response(JSON.stringify({ error: "Only admins/wardens can delete students" }), {
+      return new Response(JSON.stringify({ error: "Only admins can delete students" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

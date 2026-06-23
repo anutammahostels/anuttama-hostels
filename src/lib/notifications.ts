@@ -31,12 +31,12 @@ export async function createBulkNotifications(
   );
 }
 
-/** Get admin/warden user_ids for a property (for sending them notifications) */
+/** Get admin user_ids for a property (for sending them notifications) */
 export async function getAdminUserIds(propertyId?: string): Promise<string[]> {
   const { data } = await supabase
     .from("user_roles")
     .select("user_id")
-    .in("role", ["super_admin", "tenant_admin", "warden"]);
+    .in("role", ["super_admin", "tenant_admin"]);
   return (data || []).map((r) => r.user_id);
 }
 

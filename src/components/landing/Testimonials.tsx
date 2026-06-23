@@ -12,9 +12,9 @@ const notes = [
   },
   {
     id: 2,
-    role: "Warden Workspace",
+    role: "Accounts Workspace",
     organization: "Anuttama-owned Hostel",
-    quote: "The warden view shows live occupancy, attendance and pending gate passes for the residents I’m responsible for — nothing more, nothing less.",
+    quote: "The accounts view shows fee collections, refunds and outstanding receivables across every center — clear and auditable.",
     icon: Building2,
   },
   {
@@ -70,7 +70,7 @@ export const Testimonials = () => {
             <span className="text-gradient"> use this platform</span>
           </h2>
           <p className="text-white/60 text-sm lg:text-lg max-w-xl mx-auto animate-slide-up stagger-1">
-            Operations, wardens and residents — each role uses a dedicated internal workspace.
+            Operations, accounts and residents — each role uses a dedicated internal workspace.
           </p>
         </div>
 

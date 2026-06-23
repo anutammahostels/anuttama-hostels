@@ -63,7 +63,7 @@ const initialData: OnboardingData = {
   messMandatory: true,
   externalFood: false,
   attendanceType: 'daily',
-  attendanceMarkedBy: ['warden'],
+  attendanceMarkedBy: ['property_manager'],
   feeCycle: 'monthly',
   paymentModes: ['upi', 'bank_transfer'],
 };
