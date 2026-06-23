@@ -72,6 +72,20 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
     },
   });
 
+  // All completed payments for this invoice (online + offline) — for receipts
+  const { data: payments = [] } = useQuery({
+    queryKey: ["invoice-payments", invoiceId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("invoice_id", invoiceId)
+        .eq("status", "completed")
+        .order("paid_at", { ascending: true });
+      return data || [];
+    },
+  });
+
   // Live HDFC details (only when expanded and order exists)
   const {
     data: order,
@@ -84,6 +98,42 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
     staleTime: 30_000,
   });
 
+  const downloadPaymentReceipt = async (payment: any) => {
+    // Fetch full invoice + student for the receipt
+    const { data: inv } = await supabase.from("invoices").select("*").eq("id", invoiceId).single();
+    if (!inv) return;
+    const { data: stu } = await supabase
+      .from("students")
+      .select("id, roll_number, user_id, father_name, mother_name, gender, course")
+      .eq("id", inv.student_id)
+      .maybeSingle();
+    const { data: prof } = stu?.user_id
+      ? await supabase.from("profiles").select("full_name").eq("id", stu.user_id).single()
+      : { data: null as any };
+
+    // Override invoice fields so the receipt represents THIS payment
+    const receiptInvoice = {
+      ...inv,
+      paid_amount: Number(payment.amount || 0),
+      payment_method: payment.payment_method || inv.payment_method || "cash",
+      payment_date: payment.paid_at || inv.payment_date,
+      invoice_number: `${inv.invoice_number} · RCPT-${String(payment.id).slice(0, 8).toUpperCase()}`,
+    };
+
+    const data = invoiceToReceipt(receiptInvoice, {
+      studentName: prof?.full_name || "Student",
+      rollNumber: stu?.roll_number || undefined,
+      fatherName: stu?.father_name || undefined,
+      motherName: stu?.mother_name || undefined,
+      gender: stu?.gender || undefined,
+      course: stu?.course || undefined,
+    });
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(buildReceiptHtml(data));
+    w.document.close();
+  };
+
   if (txnLoading) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -92,10 +142,10 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
     );
   }
 
-  if (!txn) {
+  if (!txn && payments.length === 0) {
     return (
       <p className="text-xs text-muted-foreground italic">
-        No online payment attempts yet for this invoice.
+        No payment activity yet for this invoice.
       </p>
     );
   }
