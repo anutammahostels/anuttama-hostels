@@ -152,6 +152,50 @@ export function PaymentOrderDetails({ invoiceId }: Props) {
 
   return (
     <div className="border-t border-border/50 pt-3 mt-3 space-y-3">
+      {/* Per-payment receipts (online + offline) */}
+      {payments.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Payments ({payments.length}{payments.length >= 3 ? " — final" : `, ${3 - payments.length} left`})
+          </p>
+          <div className="space-y-1.5">
+            {payments.map((p: any, idx: number) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-background/50 p-2 text-xs"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-foreground">
+                      ₹{Number(p.amount).toLocaleString("en-IN")}
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">
+                      {(p.payment_method || "cash").toUpperCase()}
+                    </Badge>
+                    <span className="text-muted-foreground">#{idx + 1}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {p.paid_at ? format(new Date(p.paid_at), "dd MMM yyyy, HH:mm") : "—"}
+                    {p.transaction_reference ? ` · Ref: ${p.transaction_reference}` : ""}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs shrink-0"
+                  onClick={() => downloadPaymentReceipt(p)}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Receipt
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {txn && (<>
+
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
