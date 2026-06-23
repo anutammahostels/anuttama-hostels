@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       .select("role")
       .eq("user_id", userId);
     const roles = (roleRow || []).map((r: any) => r.role);
-    if (roles.some((r: string) => ["super_admin", "tenant_admin", "warden", "accountant"].includes(r))) {
+    if (roles.some((r: string) => ["super_admin", "tenant_admin", "accountant"].includes(r))) {
       allowed = true;
     }
 

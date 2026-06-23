@@ -14,22 +14,20 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-const ALL_ROLES: AppRole[] = ['super_admin', 'tenant_admin', 'warden', 'student', 'parent', 'security_guard', 'accountant'];
+const ALL_ROLES: AppRole[] = ['super_admin', 'tenant_admin', 'student', 'parent', 'security_guard', 'accountant'];
 
-const roleBadgeVariants: Record<AppRole, string> = {
+const roleBadgeVariants: Partial<Record<AppRole, string>> = {
   super_admin: "bg-red-100 text-red-700 border-red-200",
   tenant_admin: "bg-blue-100 text-blue-700 border-blue-200",
-  warden: "bg-amber-100 text-amber-700 border-amber-200",
   student: "bg-emerald-100 text-emerald-700 border-emerald-200",
   parent: "bg-purple-100 text-purple-700 border-purple-200",
   security_guard: "bg-slate-100 text-slate-700 border-slate-200",
   accountant: "bg-teal-100 text-teal-700 border-teal-200",
 };
 
-const roleLabels: Record<AppRole, string> = {
+const roleLabels: Partial<Record<AppRole, string>> = {
   super_admin: "Super Admin",
   tenant_admin: "Hostel Admin",
-  warden: "Warden",
   student: "Student",
   parent: "Parent",
   security_guard: "Security Guard",

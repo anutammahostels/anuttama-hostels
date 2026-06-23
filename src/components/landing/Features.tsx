@@ -115,7 +115,7 @@ export const Features = () => {
             <span className="text-gradient"> run Anuttama Hostels</span>
           </h2>
           <p className="text-muted-foreground text-sm lg:text-lg">
-            A consolidated workspace for Anuttama’s internal teams — operations, accounts and wardens —
+            A consolidated workspace for Anuttama’s internal teams — operations and accounts —
             <span className="font-medium text-foreground"> built for our own hostel only.</span>
           </p>
         </div>

@@ -79,7 +79,7 @@ const App = () => (
             <Route path="/payment/callback" element={<PaymentCallback />} />
 
             {/* Admin / Staff Dashboard - shared layout */}
-            <Route element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'warden', 'accountant']}><DashboardLayoutRoute /></ProtectedRoute>}>
+            <Route element={<ProtectedRoute allowedRoles={['super_admin', 'tenant_admin', 'accountant']}><DashboardLayoutRoute /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/properties" element={<Properties />} />
               <Route path="/dashboard/students" element={<Students />} />

@@ -23,7 +23,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
-  isWarden: boolean;
+  
   isStudent: boolean;
   isParent: boolean;
   isSecurityGuard: boolean;
@@ -150,7 +150,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isAdmin = role === 'super_admin' || role === 'tenant_admin';
-  const isWarden = role === 'warden';
   const isStudent = role === 'student';
   const isParent = role === 'parent';
   const isSecurityGuard = role === 'security_guard';
@@ -167,7 +166,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signOut,
         isAdmin,
-        isWarden,
         isStudent,
         isParent,
         isSecurityGuard,

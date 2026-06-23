@@ -39,37 +39,35 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", shortLabel: "Home", path: "/dashboard", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: LayoutDashboard, label: "Dashboard", shortLabel: "Home", path: "/dashboard", roles: ['super_admin', 'tenant_admin'] },
   
-  { icon: Users, label: "Students", shortLabel: "Students", path: "/dashboard/students", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: Users, label: "Students", shortLabel: "Students", path: "/dashboard/students", roles: ['super_admin', 'tenant_admin'] },
   { icon: Building2, label: "Centers", shortLabel: "Centers", path: "/dashboard/properties", roles: ['super_admin', 'tenant_admin'] },
-  { icon: BedDouble, label: "Rooms", shortLabel: "Rooms", path: "/dashboard/rooms", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: QrCode, label: "Gate Passes", shortLabel: "Passes", path: "/dashboard/passes", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: UtensilsCrossed, label: "Mess", shortLabel: "Mess", path: "/dashboard/mess", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: Receipt, label: "Billing", shortLabel: "Bills", path: "/dashboard/billing", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: BedDouble, label: "Rooms", shortLabel: "Rooms", path: "/dashboard/rooms", roles: ['super_admin', 'tenant_admin'] },
+  { icon: QrCode, label: "Gate Passes", shortLabel: "Passes", path: "/dashboard/passes", roles: ['super_admin', 'tenant_admin'] },
+  { icon: UtensilsCrossed, label: "Mess", shortLabel: "Mess", path: "/dashboard/mess", roles: ['super_admin', 'tenant_admin'] },
+  { icon: Receipt, label: "Billing", shortLabel: "Bills", path: "/dashboard/billing", roles: ['super_admin', 'tenant_admin'] },
   { icon: Receipt, label: "Receivables", shortLabel: "Recv.", path: "/dashboard/receivables", roles: ['super_admin', 'tenant_admin'] },
   { icon: Briefcase, label: "Payroll", shortLabel: "Payroll", path: "/dashboard/payroll", roles: ['super_admin', 'tenant_admin'] },
   { icon: BookOpen, label: "Accounting", shortLabel: "Accounts", path: "/dashboard/accounting", roles: ['super_admin', 'tenant_admin', 'accountant'] },
-  { icon: UserPlus, label: "Admissions", shortLabel: "Admit", path: "/dashboard/admissions", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/dashboard/maintenance", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: MessageSquareWarning, label: "Complaints", shortLabel: "Compl.", path: "/dashboard/complaints", roles: ['super_admin', 'tenant_admin', 'warden'] },
-  { icon: Settings, label: "Settings", shortLabel: "Settings", path: "/dashboard/settings", roles: ['super_admin', 'tenant_admin', 'warden'] },
+  { icon: UserPlus, label: "Admissions", shortLabel: "Admit", path: "/dashboard/admissions", roles: ['super_admin', 'tenant_admin'] },
+  { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/dashboard/maintenance", roles: ['super_admin', 'tenant_admin'] },
+  { icon: MessageSquareWarning, label: "Complaints", shortLabel: "Compl.", path: "/dashboard/complaints", roles: ['super_admin', 'tenant_admin'] },
+  { icon: Settings, label: "Settings", shortLabel: "Settings", path: "/dashboard/settings", roles: ['super_admin', 'tenant_admin'] },
 ];
 
-const roleLabels: Record<AppRole, string> = {
+const roleLabels: Partial<Record<AppRole, string>> = {
   super_admin: 'Super Admin',
   tenant_admin: 'Owner',
-  warden: 'Warden',
   student: 'Student',
   parent: 'Parent',
   security_guard: 'Guard',
   accountant: 'Accountant',
 };
 
-const roleBadgeColors: Record<AppRole, string> = {
+const roleBadgeColors: Partial<Record<AppRole, string>> = {
   super_admin: 'bg-hostylia-forest text-white',
   tenant_admin: 'bg-hostylia-navy-light text-white',
-  warden: 'bg-amber-600 text-white',
   student: 'bg-blue-600 text-white',
   parent: 'bg-purple-600 text-white',
   security_guard: 'bg-slate-600 text-white',
