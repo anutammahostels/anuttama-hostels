@@ -58,6 +58,8 @@ const Billing = () => {
   const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; invoice: InvoiceWithStudent | null }>({ open: false, invoice: null });
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentCount, setPaymentCount] = useState<number | null>(null);
 
   // Generate Invoices dialog state
   const [generateDialog, setGenerateDialog] = useState(false);
