@@ -206,11 +206,34 @@ const Billing = () => {
       id: paymentDialog.invoice.id,
       amount: parseFloat(paymentAmount),
       method: paymentMethod,
+      modeLabel: paymentMethod,
+      reference: paymentReference || undefined,
     });
     setPaymentDialog({ open: false, invoice: null });
     setPaymentAmount("");
     setPaymentMethod("upi");
+    setPaymentReference("");
+    setPaymentCount(null);
   };
+
+  // Load count of completed payments whenever the payment dialog opens
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!paymentDialog.open || !paymentDialog.invoice) {
+        setPaymentCount(null);
+        return;
+      }
+      const { count } = await supabase
+        .from('payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('invoice_id', paymentDialog.invoice.id)
+        .eq('status', 'completed');
+      if (!cancelled) setPaymentCount(count || 0);
+    })();
+    return () => { cancelled = true; };
+  }, [paymentDialog.open, paymentDialog.invoice?.id]);
+
 
   const handleDownloadPdf = (invoice: InvoiceWithStudent) => {
     const printWindow = window.open("", "_blank");
