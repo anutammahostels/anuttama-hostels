@@ -37,24 +37,39 @@ export function useInvoicesPaginated({ page, pageSize, search, centerId, enabled
       const term = search.trim();
       if (term) {
         const escaped = term.replace(/[%,()]/g, "");
-        // Resolve matching student IDs by Form Number (roll_number) first,
-        // then OR with invoice_number on the invoices table. Filtering on a
-        // joined table inside .or() does not filter parent rows reliably.
+        // Resolve matching student IDs by:
+        //  1. Form Number (students.roll_number)
+        //  2. Name / phone / email (profiles → students.user_id)
         let studentQuery = supabase
           .from("students")
           .select("id")
           .ilike("roll_number", `%${escaped}%`)
           .limit(1000);
-        if (useInner) {
-          studentQuery = studentQuery.eq("property_id", centerId);
-        }
-        const { data: matchedStudents, error: sErr } = await studentQuery;
+        if (useInner) studentQuery = studentQuery.eq("property_id", centerId);
+
+        const profileQuery = supabase
+          .from("profiles")
+          .select("id")
+          .or(`full_name.ilike.%${escaped}%,phone.ilike.%${escaped}%,email.ilike.%${escaped}%`)
+          .limit(1000);
+
+        const [{ data: matchedStudents, error: sErr }, { data: matchedProfiles, error: pErr }] =
+          await Promise.all([studentQuery, profileQuery]);
         if (sErr) throw sErr;
-        const ids = (matchedStudents || []).map((s: any) => s.id);
-        const orParts = [`invoice_number.ilike.%${escaped}%`];
-        if (ids.length) {
-          orParts.push(`student_id.in.(${ids.join(",")})`);
+        if (pErr) throw pErr;
+
+        const idSet = new Set<string>((matchedStudents || []).map((s: any) => s.id));
+        const userIds = (matchedProfiles || []).map((p: any) => p.id);
+        if (userIds.length) {
+          let byUser = supabase.from("students").select("id").in("user_id", userIds).limit(1000);
+          if (useInner) byUser = byUser.eq("property_id", centerId);
+          const { data: byUserRows } = await byUser;
+          (byUserRows || []).forEach((r: any) => idSet.add(r.id));
         }
+
+        const ids = Array.from(idSet);
+        const orParts = [`invoice_number.ilike.%${escaped}%`];
+        if (ids.length) orParts.push(`student_id.in.(${ids.join(",")})`);
         query = query.or(orParts.join(","));
       }
 
