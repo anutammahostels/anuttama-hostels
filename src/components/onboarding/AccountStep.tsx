@@ -152,7 +152,7 @@ export function AccountStep({ onComplete }: AccountStepProps) {
         <Button
           onClick={handleNext}
           disabled={!canProceed()}
-          className="w-full h-10 rounded-lg bg-[#29926A] hover:from-emerald-500 hover:to-green-500"
+          className="w-full h-10 rounded-lg bg-[#29926A]"
         >
           {currentField === steps.length - 1 ? 'Continue to Setup' : 'Next'}
           <ArrowRight className="ml-1.5 h-4 w-4" />

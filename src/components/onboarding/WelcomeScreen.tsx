@@ -102,7 +102,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
             <Button
               onClick={onGetStarted}
               size="lg"
-              className="w-full h-12 rounded-xl bg-[#29926A] hover:from-emerald-500 hover:to-green-500 text-base font-semibold"
+              className="w-full h-12 rounded-xl bg-[#29926A] text-base font-semibold"
             >
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />

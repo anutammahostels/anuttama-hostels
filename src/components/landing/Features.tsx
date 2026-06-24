@@ -193,7 +193,7 @@ export const Features = () => {
           {roles.map((role, index) => (
             <div
               key={role.label}
-              className="group flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl bg-card border border-border hover:bg-[#29926A] hover:from-primary hover:to-secondary hover:border-transparent transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 lg:hover:-translate-y-1"
+              className="group flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl bg-card border border-border hover:bg-[#29926A] hover:border-transparent transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 lg:hover:-translate-y-1"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className={`p-1.5 lg:p-2 rounded-md lg:rounded-lg ${role.color}/20 group-hover:bg-white/20 transition-colors`}>

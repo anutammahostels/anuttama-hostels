@@ -192,7 +192,7 @@ export default function Auth() {
                 >
                   <div className="bg-card rounded-2xl border-2 border-border/50 shadow-md p-6 transition-all duration-300 hover:border-secondary hover:shadow-xl hover:shadow-secondary/10 hover:-translate-y-1">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-xl bg-[#29926A] group-hover:from-secondary/30 group-hover:to-secondary/10 transition-colors">
+                      <div className="p-3 rounded-xl bg-[#29926A] transition-colors">
                         <Building2 className="h-7 w-7 text-secondary" />
                       </div>
                       <div className="flex-1">
@@ -211,7 +211,7 @@ export default function Auth() {
                 >
                   <div className="bg-card rounded-2xl border-2 border-border/50 shadow-md p-6 transition-all duration-300 hover:border-primary hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-xl bg-[#29926A] group-hover:from-primary/30 group-hover:to-primary/10 transition-colors">
+                      <div className="p-3 rounded-xl bg-[#29926A] transition-colors">
                         <GraduationCap className="h-7 w-7 text-primary" />
                       </div>
                       <div className="flex-1">

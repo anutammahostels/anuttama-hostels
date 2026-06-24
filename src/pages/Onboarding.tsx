@@ -391,7 +391,7 @@ export default function Onboarding() {
                 size="sm"
                 onClick={nextStep} 
                 disabled={!canProceed()} 
-                className="gap-1.5 h-9 bg-[#29926A] hover:from-emerald-500 hover:to-green-500"
+                className="gap-1.5 h-9 bg-[#29926A]"
               >
                 Continue
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -401,7 +401,7 @@ export default function Onboarding() {
                 size="sm"
                 onClick={handleSubmit} 
                 disabled={isSubmitting || !canProceed()} 
-                className="gap-1.5 h-9 bg-[#29926A] hover:from-emerald-500 hover:to-green-500"
+                className="gap-1.5 h-9 bg-[#29926A]"
               >
                 {isSubmitting ? (
                   <><Loader2 className="h-3.5 w-3.5 animate-spin" />Creating...</>

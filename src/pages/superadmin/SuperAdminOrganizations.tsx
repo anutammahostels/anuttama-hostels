@@ -121,7 +121,7 @@ const SuperAdminOrganizations = () => {
           </div>
           <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) resetForm(); setDialogOpen(o); }}>
             <DialogTrigger asChild>
-              <Button className="bg-[#29926A] hover:from-red-700 hover:to-orange-600">
+              <Button className="bg-[#29926A]">
                 <Plus className="h-4 w-4 mr-2" /> Add Organization
               </Button>
             </DialogTrigger>

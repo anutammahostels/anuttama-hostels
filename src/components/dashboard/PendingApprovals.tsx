@@ -94,7 +94,7 @@ export const PendingApprovals = () => {
               <div className="flex gap-2">
                 <Button 
                   size="sm" 
-                  className="flex-1 h-7 md:h-8 text-xs bg-[#29926A] hover:from-hostylia-forest-light hover:to-hostylia-forest text-white shadow-md"
+                  className="flex-1 h-7 md:h-8 text-xs bg-[#29926A] text-white shadow-md"
                   onClick={() => handleApprove(approval.id)}
                   disabled={approveGatePass.isPending}
                 >
