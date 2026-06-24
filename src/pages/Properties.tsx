@@ -373,32 +373,6 @@ const Properties = () => {
           </div>
         )}
 
-        {/* Property Hierarchy Info */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Property Hierarchy</CardTitle>
-            <CardDescription>Understanding the property structure</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center gap-4">
-              {[
-                { label: "Hostel", color: "text-primary", bg: "bg-primary/10" },
-                { label: "Block", color: "text-blue-500", bg: "bg-blue-500/10" },
-                { label: "Floor", color: "text-purple-500", bg: "bg-purple-500/10" },
-                { label: "Room", color: "text-orange-500", bg: "bg-orange-500/10" },
-                { label: "Bed (Sellable Unit)", color: "text-green-500", bg: "bg-green-500/10" },
-              ].map((item, i, arr) => (
-                <span key={item.label} className="flex items-center gap-2">
-                  <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center`}>
-                    <Building2 className={`h-4 w-4 ${item.color}`} />
-                  </div>
-                  <span className="text-sm font-medium">{item.label}</span>
-                  {i < arr.length - 1 && <span className="text-muted-foreground ml-2">→</span>}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Add / Edit Dialog */}
