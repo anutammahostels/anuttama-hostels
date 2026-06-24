@@ -128,7 +128,7 @@ export default function Auth() {
             )}>
               {isStudent ? <GraduationCap className="h-4 w-4 text-blue-300" /> : <Sparkles className="h-4 w-4 text-secondary" />}
               <span className="text-sm text-white/80">
-                {mode === 'select' ? 'Smart Residential Management' : isStudent ? 'Student Portal' : 'Admin Dashboard'}
+                {mode === 'select' ? 'Smart Residential Management' : isStudent ? "Parent's Portal" : 'Admin Dashboard'}
               </span>
             </div>
             <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
