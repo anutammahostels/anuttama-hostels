@@ -128,7 +128,7 @@ export default function Auth() {
             )}>
               {isStudent ? <GraduationCap className="h-4 w-4 text-blue-300" /> : <Sparkles className="h-4 w-4 text-secondary" />}
               <span className="text-sm text-white/80">
-                {mode === 'select' ? 'Smart Residential Management' : isStudent ? 'Student Portal' : 'Admin Dashboard'}
+                {mode === 'select' ? 'Smart Residential Management' : isStudent ? "Parent's Portal" : 'Admin Dashboard'}
               </span>
             </div>
             <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
@@ -215,8 +215,8 @@ export default function Auth() {
                         <GraduationCap className="h-7 w-7 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-foreground">Student</h3>
-                        <p className="text-sm text-muted-foreground">Access your hostel portal & services</p>
+                        <h3 className="text-lg font-bold text-foreground">Parent</h3>
+                        <p className="text-sm text-muted-foreground">Access your child's hostel portal & pay fees</p>
                       </div>
                       <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
@@ -248,11 +248,11 @@ export default function Auth() {
                     }
                   </div>
                   <h2 className="text-2xl font-bold text-foreground">
-                    {isStudent ? 'Student Login' : 'Admin Login'}
+                    {isStudent ? 'Parent Login' : 'Admin Login'}
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {isStudent 
-                      ? 'Sign in with your Form Number and password'
+                      ? "Sign in with your child's Form Number and password"
                       : 'Sign in to manage your properties and operations'
                     }
                   </p>
@@ -325,14 +325,14 @@ export default function Auth() {
                       "w-full h-12 rounded-xl text-white",
                       isStudent 
                         ? "bg-gradient-to-r from-primary to-blue-500" 
-                        : "bg-gradient-to-r from-primary to-secondary"
+                        : "bg-[#29926A] hover:bg-[#22805C]"
                     )}
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</>
                     ) : (
-                      <>Sign In as {isStudent ? 'Student' : 'Admin'}<ArrowRight className="ml-2 h-4 w-4" /></>
+                      <>Sign In as {isStudent ? 'Parent' : 'Admin'}<ArrowRight className="ml-2 h-4 w-4" /></>
                     )}
                   </Button>
                 </form>

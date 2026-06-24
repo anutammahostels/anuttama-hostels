@@ -11,11 +11,11 @@ export const StudentLayout = ({ children }: StudentLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50/30 overflow-x-hidden">
       <StudentSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
-      <div className={cn("transition-all duration-300", "lg:ml-52")}>
+      <div className={cn("transition-all duration-300 min-w-0", "lg:ml-52")}>
         <DashboardHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="p-3 md:p-4 lg:p-6">{children}</main>
+        <main className="p-3 md:p-4 lg:p-6 min-w-0 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );
