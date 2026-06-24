@@ -248,11 +248,11 @@ export default function Auth() {
                     }
                   </div>
                   <h2 className="text-2xl font-bold text-foreground">
-                    {isStudent ? 'Student Login' : 'Admin Login'}
+                    {isStudent ? "Parent Login" : 'Admin Login'}
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {isStudent 
-                      ? 'Sign in with your Form Number and password'
+                      ? "Sign in with your child's Form Number and password"
                       : 'Sign in to manage your properties and operations'
                     }
                   </p>
