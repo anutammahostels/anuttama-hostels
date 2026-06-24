@@ -1469,12 +1469,6 @@ const Students = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3">
-                        <div>
-                          <Label className="text-xs font-semibold">Notes (optional balance / remarks)</Label>
-                          <Input placeholder="Free-form note" value={form.balance_payment} onChange={(e) => setForm(f => ({ ...f, balance_payment: e.target.value }))} />
-                        </div>
-                      </div>
                     </>
                   );
                 })()}
