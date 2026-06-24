@@ -42,7 +42,7 @@ export const Navbar = () => {
             <Link to="/auth">
               <Button
                 size="sm"
-                className="bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 gap-2"
+                className="bg-[#29926A] text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 gap-2"
               >
                 Sign In
                 <ArrowRight className="h-4 w-4" />
@@ -84,7 +84,7 @@ export const Navbar = () => {
             ))}
             <div className="pt-4 space-y-2 px-4">
               <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button className="w-full bg-gradient-to-r from-primary to-secondary">
+                <Button className="w-full bg-[#29926A]">
                   Sign In
                 </Button>
               </Link>

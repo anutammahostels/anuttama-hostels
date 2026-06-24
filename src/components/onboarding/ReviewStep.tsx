@@ -41,7 +41,7 @@ export function ReviewStep({ data, updateData }: ReviewStepProps) {
   return (
     <div className="space-y-5">
       <div className="text-center">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center mx-auto mb-2 shadow-md">
+        <div className="w-10 h-10 rounded-xl bg-[#29926A] flex items-center justify-center mx-auto mb-2 shadow-md">
           <Sparkles className="h-5 w-5 text-white" />
         </div>
         <h2 className="text-lg font-semibold text-foreground">Almost Done!</h2>

@@ -67,7 +67,7 @@ const Solutions = () => {
       <section className="pt-32 pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={studentsImage} alt="Anuttama residents" className="w-full h-full object-cover opacity-10" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(222,47%,6%)] via-[hsl(222,47%,6%)]/90 to-[hsl(222,47%,6%)]" />
+          <div className="absolute inset-0 bg-[#29926A]/90 to-[hsl(222,47%,6%)]" />
         </div>
         <div className="absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/15 blur-[100px]" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full bg-secondary/10 blur-[80px]" />
@@ -97,7 +97,7 @@ const Solutions = () => {
             {areas.map((area, index) => (
               <div key={area.title} className="grid lg:grid-cols-2 gap-12 items-center">
                 <div className={`${index % 2 === 1 ? "lg:order-2" : ""} animate-slide-up`}>
-                  <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${area.gradient} mb-6`}>
+                  <div className={`inline-flex p-4 rounded-2xl bg-[#29926A] ${area.gradient} mb-6`}>
                     <area.icon className="h-8 w-8 text-white" />
                   </div>
 
@@ -122,7 +122,7 @@ const Solutions = () => {
                         alt={area.title}
                         className="w-full h-80 lg:h-96 object-cover group-hover:scale-105 transition-transform duration-700"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-[#29926A]" />
                     </div>
                   </div>
                 </div>
@@ -146,7 +146,7 @@ const Solutions = () => {
             </p>
             <div className="mt-8">
               <Link to="/contact">
-                <Button className="gap-2 bg-gradient-to-r from-primary to-secondary">
+                <Button className="gap-2 bg-[#29926A]">
                   Contact Anuttama <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
