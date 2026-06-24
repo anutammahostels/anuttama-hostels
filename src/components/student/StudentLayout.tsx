@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
+import { StudentBottomNav } from "@/components/student/StudentBottomNav";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { cn } from "@/lib/utils";
 
@@ -14,9 +15,10 @@ export const StudentLayout = ({ children }: StudentLayoutProps) => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50/30 overflow-x-hidden">
       <StudentSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       <div className={cn("transition-all duration-300 min-w-0", "lg:ml-52")}>
-        <DashboardHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="p-3 md:p-4 lg:p-6 min-w-0 overflow-x-hidden">{children}</main>
+        <DashboardHeader variant="student" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <main className="p-3 md:p-4 lg:p-6 pb-24 lg:pb-6 min-w-0 overflow-x-hidden">{children}</main>
       </div>
+      <StudentBottomNav />
     </div>
   );
 };
