@@ -517,6 +517,20 @@ const Students = () => {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const downloadCredentialTxt = () => {
+    if (!createdCredentials) return;
+    const content = `Anuttama Hostels - Student Login Credentials\n\nForm Number (Login ID): ${createdCredentials.enrollmentNumber}\nTemporary Password: ${createdCredentials.password}\n\nPowered by Hostylia Payments\n`;
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${createdCredentials.enrollmentNumber}_credentials.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleCloseDialog = () => {
     setDialogOpen(false);
     resetForm();
