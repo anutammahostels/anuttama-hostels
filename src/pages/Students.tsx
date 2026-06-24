@@ -1311,7 +1311,7 @@ const Students = () => {
         </AlertDialog>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
-        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`max-h-[90vh] overflow-y-auto ${createdCredentials ? 'sm:max-w-lg' : 'sm:max-w-5xl'}`}>
           {!createdCredentials ? (
             <>
               <DialogHeader>
