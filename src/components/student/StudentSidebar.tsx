@@ -56,7 +56,7 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-sm text-white tracking-tight">Anuttama Hostels</span>
-            <span className="text-[9px] text-hostylia-slate -mt-0.5">Student Portal</span>
+            <span className="text-[9px] text-hostylia-slate -mt-0.5">Parent's Portal</span>
           </div>
         </Link>
         {isMobile && (
@@ -68,7 +68,7 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
 
       <div className="px-3 py-2">
         <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold shadow-sm bg-blue-600 text-white">
-          Student
+          Parent
         </span>
       </div>
 
@@ -102,7 +102,7 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-white truncate">{userName}</p>
-            <p className="text-[10px] text-hostylia-slate truncate">Student</p>
+            <p className="text-[10px] text-hostylia-slate truncate">Parent</p>
           </div>
           <button onClick={handleSignOut} className="p-1.5 rounded-lg hover:bg-hostylia-navy-light/50 transition-colors group" title="Sign out">
             <LogOut className="h-4 w-4 text-hostylia-slate group-hover:text-white transition-colors" />

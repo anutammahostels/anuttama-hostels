@@ -90,11 +90,11 @@ export default function StudentDashboard() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Welcome */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Welcome, {profile?.full_name || "Student"} 👋</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground break-words">Welcome, Parent of {profile?.full_name || "Student"} 👋</h1>
+          <p className="text-muted-foreground text-xs md:text-sm mt-1">
             {studentData?.roll_number && <span>Form No: {studentData.roll_number}</span>}
           </p>
         </div>
