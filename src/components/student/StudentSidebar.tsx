@@ -2,7 +2,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   QrCode,
-  UtensilsCrossed,
   Receipt,
   Wrench,
   Bell,
@@ -24,7 +23,6 @@ interface StudentSidebarProps {
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", shortLabel: "Home", path: "/student" },
   { icon: QrCode, label: "Gate Passes", shortLabel: "Passes", path: "/student/passes" },
-  { icon: UtensilsCrossed, label: "Mess", shortLabel: "Mess", path: "/student/mess" },
   { icon: Receipt, label: "My Invoices", shortLabel: "Bills", path: "/student/invoices" },
   { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/student/maintenance" },
   { icon: MessageSquare, label: "Complaints", shortLabel: "Cmplnt", path: "/student/complaints" },
