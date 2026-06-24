@@ -291,7 +291,7 @@ const Properties = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {filteredProperties.map((property) => (
               <Card key={property.id} className="border-border/50 hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
