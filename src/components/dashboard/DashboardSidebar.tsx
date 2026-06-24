@@ -148,7 +148,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
               className={cn(
                 "flex items-center gap-2 px-2 py-2 rounded-lg transition-all duration-200 group",
                 isActive
-                  ? "bg-gradient-to-r from-hostylia-forest to-hostylia-forest-light text-white shadow-lg shadow-hostylia-forest/20"
+                  ? "bg-[#29926A] text-white shadow-lg shadow-[#29926A]/20"
                   : "text-hostylia-slate hover:bg-hostylia-navy-light/50 hover:text-white"
               )}
               title={item.label}

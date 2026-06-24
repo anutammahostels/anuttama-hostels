@@ -146,7 +146,7 @@ const Solutions = () => {
             </p>
             <div className="mt-8">
               <Link to="/contact">
-                <Button className="gap-2 bg-gradient-to-r from-primary to-secondary">
+                <Button className="gap-2 bg-[#29926A] hover:bg-[#22805C] text-white">
                   Contact Anuttama <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>

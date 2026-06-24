@@ -127,7 +127,7 @@ const Contact = () => {
                   <Textarea placeholder="Your message…" className="min-h-[100px] md:min-h-[120px] text-sm md:text-base" />
                 </div>
 
-                <Button className="w-full h-10 md:h-12 gap-2 bg-gradient-to-r from-primary to-secondary text-sm md:text-lg">
+                <Button className="w-full h-10 md:h-12 gap-2 bg-[#29926A] hover:bg-[#22805C] text-white text-sm md:text-lg">
                   Send Message <Send className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
 
