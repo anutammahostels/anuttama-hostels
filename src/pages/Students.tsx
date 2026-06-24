@@ -1529,6 +1529,10 @@ const Students = () => {
                 <p className="text-xs text-muted-foreground">⚠️ Make sure to copy the password now. It won't be shown again.</p>
               </div>
 
+              <Button variant="outline" className="w-full" onClick={downloadCredentialTxt}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Credentials (TXT)
+              </Button>
               <DialogFooter>
                 <Button className="gradient-primary text-white w-full" onClick={handleCloseDialog}>Done</Button>
               </DialogFooter>
