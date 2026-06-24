@@ -90,16 +90,16 @@ html, body {
     --popover: 222 47% 7%;
     --popover-foreground: 220 14% 96%;
 
-    --primary: 217 91% 55%;
+    --primary: 154 56% 42%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 152 55% 45%;
+    --secondary: 154 56% 42%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 222 47% 12%;
     --muted-foreground: 220 14% 60%;
 
-    --accent: 168 80% 45%;
+    --accent: 154 56% 42%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 50%;
@@ -107,7 +107,7 @@ html, body {
 
     --border: 222 47% 14%;
     --input: 222 47% 14%;
-    --ring: 152 55% 45%;
+    --ring: 154 56% 42%;
   }
 }
 
