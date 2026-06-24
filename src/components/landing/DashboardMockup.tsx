@@ -28,7 +28,7 @@ export const DashboardMockup = () => {
           {/* Sidebar - Hidden on mobile */}
           <div className="hidden lg:flex flex-col w-48 bg-[hsl(222,47%,8%)] rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[#29926A] flex items-center justify-center">
                 <span className="text-white font-bold text-sm">A</span>
               </div>
               <span className="text-white font-semibold text-sm">Anuttama</span>
@@ -47,7 +47,7 @@ export const DashboardMockup = () => {
                 key={item.label}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs mb-1 cursor-pointer transition-colors ${
                   item.active 
-                    ? "bg-gradient-to-r from-primary/20 to-secondary/20 text-white border border-primary/30" 
+                    ? "bg-[#29926A] text-white border border-primary/30" 
                     : "text-white/50 hover:text-white/80 hover:bg-white/5"
                 }`}
               >
@@ -70,7 +70,7 @@ export const DashboardMockup = () => {
                   <Bell className="h-4 w-4 lg:h-5 lg:w-5 text-white/50" />
                   <span className="absolute -top-1 -right-1 w-2 h-2 lg:w-2.5 lg:h-2.5 bg-red-500 rounded-full border border-[hsl(222,47%,6%)]" />
                 </div>
-                <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-full bg-gradient-to-br from-primary to-secondary" />
+                <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-full bg-[#29926A]" />
               </div>
             </div>
             
@@ -89,7 +89,7 @@ export const DashboardMockup = () => {
                   }`}
                 >
                   <div className="flex items-start justify-between mb-1 lg:mb-2">
-                    <div className={`p-1 lg:p-1.5 rounded-md lg:rounded-lg bg-gradient-to-br ${stat.color}`}>
+                    <div className={`p-1 lg:p-1.5 rounded-md lg:rounded-lg bg-[#29926A] ${stat.color}`}>
                       <stat.icon className="h-2.5 w-2.5 lg:h-3.5 lg:w-3.5 text-white" />
                     </div>
                     {stat.change && (
@@ -125,9 +125,9 @@ export const DashboardMockup = () => {
                       <div className="w-full relative h-12 lg:h-20 bg-white/10 rounded-t-md overflow-hidden">
                         <div 
                           className={`absolute bottom-0 w-full rounded-t-md transition-all duration-500 ${
-                            item.fill > 90 ? "bg-gradient-to-t from-secondary to-emerald-400" : 
-                            item.fill > 80 ? "bg-gradient-to-t from-primary to-blue-400" :
-                            "bg-gradient-to-t from-amber-500 to-orange-400"
+                            item.fill > 90 ? "bg-[#29926A]" : 
+                            item.fill > 80 ? "bg-[#29926A]" :
+                            "bg-[#29926A]"
                           }`}
                           style={{ height: `${item.fill}%` }}
                         />
@@ -180,7 +180,7 @@ export const DashboardMockup = () => {
                   ].map((item, i) => (
                     <div key={i} className="flex items-center justify-between p-1.5 lg:p-2 rounded-md lg:rounded-lg bg-white/5">
                       <div className="flex items-center gap-1.5 lg:gap-2 min-w-0">
-                        <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-gradient-to-br from-primary to-secondary flex-shrink-0" />
+                        <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-[#29926A] flex-shrink-0" />
                         <div className="min-w-0">
                           <p className="text-white text-[9px] lg:text-xs font-medium truncate">{item.name}</p>
                           <p className="text-white/40 text-[7px] lg:text-[10px] truncate">{item.type}</p>
@@ -234,7 +234,7 @@ export const DashboardMockup = () => {
       </div>
       
       {/* Gradient overlay at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-8 lg:h-16 bg-gradient-to-t from-[hsl(222,47%,8%)] to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-8 lg:h-16 bg-[#29926A] pointer-events-none" />
     </div>
   );
 };

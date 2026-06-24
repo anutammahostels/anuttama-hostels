@@ -62,7 +62,7 @@ const SuperAdminDashboard = () => {
             <Card key={stat.label} className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
+                  <div className={`w-9 h-9 rounded-lg bg-[#29926A] ${stat.color} flex items-center justify-center`}>
                     <stat.icon className="h-4 w-4 text-white" />
                   </div>
                 </div>
@@ -90,7 +90,7 @@ const SuperAdminDashboard = () => {
                 <div className="flex-1">
                   <div className="w-full bg-secondary rounded-full h-3">
                     <div
-                      className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-3 rounded-full transition-all"
+                      className="bg-[#29926A] h-3 rounded-full transition-all"
                       style={{ width: `${stats?.occupancyRate || 0}%` }}
                     />
                   </div>

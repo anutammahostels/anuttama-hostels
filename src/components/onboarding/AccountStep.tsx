@@ -109,7 +109,7 @@ export function AccountStep({ onComplete }: AccountStepProps) {
             key={step.id}
             className={cn(
               "h-1.5 rounded-full transition-all duration-300",
-              index === currentField && "w-6 bg-gradient-to-r from-emerald-500 to-green-500",
+              index === currentField && "w-6 bg-[#29926A]",
               index < currentField && "w-1.5 bg-emerald-500",
               index > currentField && "w-1.5 bg-muted"
             )}
@@ -119,7 +119,7 @@ export function AccountStep({ onComplete }: AccountStepProps) {
 
       {/* Current Field */}
       <div className="text-center animate-fade-in" key={currentField}>
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center mx-auto mb-3 shadow-md">
+        <div className="w-12 h-12 rounded-xl bg-[#29926A] flex items-center justify-center mx-auto mb-3 shadow-md">
           <Icon className="h-6 w-6 text-white" />
         </div>
         <h2 className="text-lg font-semibold text-foreground">{currentStepData.label}</h2>
@@ -152,7 +152,7 @@ export function AccountStep({ onComplete }: AccountStepProps) {
         <Button
           onClick={handleNext}
           disabled={!canProceed()}
-          className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500"
+          className="w-full h-10 rounded-lg bg-[#29926A]"
         >
           {currentField === steps.length - 1 ? 'Continue to Setup' : 'Next'}
           <ArrowRight className="ml-1.5 h-4 w-4" />

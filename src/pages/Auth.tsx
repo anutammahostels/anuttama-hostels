@@ -113,7 +113,7 @@ export default function Auth() {
       {/* Left Panel */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <img src={heroBuilding} alt="Modern hostel" className="absolute inset-0 w-full h-full object-cover" />
-        <div className={cn("absolute inset-0 bg-gradient-to-br transition-all duration-700", leftPanelGradient)} />
+        <div className={cn("absolute inset-0 bg-[#29926A] transition-all duration-700", leftPanelGradient)} />
         
         <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-float" />
         <div className="absolute bottom-20 right-20 w-48 h-48 bg-secondary/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
@@ -128,7 +128,7 @@ export default function Auth() {
             )}>
               {isStudent ? <GraduationCap className="h-4 w-4 text-blue-300" /> : <Sparkles className="h-4 w-4 text-secondary" />}
               <span className="text-sm text-white/80">
-                {mode === 'select' ? 'Smart Residential Management' : isStudent ? 'Student Portal' : 'Admin Dashboard'}
+                {mode === 'select' ? 'Smart Residential Management' : isStudent ? "Parent's Portal" : 'Admin Dashboard'}
               </span>
             </div>
             <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
@@ -192,7 +192,7 @@ export default function Auth() {
                 >
                   <div className="bg-card rounded-2xl border-2 border-border/50 shadow-md p-6 transition-all duration-300 hover:border-secondary hover:shadow-xl hover:shadow-secondary/10 hover:-translate-y-1">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/5 group-hover:from-secondary/30 group-hover:to-secondary/10 transition-colors">
+                      <div className="p-3 rounded-xl bg-[#29926A] transition-colors">
                         <Building2 className="h-7 w-7 text-secondary" />
                       </div>
                       <div className="flex-1">
@@ -211,12 +211,12 @@ export default function Auth() {
                 >
                   <div className="bg-card rounded-2xl border-2 border-border/50 shadow-md p-6 transition-all duration-300 hover:border-primary hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 group-hover:from-primary/30 group-hover:to-primary/10 transition-colors">
+                      <div className="p-3 rounded-xl bg-[#29926A] transition-colors">
                         <GraduationCap className="h-7 w-7 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-foreground">Student</h3>
-                        <p className="text-sm text-muted-foreground">Access your hostel portal & services</p>
+                        <h3 className="text-lg font-bold text-foreground">Parent</h3>
+                        <p className="text-sm text-muted-foreground">Access your child's hostel portal & services</p>
                       </div>
                       <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
@@ -248,11 +248,11 @@ export default function Auth() {
                     }
                   </div>
                   <h2 className="text-2xl font-bold text-foreground">
-                    {isStudent ? 'Student Login' : 'Admin Login'}
+                    {isStudent ? "Parent Login" : 'Admin Login'}
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {isStudent 
-                      ? 'Sign in with your Form Number and password'
+                      ? "Sign in with your child's Form Number and password"
                       : 'Sign in to manage your properties and operations'
                     }
                   </p>
@@ -324,8 +324,8 @@ export default function Auth() {
                     className={cn(
                       "w-full h-12 rounded-xl text-white",
                       isStudent 
-                        ? "bg-gradient-to-r from-primary to-blue-500" 
-                        : "bg-gradient-to-r from-primary to-secondary"
+                        ? "bg-[#29926A]" 
+                        : "bg-[#29926A]"
                     )}
                     disabled={isLoading}
                   >

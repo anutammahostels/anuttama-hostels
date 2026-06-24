@@ -126,8 +126,8 @@ export const Features = () => {
               key={feature.title}
               className="group relative rounded-xl bg-card border border-border p-3 lg:p-5 transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 hover:border-primary/20 overflow-hidden"
             >
-              <div className={`absolute -top-16 -right-16 w-32 h-32 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 blur-3xl transition-opacity duration-500`} />
-              <div className={`inline-flex p-2 lg:p-2.5 rounded-lg bg-gradient-to-br ${feature.gradient} mb-2 lg:mb-3 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
+              <div className={`absolute -top-16 -right-16 w-32 h-32 bg-[#29926A] ${feature.gradient} opacity-0 group-hover:opacity-10 blur-3xl transition-opacity duration-500`} />
+              <div className={`inline-flex p-2 lg:p-2.5 rounded-lg bg-[#29926A] ${feature.gradient} mb-2 lg:mb-3 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
                 <feature.icon className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-white" />
               </div>
               <h3 className="text-xs lg:text-sm font-semibold text-foreground mb-1 lg:mb-1.5 group-hover:text-primary transition-colors leading-tight">
@@ -150,7 +150,7 @@ export const Features = () => {
 
         <div className="grid grid-cols-2 gap-3 lg:gap-8 mb-10 lg:mb-20">
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl lg:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-[#29926A] rounded-xl lg:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <img
               src={hostelRoomImage}
               alt="Anuttama hostel room"
@@ -162,7 +162,7 @@ export const Features = () => {
             </div>
           </div>
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-primary/20 rounded-xl lg:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-[#29926A] rounded-xl lg:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <img
               src={messCafeteriaImage}
               alt="Anuttama hostel mess"
@@ -193,7 +193,7 @@ export const Features = () => {
           {roles.map((role, index) => (
             <div
               key={role.label}
-              className="group flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl bg-card border border-border hover:bg-gradient-to-r hover:from-primary hover:to-secondary hover:border-transparent transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 lg:hover:-translate-y-1"
+              className="group flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl bg-card border border-border hover:bg-[#29926A] hover:border-transparent transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 lg:hover:-translate-y-1"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className={`p-1.5 lg:p-2 rounded-md lg:rounded-lg ${role.color}/20 group-hover:bg-white/20 transition-colors`}>

@@ -8,32 +8,32 @@ const getActivityIcon = (type: RecentActivityItem['type']): { icon: LucideIcon; 
     case 'gate_pass':
       return { 
         icon: QrCode, 
-        bg: "bg-gradient-to-br from-hostylia-navy to-hostylia-navy-light" 
+        bg: "bg-[#29926A]" 
       };
     case 'payment':
       return { 
         icon: Receipt, 
-        bg: "bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light" 
+        bg: "bg-[#29926A]" 
       };
     case 'ticket':
       return { 
         icon: Wrench, 
-        bg: "bg-gradient-to-br from-amber-500 to-orange-500" 
+        bg: "bg-[#29926A]" 
       };
     case 'check_in':
       return { 
         icon: UserCheck, 
-        bg: "bg-gradient-to-br from-purple-500 to-violet-500" 
+        bg: "bg-[#29926A]" 
       };
     case 'late_entry':
       return { 
         icon: QrCode, 
-        bg: "bg-gradient-to-br from-rose-500 to-pink-500" 
+        bg: "bg-[#29926A]" 
       };
     default:
       return { 
         icon: Activity, 
-        bg: "bg-gradient-to-br from-gray-500 to-gray-600" 
+        bg: "bg-[#29926A]" 
       };
   }
 };

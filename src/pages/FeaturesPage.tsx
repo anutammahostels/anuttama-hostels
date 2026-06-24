@@ -71,7 +71,7 @@ const FeaturesPage = () => {
       <section className="pt-32 pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={dashboardImage} alt="Operations dashboard" className="w-full h-full object-cover opacity-5" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(222,47%,6%)] via-[hsl(222,47%,6%)]/90 to-[hsl(222,47%,6%)]" />
+          <div className="absolute inset-0 bg-[#29926A]/90 to-[hsl(222,47%,6%)]" />
         </div>
         <div className="absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/15 blur-[100px]" />
         <div className="absolute bottom-0 right-1/3 w-[400px] h-[400px] rounded-full bg-secondary/10 blur-[80px]" />
@@ -107,7 +107,7 @@ const FeaturesPage = () => {
             {mainFeatures.map((feature, index) => (
               <div key={feature.category} className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                 <div className={`${index % 2 === 1 ? "lg:order-2" : ""} animate-slide-up`}>
-                  <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} mb-6`}>
+                  <div className={`inline-flex p-4 rounded-2xl bg-[#29926A] ${feature.gradient} mb-6`}>
                     <feature.icon className="h-8 w-8 text-white" />
                   </div>
 
@@ -133,7 +133,7 @@ const FeaturesPage = () => {
                         alt={feature.category}
                         className="w-full h-80 lg:h-[450px] object-cover group-hover:scale-105 transition-transform duration-700"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-[#29926A]" />
                     </div>
                   </div>
                 </div>
@@ -163,7 +163,7 @@ const FeaturesPage = () => {
                 className="group p-6 rounded-2xl bg-card border border-border hover:shadow-xl hover:-translate-y-1 hover:border-primary/20 transition-all duration-500 animate-slide-up"
                 style={{ animationDelay: `${0.1 * (index + 1)}s` }}
               >
-                <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-secondary inline-flex mb-4 group-hover:scale-110 transition-transform">
+                <div className="p-3 rounded-xl bg-[#29926A] inline-flex mb-4 group-hover:scale-110 transition-transform">
                   <feature.icon className="h-5 w-5 text-white" />
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
@@ -177,7 +177,7 @@ const FeaturesPage = () => {
       {/* Internal-use notice */}
       <section className="py-20">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="relative rounded-3xl bg-gradient-to-r from-primary to-secondary p-12 lg:p-16 text-center overflow-hidden">
+          <div className="relative rounded-3xl bg-[#29926A] p-12 lg:p-16 text-center overflow-hidden">
             <Sparkles className="h-8 w-8 text-white/80 mx-auto mb-4" />
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
               Sign in to your Anuttama workspace

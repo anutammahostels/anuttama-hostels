@@ -52,7 +52,7 @@ export const OccupancyChart = () => {
               className={cn(
                 "px-2.5 md:px-4 py-1.5 md:py-2 rounded-md md:rounded-lg text-xs md:text-sm font-semibold transition-all duration-200",
                 selectedPeriod === period
-                  ? "bg-gradient-to-r from-hostylia-navy to-hostylia-forest text-white shadow-md"
+                  ? "bg-[#29926A] text-white shadow-md"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               )}
             >

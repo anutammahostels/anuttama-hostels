@@ -42,7 +42,7 @@ const item = {
 
 export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+    <div className="min-h-screen bg-[#29926A] flex flex-col">
       {/* Header */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-center">
@@ -58,7 +58,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-600/30">
+            <div className="w-16 h-16 rounded-2xl bg-[#29926A] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-600/30">
               <Sparkles className="h-8 w-8 text-white" />
             </div>
             
@@ -102,7 +102,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
             <Button
               onClick={onGetStarted}
               size="lg"
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-base font-semibold"
+              className="w-full h-12 rounded-xl bg-[#29926A] text-base font-semibold"
             >
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />

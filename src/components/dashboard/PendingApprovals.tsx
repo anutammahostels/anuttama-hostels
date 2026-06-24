@@ -48,7 +48,7 @@ export const PendingApprovals = () => {
       <div className="flex items-center justify-between mb-3 md:mb-6">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-sm md:text-lg text-card-foreground">Approvals</h3>
-          <span className="flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light text-white text-[10px] md:text-xs font-bold shadow-lg">
+          <span className="flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#29926A] text-white text-[10px] md:text-xs font-bold shadow-lg">
             {pendingApprovals.length}
           </span>
         </div>
@@ -94,7 +94,7 @@ export const PendingApprovals = () => {
               <div className="flex gap-2">
                 <Button 
                   size="sm" 
-                  className="flex-1 h-7 md:h-8 text-xs bg-gradient-to-r from-hostylia-forest to-hostylia-forest-light hover:from-hostylia-forest-light hover:to-hostylia-forest text-white shadow-md"
+                  className="flex-1 h-7 md:h-8 text-xs bg-[#29926A] text-white shadow-md"
                   onClick={() => handleApprove(approval.id)}
                   disabled={approveGatePass.isPending}
                 >

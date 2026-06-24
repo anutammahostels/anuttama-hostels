@@ -49,7 +49,7 @@ const Contact = () => {
       <section className="pt-24 md:pt-32 pb-12 md:pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={campusImage} alt="Anuttama campus" className="w-full h-full object-cover opacity-10" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(222,47%,6%)] via-[hsl(222,47%,6%)]/90 to-[hsl(222,47%,6%)]" />
+          <div className="absolute inset-0 bg-[#29926A]/90 to-[hsl(222,47%,6%)]" />
         </div>
         <div className="absolute top-20 right-1/4 w-[300px] md:w-[400px] h-[300px] md:h-[400px] rounded-full bg-secondary/15 blur-[100px]" />
 
@@ -127,7 +127,7 @@ const Contact = () => {
                   <Textarea placeholder="Your message…" className="min-h-[100px] md:min-h-[120px] text-sm md:text-base" />
                 </div>
 
-                <Button className="w-full h-10 md:h-12 gap-2 bg-gradient-to-r from-primary to-secondary text-sm md:text-lg">
+                <Button className="w-full h-10 md:h-12 gap-2 bg-[#29926A] text-sm md:text-lg">
                   Send Message <Send className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
 
@@ -138,7 +138,7 @@ const Contact = () => {
             </div>
 
             <div className="space-y-4 md:space-y-8 animate-slide-up">
-              <div className="p-4 md:p-6 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20">
+              <div className="p-4 md:p-6 rounded-xl md:rounded-2xl bg-[#29926A] border border-primary/20">
                 <h3 className="font-bold text-foreground text-sm md:text-base mb-3 md:mb-4 flex items-center gap-2">
                   <Headphones className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   This contact form is for
@@ -212,7 +212,7 @@ const Contact = () => {
       {/* Internal access CTA */}
       <section className="py-12 md:py-20">
         <div className="container mx-auto px-4">
-          <div className="relative rounded-2xl md:rounded-3xl bg-gradient-to-r from-primary to-secondary p-6 md:p-12 lg:p-16 text-center overflow-hidden">
+          <div className="relative rounded-2xl md:rounded-3xl bg-[#29926A] p-6 md:p-12 lg:p-16 text-center overflow-hidden">
             <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-4">
               Anuttama Staff or Resident?
             </h2>

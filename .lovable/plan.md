@@ -1,94 +1,59 @@
-# Billing & Payments — Consistency Fix
+## Goals
+1. Replace every gradient in the app with the solid brand green `#29926A` — except the Parent (student) Portal which keeps its blue identity.
+2. Rename "Student Portal" → "Parent's Portal" (text only).
+3. Audit the Parent Portal so every page is mobile‑first responsive with no horizontal overflow.
 
-## Goals (from your answers)
+---
 
-1. **Invoice model unchanged** — `create-student` keeps creating one invoice per installment + one pending "balance" invoice.
-2. **Per pending invoice**: max **3 partial payments** allowed (combining online + offline). The 3rd partial payment **must clear the remaining balance** (no 4th).
-3. **Receipts**: every successful payment generates a payment receipt; when an invoice becomes fully paid, a consolidated "Paid in Full" invoice receipt is also available.
-4. **Admin offline updates**: a global search bar at the top of `Billing` (search by Form Number / name / phone) that filters invoices instantly so admins can record offline payments against the right invoice.
+## 1. Solid green replacement (`#29926A`)
 
-## Root-cause fixes (current bugs)
+**Design tokens — `src/index.css`**
+- `--primary` / `--ring` / `--sidebar-primary` → `152 55% 36%` (HSL of #29926A) in both `:root` and `.dark`.
+- Collapse gradient tokens to solid color:
+  - `--gradient-primary: hsl(152 55% 36%);`
+  - `--gradient-hero`, `--gradient-card`, `--gradient-glass` → solid `#29926A` / surface equivalents.
+  - `--shadow-glow: 0 0 60px -15px hsl(152 55% 36% / 0.35);`
 
-- `Billing.tsx` bulk-generates invoices and **writes `paid_amount` directly** on the invoice row instead of relying on the payments → reconcile pipeline. This drifts from `reconcileInvoice` (in `hdfc-webhook`). Result: an invoice's `paid_amount` and `status` can disagree with `SUM(payments.amount)`.
-- "Mark Payment" in `Billing.tsx` likely does the same.
-- `hdfc-create-session` always charges the full outstanding balance — no partial input from student.
-- Student dashboard `StudentInvoices.tsx` has no partial-amount UI.
-- No payment-count enforcement anywhere.
+**Tailwind utility sweep**
+Run a scripted replace across `src/` (excluding `src/components/student/**` and `src/pages/student/**` to preserve the blue Parent Portal theme):
+- `bg-gradient-to-[a-z]+\s+from-[^\s"']+(\s+via-[^\s"']+)?\s+to-[^\s"']+` → `bg-[#29926A]`
+- Standalone `bg-gradient-to-*` (no from/to) → `bg-[#29926A]`
+- Text gradients (`bg-clip-text text-transparent bg-gradient-to-*`) → `text-[#29926A]`
 
-## Plan
+Each touched file is re‑opened and visually sanity‑checked (sidebars, buttons, cards, hero, badges) so foreground contrast stays correct (white text on green stays white).
 
-### 1. Single source of truth: `reconcile_invoice` DB function (migration)
+**Files in scope** (40 files identified via `rg`): landing pages, dashboard, super‑admin, onboarding, auth, payments, etc.
 
-Create `public.reconcile_invoice(_invoice_id uuid)` (SECURITY DEFINER) that:
-- Sums `payments.amount WHERE invoice_id = _invoice_id AND status = 'completed'`.
-- Sums `refunds.amount` for the invoice (if any).
-- Updates `invoices.paid_amount`, `status` (`paid` if ≥ total, `partial` if > 0, `pending` otherwise; `overdue` if pending & past `due_date`), `payment_date` (latest completed payment timestamp when fully paid), and `payment_method` (last used).
-- Returns the new row.
+---
 
-Add an `AFTER INSERT/UPDATE/DELETE` trigger on `payments` and `refunds` that calls `reconcile_invoice(NEW.invoice_id)` so reconciliation happens automatically — no more drift regardless of which code path inserts a payment.
+## 2. "Student Portal" → "Parent's Portal"
 
-Delete the duplicate TS reconciler in `hdfc-webhook` (or have it just call the SQL function).
+Pure text changes:
+- `src/pages/Auth.tsx` line 131 — header label.
+- `src/components/student/StudentSidebar.tsx` line 59 — sidebar subtitle.
+- Any other user‑visible "student portal" strings discovered with a final `rg -i` pass (route paths, component names, table fields, code identifiers are **not** changed).
 
-### 2. Enforce "max 3 partial payments per invoice"
+---
 
-In the same migration, in `reconcile_invoice` (and a `BEFORE INSERT` trigger on `payments`):
-- Count existing `completed` payments for the invoice.
-- If count ≥ 3, reject the insert with a clear error.
-- If count = 2 (this is the 3rd payment) and `existing_paid + new_amount < invoice.total_amount`, reject with "Final payment must clear the balance".
+## 3. Parent Portal — mobile‑first responsiveness
 
-This guarantees the rule regardless of caller (student, admin, webhook).
+Pages to audit: `StudentDashboard`, `StudentInvoices`, `StudentGatePasses`, `StudentComplaints`, `StudentMaintenance`, `StudentMess`, `StudentNotices`, `StudentProfile`, plus `StudentLayout` + `StudentSidebar`.
 
-### 3. Student dashboard — partial payment UI
+Standard fixes applied where missing:
+- Page container: `p-3 sm:p-6 space-y-4` and `max-w-full overflow-x-hidden`.
+- Headings: `text-xl sm:text-2xl lg:text-3xl`, body `text-sm sm:text-base`, truncate long names.
+- Tabs (shadcn `TabsList`): wrap in `overflow-x-auto` with `flex w-max` so tabs scroll horizontally on small screens instead of clipping.
+- Tables: enforce the project's dual‑view rule — `hidden sm:block` desktop table + `sm:hidden` mobile card list (already a Core memory). Add the mobile card view where a page only ships a table today.
+- Grids: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` (no fixed multi‑column on mobile).
+- Buttons & form rows: full‑width on mobile (`w-full sm:w-auto`), stack with `flex-col sm:flex-row gap-2`.
+- Sidebar: confirm mobile drawer (`sm:hidden` trigger, slide‑in `w-64`) closes on route change; desktop stays `lg:ml-52`.
+- Modals/Dialogs: `max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto`.
 
-`src/pages/student/StudentInvoices.tsx`:
-- Replace single "Pay Online" button with a small dialog that shows: total, paid so far, balance, payments-used (`x/3`).
-- Amount input (default = balance). Constraints:
-  - Min = 1, Max = balance.
-  - If `payments_count == 2` → amount input is locked to `balance` with a note "Final partial payment must clear the balance."
-  - If `payments_count == 3` → no pay button (already shouldn't be unpaid, but defensive).
-- Submit calls `hdfc-create-session` with `{ invoice_id, amount }`.
+Verification: Playwright at viewport 390×844 — load each Parent Portal route, screenshot, confirm no horizontal scrollbar on `<body>` and every tab/column is reachable.
 
-`supabase/functions/hdfc-create-session/index.ts`:
-- Accept optional `amount` from request body.
-- Validate: `0 < amount ≤ balance`; re-check the 3-payment rule server-side; if 3rd payment, require `amount == balance`.
-- Pass the (partial) amount to HDFC instead of always using full balance.
+---
 
-The existing webhook → payments → reconcile flow then naturally records the partial payment and flips the invoice to `partial` or `paid`.
-
-### 4. Admin offline payment — global search bar in Billing
-
-`src/pages/Billing.tsx`:
-- Add a sticky search bar at the top: input + debounced query against `students` (form number / full name / phone). Show a dropdown of matching students with their **outstanding invoices** (number, balance, payments used `x/3`).
-- Clicking an outstanding invoice opens the existing "Record Payment" dialog pre-filled with that invoice.
-- Refactor the existing "Mark Payment" / bulk-generate flow to **insert a `payments` row** (with mode = `cash` / `upi` / `bank_transfer` / `card`, reference, UTR, recorded_by, paid_at) and **stop writing `paid_amount` / `status` directly** on the invoice — the trigger handles it.
-- The 3-payment rule is enforced server-side, so the dialog also shows live "Payment x of 3" and disables submit / locks amount appropriately, mirroring the student UI.
-
-### 5. Receipts
-
-- **Per-payment receipt**: in `StudentInvoices.tsx` and `Billing.tsx`, render a "Download receipt" action next to each row in the per-invoice payments list (the existing `PaymentOrderDetails` already lists payments — extend it). Receipt PDF includes invoice number, payment id, amount, mode, txn ref, date, running balance after this payment, branding ("Anuttama Hostels" / "Powered by Hostylia Payments").
-- **Final paid receipt**: when `invoice.status == 'paid'`, also expose a "Download paid-in-full invoice receipt" that lists all payments and shows ₹0 balance.
-- Reuse the existing PDF helper used for invoice download; add a small `generatePaymentReceiptPdf(payment, invoice)` and `generatePaidInvoiceReceiptPdf(invoice, payments)`.
-
-### 6. Cleanup of duplicated logic
-
-- Remove `paid_amount` / `status` writes from `Billing.tsx` bulk-generate (only seed the invoice; insert the matching payment row; let trigger reconcile).
-- `create-student` continues to insert installment invoices with `total_amount = paid_amount` AND a payments row — change it to insert invoice with `paid_amount = 0` and let the trigger set it from the payments row. This avoids the same drift at student-creation time.
-- `hdfc-webhook` `reconcileInvoice` becomes a thin call to `select reconcile_invoice(...)`.
-
-## Technical details
-
-- Tables touched: `invoices`, `payments`, `refunds` (function + triggers only — no column changes).
-- New SQL: `public.reconcile_invoice(uuid)`, `public.enforce_payment_rules()` trigger function, triggers on `payments` (BEFORE INSERT for rules, AFTER INSERT/UPDATE/DELETE for reconcile) and on `refunds` (AFTER INSERT/UPDATE/DELETE for reconcile).
-- Edge function changes: `hdfc-create-session` (accept `amount`, validate), `hdfc-webhook` (delegate to SQL), `create-student` (stop manually setting `paid_amount`).
-- Frontend changes: `src/pages/Billing.tsx` (search bar, refactor payment recording), `src/pages/student/StudentInvoices.tsx` (partial-payment dialog, receipts), `PaymentOrderDetails` (per-payment receipt download).
-- Backfill: one-time `UPDATE` running `reconcile_invoice(id)` for every existing invoice so historical data matches the new invariants.
-
-## Out of scope (won't touch)
-
-- Invoice structure at student creation (you chose to keep separate invoices per installment).
-- Refund flow logic (only made reactive to reconcile).
-- HDFC keys / gateway config.
-
-## Open assumption to confirm during build
-
-The 3-payment limit applies per invoice. The "balance" invoice generated at student creation is itself one invoice → it gets its own 3-partial-payment budget. Let me know if you instead want the balance invoice to allow unlimited partial payments.
+## Out of scope
+- No business‑logic, routing, or DB changes.
+- The Parent Portal keeps its blue accent (`from-blue-500 to-blue-600`) per your choice.
+- Login mechanics unchanged — only the label says "Parent's Portal".
