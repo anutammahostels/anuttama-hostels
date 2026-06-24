@@ -17,7 +17,7 @@ const actions: Action[] = [
     icon: UserPlus, 
     label: "Add Student",
     shortLabel: "Student",
-    iconBg: "bg-[#29926A]",
+    iconBg: "bg-gradient-to-br from-hostylia-navy to-hostylia-navy-light",
     hoverBg: "hover:border-hostylia-navy/30",
     path: "/dashboard/students"
   },
@@ -25,7 +25,7 @@ const actions: Action[] = [
     icon: QrCode, 
     label: "Issue Pass",
     shortLabel: "Pass",
-    iconBg: "bg-[#29926A]",
+    iconBg: "bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light",
     hoverBg: "hover:border-hostylia-forest/30",
     path: "/dashboard/passes"
   },
@@ -33,7 +33,7 @@ const actions: Action[] = [
     icon: Receipt, 
     label: "Create Invoice",
     shortLabel: "Invoice",
-    iconBg: "bg-[#29926A]",
+    iconBg: "bg-gradient-to-br from-amber-500 to-orange-500",
     hoverBg: "hover:border-amber-500/30",
     path: "/dashboard/billing"
   },
@@ -41,7 +41,7 @@ const actions: Action[] = [
     icon: Wrench, 
     label: "Log Ticket",
     shortLabel: "Ticket",
-    iconBg: "bg-[#29926A]",
+    iconBg: "bg-gradient-to-br from-rose-500 to-pink-500",
     hoverBg: "hover:border-rose-500/30",
     path: "/dashboard/maintenance"
   },
@@ -49,7 +49,7 @@ const actions: Action[] = [
     icon: FileText, 
     label: "Room Allocation",
     shortLabel: "Rooms",
-    iconBg: "bg-[#29926A]",
+    iconBg: "bg-gradient-to-br from-purple-500 to-violet-500",
     hoverBg: "hover:border-purple-500/30",
     path: "/dashboard/rooms"
   },
@@ -57,7 +57,7 @@ const actions: Action[] = [
     icon: Send, 
     label: "Mess",
     shortLabel: "Mess",
-    iconBg: "bg-[#29926A]",
+    iconBg: "bg-gradient-to-br from-cyan-500 to-blue-500",
     hoverBg: "hover:border-cyan-500/30",
     path: "/dashboard/mess"
   },

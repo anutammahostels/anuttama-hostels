@@ -11,7 +11,7 @@ export const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#29926A]">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <SuperAdminSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       <div className={cn("transition-all duration-300", "lg:ml-56")}>
         <DashboardHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />

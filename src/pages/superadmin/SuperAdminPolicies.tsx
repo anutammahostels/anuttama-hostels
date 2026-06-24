@@ -98,7 +98,7 @@ const SuperAdminPolicies = () => {
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#29926A] text-white">
+              <Button className="bg-gradient-to-r from-red-600 to-orange-500 text-white">
                 <Plus className="h-4 w-4 mr-1" /> Add Policy
               </Button>
             </DialogTrigger>

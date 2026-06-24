@@ -31,7 +31,7 @@ export const DashboardStats = () => {
       change: stats.studentsChange > 0 ? `+${stats.studentsChange}` : stats.studentsChange.toString(),
       trend: stats.studentsChange >= 0 ? "up" : "down",
       icon: Users,
-      iconBg: "bg-[#29926A]",
+      iconBg: "bg-gradient-to-br from-hostylia-navy to-hostylia-navy-light",
       glowColor: "group-hover:shadow-hostylia-navy/20",
     },
     {
@@ -40,7 +40,7 @@ export const DashboardStats = () => {
       change: stats.occupancyChange > 0 ? `+${stats.occupancyChange}%` : `${stats.occupancyChange}%`,
       trend: stats.occupancyChange >= 0 ? "up" : "down",
       icon: BedDouble,
-      iconBg: "bg-[#29926A]",
+      iconBg: "bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light",
       glowColor: "group-hover:shadow-hostylia-forest/20",
     },
     {
@@ -49,7 +49,7 @@ export const DashboardStats = () => {
       change: stats.duesChange !== 0 ? formatCurrency(Math.abs(stats.duesChange)) : "—",
       trend: stats.duesChange <= 0 ? "down" : "up",
       icon: Receipt,
-      iconBg: "bg-[#29926A]",
+      iconBg: "bg-gradient-to-br from-amber-500 to-orange-500",
       glowColor: "group-hover:shadow-amber-500/20",
     },
     {
@@ -58,7 +58,7 @@ export const DashboardStats = () => {
       change: stats.ticketsChange !== 0 ? `+${stats.ticketsChange}` : "—",
       trend: stats.ticketsChange > 0 ? "up" : "neutral",
       icon: AlertTriangle,
-      iconBg: "bg-[#29926A]",
+      iconBg: "bg-gradient-to-br from-rose-500 to-pink-500",
       glowColor: "group-hover:shadow-rose-500/20",
     },
     {
@@ -67,7 +67,7 @@ export const DashboardStats = () => {
       change: stats.refundsCount > 0 ? `${stats.refundsCount} processed` : "—",
       trend: stats.refundsCount > 0 ? "down" : "neutral",
       icon: Undo2,
-      iconBg: "bg-[#29926A]",
+      iconBg: "bg-gradient-to-br from-orange-500 to-red-500",
       glowColor: "group-hover:shadow-orange-500/20",
     },
   ];
@@ -102,7 +102,7 @@ export const DashboardStats = () => {
           style={{ animationDelay: `${index * 100}ms` }}
         >
           {/* Background decoration */}
-          <div className="absolute -right-4 -top-4 md:-right-8 md:-top-8 w-16 h-16 md:w-32 md:h-32 rounded-full bg-[#29926A] blur-2xl transition-all duration-300 group-hover:scale-150" />
+          <div className="absolute -right-4 -top-4 md:-right-8 md:-top-8 w-16 h-16 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl transition-all duration-300 group-hover:scale-150" />
           
           <div className="relative">
             {/* Icon and change */}

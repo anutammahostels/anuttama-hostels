@@ -81,7 +81,7 @@ export const SuperAdminSidebar = ({ open, onOpenChange }: SuperAdminSidebarProps
       {/* Logo */}
       <div className="flex items-center justify-between h-14 px-3 border-b border-hostylia-navy-light/30">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#29926A] flex-shrink-0 transition-transform group-hover:scale-105">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 to-orange-500 flex-shrink-0 transition-transform group-hover:scale-105">
             <Shield className="h-4 w-4 text-white" />
           </div>
           <div className="flex flex-col">
@@ -98,7 +98,7 @@ export const SuperAdminSidebar = ({ open, onOpenChange }: SuperAdminSidebarProps
 
       {/* Role Badge */}
       <div className="px-3 py-2">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#29926A] text-white shadow-sm">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-sm">
           <Shield className="h-3 w-3" />
           Super Admin
         </span>
@@ -122,7 +122,7 @@ export const SuperAdminSidebar = ({ open, onOpenChange }: SuperAdminSidebarProps
                     className={cn(
                       "flex items-center gap-2 px-2 py-2 rounded-lg transition-all duration-200 group",
                       isActive
-                        ? "bg-[#29926A] text-white shadow-lg shadow-red-600/20"
+                        ? "bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg shadow-red-600/20"
                         : "text-hostylia-slate hover:bg-hostylia-navy-light/50 hover:text-white"
                     )}
                   >
@@ -139,7 +139,7 @@ export const SuperAdminSidebar = ({ open, onOpenChange }: SuperAdminSidebarProps
       {/* User section */}
       <div className="p-2 border-t border-hostylia-navy-light/30">
         <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-hostylia-navy-light/30">
-          <div className="w-8 h-8 rounded-full bg-[#29926A] flex items-center justify-center flex-shrink-0 ring-2 ring-red-600/30">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-orange-500 flex items-center justify-center flex-shrink-0 ring-2 ring-red-600/30">
             <span className="text-white text-xs font-semibold uppercase">{userInitial}</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -159,11 +159,11 @@ export const SuperAdminSidebar = ({ open, onOpenChange }: SuperAdminSidebarProps
       {open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-fade-in" onClick={() => onOpenChange(false)} />
       )}
-      <aside className="fixed left-0 top-0 z-50 h-screen w-56 bg-[#29926A] border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col">
+      <aside className="fixed left-0 top-0 z-50 h-screen w-56 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col">
         <SidebarContent />
       </aside>
       <aside className={cn(
-        "fixed left-0 top-0 z-50 h-screen w-64 bg-[#29926A] border-r border-hostylia-navy-light/20 transition-transform duration-300 lg:hidden flex flex-col",
+        "fixed left-0 top-0 z-50 h-screen w-64 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-transform duration-300 lg:hidden flex flex-col",
         open ? "translate-x-0" : "-translate-x-full"
       )}>
         <SidebarContent isMobile />

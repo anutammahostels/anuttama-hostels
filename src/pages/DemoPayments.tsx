@@ -99,7 +99,7 @@ const PaymentGateway = ({
     <Dialog open onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden">
         {/* Gateway header */}
-        <div className="bg-[#29926A] p-4 text-white">
+        <div className="bg-gradient-to-r from-hostylia-forest to-hostylia-forest-light p-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
@@ -385,7 +385,7 @@ const DemoPayments = () => {
                       <p className="text-lg sm:text-2xl font-bold mt-1">{stat.value}</p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{stat.change}</p>
                     </div>
-                    <div className={`p-2 rounded-lg bg-[#29926A] ${stat.color} bg-opacity-10`}>
+                    <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.color} bg-opacity-10`}>
                       <stat.icon className="h-4 w-4 text-white" />
                     </div>
                   </div>
@@ -438,7 +438,7 @@ const DemoPayments = () => {
                     <Card className="border-border/50">
                       <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[#29926A] flex items-center justify-center flex-shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs font-bold">{student.avatar}</span>
                           </div>
                           <div className="flex-1 min-w-0">
@@ -526,7 +526,7 @@ const DemoPayments = () => {
                       <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-[#29926A] flex items-center justify-center">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
                               <span className="text-white text-xs font-bold">{student.avatar}</span>
                             </div>
                             <div>

@@ -129,7 +129,7 @@ const GatePasses = () => {
         </div>
 
         {/* Pass Workflow Info */}
-        <Card className="border-border/50 bg-[#29926A]">
+        <Card className="border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
           <CardContent className="p-4">
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
               <div className="flex items-center gap-2">

@@ -57,7 +57,7 @@ export const PolicyEngine = () => {
           </div>
 
           <div className="relative">
-            <div className="absolute inset-0 bg-[#29926A] rounded-3xl blur-3xl" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl blur-3xl" />
 
             <div className="relative rounded-2xl lg:rounded-3xl bg-card border border-border p-6 lg:p-8 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
@@ -92,7 +92,7 @@ export const PolicyEngine = () => {
                           onClick={() => setActiveOptions(prev => ({ ...prev, [policy.id]: i }))}
                           className={`flex-1 text-xs px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
                             activeOptions[policy.id] === i
-                              ? "bg-[#29926A] text-white shadow-md"
+                              ? "bg-gradient-to-r from-primary to-secondary text-white shadow-md"
                               : "bg-background border border-border text-muted-foreground hover:border-secondary/50"
                           }`}
                         >

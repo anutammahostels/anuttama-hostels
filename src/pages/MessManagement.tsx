@@ -127,7 +127,7 @@ const MessManagement = () => {
         </div>
 
         {/* Today's Menu Highlight */}
-        <Card className="border-border/50 bg-[#29926A]">
+        <Card className="border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">

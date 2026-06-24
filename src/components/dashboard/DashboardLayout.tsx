@@ -18,7 +18,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#29926A]">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <DashboardSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       
       <div className={cn(

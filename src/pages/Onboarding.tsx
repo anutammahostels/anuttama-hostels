@@ -266,7 +266,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#29926A]">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Compact Header */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -342,7 +342,7 @@ export default function Onboarding() {
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.3 }}
-              className="h-full bg-[#29926A]"
+              className="h-full bg-gradient-to-r from-emerald-500 to-green-500"
             />
           </div>
         </motion.div>
@@ -391,7 +391,7 @@ export default function Onboarding() {
                 size="sm"
                 onClick={nextStep} 
                 disabled={!canProceed()} 
-                className="gap-1.5 h-9 bg-[#29926A]"
+                className="gap-1.5 h-9 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500"
               >
                 Continue
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -401,7 +401,7 @@ export default function Onboarding() {
                 size="sm"
                 onClick={handleSubmit} 
                 disabled={isSubmitting || !canProceed()} 
-                className="gap-1.5 h-9 bg-[#29926A]"
+                className="gap-1.5 h-9 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500"
               >
                 {isSubmitting ? (
                   <><Loader2 className="h-3.5 w-3.5 animate-spin" />Creating...</>

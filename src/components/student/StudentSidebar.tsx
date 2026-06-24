@@ -56,7 +56,7 @@ export const StudentSidebar = ({ open, onOpenChange }: StudentSidebarProps) => {
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-sm text-white tracking-tight">Anuttama Hostels</span>
-            <span className="text-[9px] text-hostylia-slate -mt-0.5">Parent's Portal</span>
+            <span className="text-[9px] text-hostylia-slate -mt-0.5">Student Portal</span>
           </div>
         </Link>
         {isMobile && (

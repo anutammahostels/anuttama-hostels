@@ -36,7 +36,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
 
           {/* Profile */}
           <button className="flex items-center gap-2 p-1 md:p-1.5 rounded-lg hover:bg-secondary transition-all group">
-            <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-[#29926A] flex items-center justify-center ring-2 ring-hostylia-forest/20 group-hover:ring-hostylia-forest/40 transition-all">
+            <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gradient-to-br from-hostylia-navy to-hostylia-forest flex items-center justify-center ring-2 ring-hostylia-forest/20 group-hover:ring-hostylia-forest/40 transition-all">
               <span className="text-white text-xs md:text-sm font-semibold uppercase">{userInitial}</span>
             </div>
           </button>

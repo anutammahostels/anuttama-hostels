@@ -22,7 +22,7 @@ const About = () => {
       <section className="pt-24 md:pt-32 pb-12 md:pb-20 bg-[hsl(222,47%,6%)] relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={campusImage} alt="Anuttama campus" className="w-full h-full object-cover opacity-10" />
-          <div className="absolute inset-0 bg-[#29926A]/90 to-[hsl(222,47%,6%)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(222,47%,6%)] via-[hsl(222,47%,6%)]/90 to-[hsl(222,47%,6%)]" />
         </div>
         <div className="absolute top-20 left-1/3 w-[300px] md:w-[500px] h-[300px] md:h-[500px] rounded-full bg-primary/15 blur-[100px]" />
 
@@ -55,7 +55,7 @@ const About = () => {
 
             <div className="space-y-4 md:space-y-8 animate-slide-up order-1 lg:order-2">
               <div className="p-4 md:p-8 rounded-xl md:rounded-2xl bg-card border border-border hover:shadow-xl transition-all duration-500">
-                <div className="p-3 md:p-4 rounded-lg md:rounded-xl bg-[#29926A] inline-flex mb-3 md:mb-6">
+                <div className="p-3 md:p-4 rounded-lg md:rounded-xl bg-gradient-to-br from-primary to-blue-500 inline-flex mb-3 md:mb-6">
                   <Target className="h-5 w-5 md:h-8 md:w-8 text-white" />
                 </div>
                 <h3 className="text-lg md:text-2xl font-bold text-foreground mb-2 md:mb-4">What we do</h3>
@@ -66,7 +66,7 @@ const About = () => {
               </div>
 
               <div className="p-4 md:p-8 rounded-xl md:rounded-2xl bg-card border border-border hover:shadow-xl transition-all duration-500">
-                <div className="p-3 md:p-4 rounded-lg md:rounded-xl bg-[#29926A] inline-flex mb-3 md:mb-6">
+                <div className="p-3 md:p-4 rounded-lg md:rounded-xl bg-gradient-to-br from-secondary to-emerald-500 inline-flex mb-3 md:mb-6">
                   <Eye className="h-5 w-5 md:h-8 md:w-8 text-white" />
                 </div>
                 <h3 className="text-lg md:text-2xl font-bold text-foreground mb-2 md:mb-4">Why this platform exists</h3>
@@ -99,7 +99,7 @@ const About = () => {
                 className="p-3 md:p-6 rounded-xl md:rounded-2xl bg-card border border-border hover:shadow-xl hover:-translate-y-2 transition-all duration-500 text-center animate-slide-up"
                 style={{ animationDelay: `${0.1 * (index + 1)}s` }}
               >
-                <div className={`inline-flex p-2 md:p-4 rounded-lg md:rounded-2xl bg-[#29926A] ${value.color} mb-2 md:mb-4`}>
+                <div className={`inline-flex p-2 md:p-4 rounded-lg md:rounded-2xl bg-gradient-to-br ${value.color} mb-2 md:mb-4`}>
                   <value.icon className="h-4 w-4 md:h-6 md:w-6 text-white" />
                 </div>
                 <h4 className="text-sm md:text-xl font-bold text-foreground mb-1 md:mb-2">{value.title}</h4>
@@ -135,7 +135,7 @@ const About = () => {
 
               <div className="mt-6 md:mt-8">
                 <Link to="/contact">
-                  <Button className="gap-2 bg-[#29926A] text-sm md:text-base">
+                  <Button className="gap-2 bg-gradient-to-r from-primary to-secondary text-sm md:text-base">
                     Contact Anuttama <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>

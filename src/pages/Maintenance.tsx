@@ -196,7 +196,7 @@ const Maintenance = () => {
         </div>
 
         {/* Escalation Info */}
-        <Card className="border-border/50 bg-[#29926A]">
+        <Card className="border-border/50 bg-gradient-to-r from-orange-500/5 to-transparent">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <ArrowUpCircle className="h-5 w-5 text-orange-500" />

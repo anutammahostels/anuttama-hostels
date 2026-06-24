@@ -14,7 +14,7 @@ export const Hero = () => {
           alt="An Anuttama Hostels residence building"
           className="w-full h-full object-cover opacity-20"
         />
-        <div className="absolute inset-0 bg-[#29926A]/80 to-[hsl(222,47%,6%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(222,47%,6%)] via-[hsl(222,47%,6%)]/80 to-[hsl(222,47%,6%)]" />
       </div>
 
       {/* Gradient orbs */}
@@ -130,7 +130,7 @@ export const Hero = () => {
               </div>
             </div>
 
-            <div className="absolute inset-0 bg-[#29926A] rounded-3xl blur-3xl" />
+            <div className="absolute inset-0 bg-gradient-to-t from-secondary/20 via-primary/10 to-transparent rounded-3xl blur-3xl" />
             <DashboardMockup />
           </div>
         </div>

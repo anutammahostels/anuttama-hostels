@@ -106,7 +106,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
       {/* Logo */}
       <div className="flex items-center justify-between h-14 px-3 border-b border-hostylia-navy-light/30">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#29926A] flex-shrink-0 transition-transform group-hover:scale-105">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light flex-shrink-0 transition-transform group-hover:scale-105">
             <Home className="h-4 w-4 text-white" />
           </div>
           <div className="flex flex-col">
@@ -148,7 +148,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
               className={cn(
                 "flex items-center gap-2 px-2 py-2 rounded-lg transition-all duration-200 group",
                 isActive
-                  ? "bg-[#29926A] text-white shadow-lg shadow-hostylia-forest/20"
+                  ? "bg-gradient-to-r from-hostylia-forest to-hostylia-forest-light text-white shadow-lg shadow-hostylia-forest/20"
                   : "text-hostylia-slate hover:bg-hostylia-navy-light/50 hover:text-white"
               )}
               title={item.label}
@@ -166,7 +166,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
       {/* User section */}
       <div className="p-2 border-t border-hostylia-navy-light/30">
         <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-hostylia-navy-light/30">
-          <div className="w-8 h-8 rounded-full bg-[#29926A] flex items-center justify-center flex-shrink-0 ring-2 ring-hostylia-forest/30">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-hostylia-forest to-hostylia-forest-light flex items-center justify-center flex-shrink-0 ring-2 ring-hostylia-forest/30">
             <span className="text-white text-xs font-semibold uppercase">{userInitial}</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -197,7 +197,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
 
       {/* Desktop sidebar - Always collapsed */}
       <aside
-        className="fixed left-0 top-0 z-50 h-screen w-52 bg-[#29926A] border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col"
+        className="fixed left-0 top-0 z-50 h-screen w-52 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-all duration-300 hidden lg:flex flex-col"
       >
         <SidebarContent />
       </aside>
@@ -205,7 +205,7 @@ export const DashboardSidebar = ({ open, onOpenChange }: DashboardSidebarProps) 
       {/* Mobile sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-screen w-64 bg-[#29926A] border-r border-hostylia-navy-light/20 transition-transform duration-300 lg:hidden flex flex-col",
+          "fixed left-0 top-0 z-50 h-screen w-64 bg-gradient-to-b from-hostylia-charcoal via-hostylia-navy to-hostylia-navy-dark border-r border-hostylia-navy-light/20 transition-transform duration-300 lg:hidden flex flex-col",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >

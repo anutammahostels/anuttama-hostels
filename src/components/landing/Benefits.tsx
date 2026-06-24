@@ -86,7 +86,7 @@ export const Benefits = () => {
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-center mb-10 lg:mb-16">
           <div className="relative group">
-            <div className="absolute inset-0 bg-[#29926A] rounded-xl lg:rounded-3xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl lg:rounded-3xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
             <img
               src={studentsImage}
               alt="Anuttama residents in a common room"
@@ -100,7 +100,7 @@ export const Benefits = () => {
                 key={benefit.title}
                 className="group p-3 lg:p-6 rounded-lg lg:rounded-2xl bg-card border border-border hover:border-primary/20 hover:shadow-xl transition-all duration-500 hover:-translate-y-0.5 lg:hover:-translate-y-1"
               >
-                <div className={`inline-flex p-2 lg:p-3 rounded-lg lg:rounded-xl bg-[#29926A] ${benefit.gradient} mb-2 lg:mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                <div className={`inline-flex p-2 lg:p-3 rounded-lg lg:rounded-xl bg-gradient-to-br ${benefit.gradient} mb-2 lg:mb-4 group-hover:scale-110 transition-transform duration-300`}>
                   <benefit.icon className="h-3 w-3 lg:h-5 lg:w-5 text-white" />
                 </div>
                 <h3 className="font-semibold text-foreground text-xs lg:text-base mb-1 lg:mb-2 line-clamp-1">{benefit.title}</h3>
@@ -121,7 +121,7 @@ export const Benefits = () => {
                 key={benefit.title}
                 className="group p-3 lg:p-6 rounded-lg lg:rounded-2xl bg-card border border-border hover:border-primary/20 hover:shadow-xl transition-all duration-500 hover:-translate-y-0.5 lg:hover:-translate-y-1"
               >
-                <div className={`inline-flex p-2 lg:p-3 rounded-lg lg:rounded-xl bg-[#29926A] ${benefit.gradient} mb-2 lg:mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                <div className={`inline-flex p-2 lg:p-3 rounded-lg lg:rounded-xl bg-gradient-to-br ${benefit.gradient} mb-2 lg:mb-4 group-hover:scale-110 transition-transform duration-300`}>
                   <benefit.icon className="h-3 w-3 lg:h-5 lg:w-5 text-white" />
                 </div>
                 <h3 className="font-semibold text-foreground text-xs lg:text-base mb-1 lg:mb-2 line-clamp-1">{benefit.title}</h3>
@@ -135,7 +135,7 @@ export const Benefits = () => {
           </div>
 
           <div className="relative group order-1 lg:order-2">
-            <div className="absolute inset-0 bg-[#29926A] rounded-xl lg:rounded-3xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-primary/20 rounded-xl lg:rounded-3xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
             <img
               src={propertyManagerImage}
               alt="Anuttama operations team at work"

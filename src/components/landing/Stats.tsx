@@ -102,7 +102,7 @@ export const Stats = () => {
               className="group relative p-6 lg:p-8 rounded-2xl lg:rounded-3xl bg-card border border-border hover:border-secondary/30 hover:shadow-xl hover:shadow-secondary/5 transition-all duration-500 hover:-translate-y-1"
             >
               {/* Icon */}
-              <div className="inline-flex p-3 rounded-xl bg-[#29926A] mb-4 group-hover:scale-110 transition-transform duration-300">
+              <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10 mb-4 group-hover:scale-110 transition-transform duration-300">
                 <stat.icon className="h-5 w-5 text-secondary" />
               </div>
               
@@ -114,7 +114,7 @@ export const Stats = () => {
               <p className="text-muted-foreground text-sm">{stat.description}</p>
 
               {/* Hover glow */}
-              <div className="absolute inset-0 rounded-2xl lg:rounded-3xl bg-[#29926A] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              <div className="absolute inset-0 rounded-2xl lg:rounded-3xl bg-gradient-to-br from-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             </div>
           ))}
         </div>

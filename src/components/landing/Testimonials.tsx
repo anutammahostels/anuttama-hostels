@@ -80,7 +80,7 @@ export const Testimonials = () => {
               isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
             }`}
           >
-            <div className="absolute -top-4 lg:-top-6 left-4 lg:left-8 p-2 lg:p-4 rounded-xl lg:rounded-2xl bg-[#29926A] shadow-lg animate-scale-in">
+            <div className="absolute -top-4 lg:-top-6 left-4 lg:left-8 p-2 lg:p-4 rounded-xl lg:rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg animate-scale-in">
               <Quote className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
             </div>
 
@@ -90,7 +90,7 @@ export const Testimonials = () => {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 lg:gap-4">
-                <div className="w-10 h-10 lg:w-14 lg:h-14 rounded-full bg-[#29926A] flex items-center justify-center">
+                <div className="w-10 h-10 lg:w-14 lg:h-14 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                   <current.icon className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
                 </div>
                 <div className="min-w-0">
@@ -131,7 +131,7 @@ export const Testimonials = () => {
                 }}
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   i === activeIndex
-                    ? 'w-6 lg:w-8 bg-[#29926A]'
+                    ? 'w-6 lg:w-8 bg-gradient-to-r from-primary to-secondary'
                     : 'bg-white/30 hover:bg-white/50'
                 }`}
               />
