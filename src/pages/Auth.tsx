@@ -215,8 +215,8 @@ export default function Auth() {
                         <GraduationCap className="h-7 w-7 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-foreground">Student</h3>
-                        <p className="text-sm text-muted-foreground">Access your hostel portal & services</p>
+                        <h3 className="text-lg font-bold text-foreground">Parent</h3>
+                        <p className="text-sm text-muted-foreground">Access your child's hostel portal & services</p>
                       </div>
                       <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
