@@ -46,22 +46,22 @@ const Properties = () => {
     status: "active",
   });
 
-  // Fetch student count per property (active students only)
+  // Fetch student count per property (active students only) using head+count to avoid 1000-row cap
   const studentsQuery = useQuery({
     queryKey: ['property-students-count', properties.map(p => p.id)],
     queryFn: async () => {
       if (properties.length === 0) return {};
-      const { data, error } = await supabase
-        .from('students')
-        .select('property_id, status');
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      data?.forEach(s => {
-        if (!s.property_id) return;
-        if (s.status && s.status !== 'active') return;
-        counts[s.property_id] = (counts[s.property_id] || 0) + 1;
-      });
-      return counts;
+      const entries = await Promise.all(
+        properties.map(async (p) => {
+          const { count } = await supabase
+            .from('students')
+            .select('id', { count: 'exact', head: true })
+            .eq('property_id', p.id)
+            .eq('status', 'active');
+          return [p.id, count || 0] as const;
+        })
+      );
+      return Object.fromEntries(entries) as Record<string, number>;
     },
     enabled: properties.length > 0,
   });
