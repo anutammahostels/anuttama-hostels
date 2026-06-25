@@ -123,8 +123,9 @@ export function useStudents(propertyId?: string) {
         chunk(studentIds, 200).map(ids =>
           supabase
             .from('payments')
-            .select('student_id, amount, payment_mode_label, payment_method, transaction_id, transaction_reference, payment_label, paid_at')
+            .select('student_id, amount, payment_mode_label, payment_method, transaction_id, transaction_reference, payment_label, paid_at, status')
             .in('student_id', ids)
+            .eq('status', 'completed')
             .order('paid_at', { ascending: false })
             .then(r => r.data || [])
         )
