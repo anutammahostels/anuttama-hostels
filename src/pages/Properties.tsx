@@ -46,52 +46,27 @@ const Properties = () => {
     status: "active",
   });
 
-  // Fetch blocks count per property
-  const blocksQuery = useQuery({
-    queryKey: ['property-blocks-count', properties.map(p => p.id)],
+  // Fetch student count per property (active students only)
+  const studentsQuery = useQuery({
+    queryKey: ['property-students-count', properties.map(p => p.id)],
     queryFn: async () => {
       if (properties.length === 0) return {};
       const { data, error } = await supabase
-        .from('blocks')
-        .select('id, property_id');
+        .from('students')
+        .select('property_id, status');
       if (error) throw error;
       const counts: Record<string, number> = {};
-      data?.forEach(b => {
-        counts[b.property_id] = (counts[b.property_id] || 0) + 1;
+      data?.forEach(s => {
+        if (!s.property_id) return;
+        if (s.status && s.status !== 'active') return;
+        counts[s.property_id] = (counts[s.property_id] || 0) + 1;
       });
       return counts;
     },
     enabled: properties.length > 0,
   });
 
-  // Fetch rooms count per property (via blocks -> floors -> rooms)
-  const roomsQuery = useQuery({
-    queryKey: ['property-rooms-count', properties.map(p => p.id)],
-    queryFn: async () => {
-      if (properties.length === 0) return {};
-      const { data: blocks } = await supabase.from('blocks').select('id, property_id');
-      if (!blocks?.length) return {};
-      const blockMap: Record<string, string> = {};
-      blocks.forEach(b => { blockMap[b.id] = b.property_id; });
-
-      const { data: floors } = await supabase.from('floors').select('id, block_id');
-      if (!floors?.length) return {};
-      const floorMap: Record<string, string> = {};
-      floors.forEach(f => { floorMap[f.id] = blockMap[f.block_id]; });
-
-      const { data: rooms } = await supabase.from('rooms').select('id, floor_id');
-      const counts: Record<string, number> = {};
-      rooms?.forEach(r => {
-        const propId = floorMap[r.floor_id];
-        if (propId) counts[propId] = (counts[propId] || 0) + 1;
-      });
-      return counts;
-    },
-    enabled: properties.length > 0,
-  });
-
-  const blocksCounts = blocksQuery.data || {};
-  const roomsCounts = roomsQuery.data || {};
+  const studentsCounts = studentsQuery.data || {};
 
   // Blocks management state
   const [blocksForProperty, setBlocksForProperty] = useState<any[]>([]);
