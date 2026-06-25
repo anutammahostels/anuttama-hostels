@@ -455,12 +455,8 @@ const Properties = () => {
                   <p className="font-medium">{selectedProperty.occupied_beds || 0}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Blocks</p>
-                  <p className="font-medium">{blocksCounts[selectedProperty.id] || 0}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Rooms</p>
-                  <p className="font-medium">{roomsCounts[selectedProperty.id] || 0}</p>
+                  <p className="text-muted-foreground">Students</p>
+                  <p className="font-medium">{studentsCounts[selectedProperty.id] || 0}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Created</p>
