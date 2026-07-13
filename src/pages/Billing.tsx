@@ -28,6 +28,7 @@ import { CenterFilter } from "@/components/dashboard/CenterFilter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { exportToExcel } from "@/lib/exportExcel";
+import { initiateRefund } from "@/lib/hdfc";
 import { buildReceiptHtml, invoiceToReceipt } from "@/lib/receiptTemplate";
 import { formatCompactINR } from "@/lib/formatCurrency";
 
@@ -1371,23 +1372,56 @@ const Billing = () => {
                     <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                     <SelectItem value="upi">UPI</SelectItem>
                     <SelectItem value="cheque">Cheque</SelectItem>
+                    <SelectItem value="hdfc">HDFC Gateway (original card/UPI)</SelectItem>
                   </SelectContent>
                 </Select>
+                {refundMethod === "hdfc" && (
+                  <p className="text-xs text-muted-foreground">
+                    Refunds the amount to the original payment source via HDFC. Only works for online payments made through the gateway.
+                  </p>
+                )}
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setRefundDialog({ open: false, invoice: null })}>Cancel</Button>
               <Button variant="destructive" disabled={!refundAmount || !refundReason || processRefund.isPending} onClick={async () => {
                 if (!refundDialog.invoice) return;
-                const propertyId = properties?.[0]?.id || "";
-                await processRefund.mutateAsync({
-                  invoiceId: refundDialog.invoice.id,
-                  studentId: refundDialog.invoice.student_id,
-                  propertyId,
-                  amount: parseFloat(refundAmount),
-                  reason: refundReason,
-                  refundMethod,
-                });
+                const amountNum = parseFloat(refundAmount);
+                if (refundMethod === "hdfc") {
+                  try {
+                    const { data: txn } = await supabase
+                      .from("payment_transactions")
+                      .select("order_id, status")
+                      .eq("invoice_id", refundDialog.invoice.id)
+                      .eq("status", "SUCCESS")
+                      .order("updated_at", { ascending: false })
+                      .limit(1)
+                      .maybeSingle();
+                    if (!txn?.order_id) {
+                      toast({ title: "No HDFC transaction found", description: "This invoice has no successful HDFC payment to refund.", variant: "destructive" });
+                      return;
+                    }
+                    const res = await initiateRefund(txn.order_id, amountNum, undefined, refundReason);
+                    toast({
+                      title: res.status === "SUCCESS" ? "Refund processed" : "Refund initiated",
+                      description: `HDFC status: ${res.status}${res.refund_id ? ` (ref ${res.refund_id})` : ""}`,
+                    });
+                    await fetchRefundsList();
+                  } catch (err: any) {
+                    toast({ title: "Refund failed", description: err?.message || "HDFC refund error", variant: "destructive" });
+                    return;
+                  }
+                } else {
+                  const propertyId = properties?.[0]?.id || "";
+                  await processRefund.mutateAsync({
+                    invoiceId: refundDialog.invoice.id,
+                    studentId: refundDialog.invoice.student_id,
+                    propertyId,
+                    amount: amountNum,
+                    reason: refundReason,
+                    refundMethod,
+                  });
+                }
                 setRefundDialog({ open: false, invoice: null });
                 setRefundAmount(""); setRefundReason(""); setRefundMethod("cash");
               }}>
@@ -1396,6 +1430,7 @@ const Billing = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
 
         <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, invoice: null })}>
           <AlertDialogContent>

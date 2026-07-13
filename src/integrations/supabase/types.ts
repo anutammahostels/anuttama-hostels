@@ -1708,6 +1708,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_invoice: {
+        Args: { _invoice_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_access_property: {
+        Args: { _property_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_access_student: {
+        Args: { _student_id: string; _user_id: string }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           _link?: string
