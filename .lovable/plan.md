@@ -1,76 +1,86 @@
-## What's actually wrong
 
-I dug into the DB and the code. There are two independent problems compounding each other:
+# Plan: Center-Isolated Admin + HDFC Refund UI
 
-### 1. Massive orphan-invoice pileup (the "14Cr / 4Cr" and "Deleted Student" row)
+## Part 1 — Yelhanka isolated admin account
 
-- `invoices.student_id` uses `ON DELETE SET NULL`. Every time students were bulk-wiped/re-seeded in the past, their invoices stayed behind with `student_id = NULL`.
-- Current DB state: **6,916 orphan invoices** totalling **₹65.24 Cr gross / ₹51.74 Cr received**, plus **5,308 orphan payments** totalling **₹51.80 Cr**. There are only 9,246 invoices in total, so ~75% of the rows are ghosts of deleted students.
-- `Receivables.tsx` groups every `student_id IS NULL` invoice into a single `"__deleted__"` bucket → one giant "Deleted Student" row you see in the Excel (₹65 Cr / ₹51 Cr). It's also what inflates the dashboard totals to `14Cr collected / 4Cr dues` instead of the real figures.
+### Credentials to provision
+- **Email:** `yelhanka@anuttamahostels.com`
+- **Password:** `yelhanka$951951`
+- **Display name:** `Yelhanka Admin`
+- **Role:** `tenant_admin`
+- **Center assignment:** Yelhanka property only (via `staff_property_assignments`)
 
-### 2. FASEEHA KHAZI (and anyone like her) — payment creates a NEW invoice instead of settling the pending one
+### Database changes (migration)
+1. Create the auth user via `supabase.auth.admin.createUser` in a one-off edge function invocation (auto-confirmed email, since managed email is off).
+2. Insert `profiles` row (`full_name = "Yelhanka Admin"`).
+3. Insert `user_roles` row (`role = 'tenant_admin'`).
+4. Insert `staff_property_assignments` row linking the new user to Yelhanka's `property_id`.
+5. Add a helper SQL function `public.user_assigned_property_ids(_user_id uuid) returns setof uuid` (SECURITY DEFINER) that returns property IDs from `staff_property_assignments`, or **all** property IDs if the user is `super_admin`.
+6. Tighten RLS across financial + operational tables so non–super-admin staff see rows only for their assigned properties. Tables to update:
+   - `students`, `invoices`, `payments`, `refunds`, `payment_transactions`
+   - `beds`, `rooms`, `floors`, `blocks`, `properties`
+   - `notices`, `complaints`, `maintenance_tickets`, `gate_passes`, `attendance`
+   - `admissions`, `mess_subscriptions`, `employees`, `payroll_records`
+   - `staff_property_assignments` itself
+   
+   Policy pattern for each table with a `property_id` (direct or via join):
+   ```sql
+   USING (
+     has_role(auth.uid(), 'super_admin')
+     OR property_id IN (SELECT public.user_assigned_property_ids(auth.uid()))
+   )
+   ```
+   Tables without a direct `property_id` (e.g. `payments`, `invoices`) join through `students.property_id` or `beds → rooms → floors → blocks.property_id`.
 
-Her actual invoices in the DB:
+### Frontend changes
+- `CenterContext`: when the current user is **not** `super_admin` and has exactly one assignment, force `centerId` to that property and ignore localStorage overrides.
+- `CenterFilter`: hide the dropdown (or render read-only chip showing "Yelhanka") for single-assignment users.
+- `useProperties`: already returns only visible properties post-RLS, so admin will naturally see one center.
+- `DashboardStats`, `Students`, `Billing`, `Receivables`, `Accounting`, `Properties`, `Reports`: no code changes needed — they consume `centerId` from context and are RLS-filtered.
+- `ProtectedRoute`: `tenant_admin` continues to land on `/dashboard`.
 
-```
-INV-...-P1   ₹60,000  paid   (Installment 1 of 3)
-INV-...-P2   ₹90,000  paid   (Installment 2 of 3)
-INV-...-BAL  ₹40,000  pending ← original balance invoice, never marked paid
-INV-...-ZEFB ₹40,000  paid   ← duplicate created on 2026-07-13 when admin recorded her balance payment
-```
-
-Total fee = ₹1,90,000. She paid 60k + 90k + 40k = ₹1,90,000 ✅. But because the "Record Payment" flow in `src/pages/Billing.tsx` (lines 321–390) **always inserts a fresh invoice for every recorded payment** and never allocates against existing pending/BAL invoices, her BAL 40k is still `pending` and gross = ₹2,30,000, net receivable = ₹40,000 (wrong).
-
-This is a code bug, not a data bug — every manual payment recording creates one duplicate invoice like this.
-
-### 3. Minor: `Receivables.tsx` line 48 sums `total_amount + discounts` into Gross (double counts discount). Harmless today (all discounts = 0) but should be fixed.
-
----
-
-## Plan
-
-### Step A — Data sanitization migration (one-off)
-
-Run a SQL migration that:
-
-1. **Deletes orphan payments** (`student_id IS NULL` or student not in `students`) and their `payment_transactions` / `payment_logs`. These belong to students that no longer exist.
-2. **Deletes orphan invoices** (`student_id IS NULL`). `payments.invoice_id` is `ON DELETE CASCADE`, so residual payments go with them.
-3. **Deletes orphan refunds** the same way.
-4. **Reconciles Faseeha-style duplicates**: for every student, when a paid standalone invoice covers the exact amount of a still-pending BAL/installment invoice created in the same schedule, delete the duplicate paid invoice and re-point its payment to the pending invoice, then re-run `reconcile_invoice`. Concretely: find pending invoices where `sum(paid standalone invoices for same student created after it) >= total_amount` and merge them.
-5. **Change FK to `ON DELETE CASCADE`** on `invoices.student_id`, `payments.student_id`, `refunds.student_id`, `payment_transactions.student_id` (and matching indexes) so a future student delete cleans its finance trail instead of orphaning it. This is a policy shift — see Details below; you can veto and keep SET NULL if you want to preserve historical financial trail.
-
-I'll show the migration in a preview before it runs so you can approve.
-
-### Step B — Fix the payment-recording flow (`src/pages/Billing.tsx`)
-
-Change "Record Payment" so it:
-
-1. First looks up the student's **oldest pending / partial / overdue invoice(s)** ordered by `due_date`.
-2. Allocates the entered amount against those invoices via `payments.invoice_id` (the existing `enforce_payment_rules` + `reconcile_invoice` trigger already handles paid_amount/status). Splits across multiple invoices if amount > single invoice balance.
-3. Only creates a new "ad-hoc" invoice if the student has zero open dues **and** the admin explicitly ticks a new "Extra / ad-hoc charge" checkbox on the form. That preserves the ability to record an off-schedule payment when it really is new.
-
-### Step C — Fix `Receivables.tsx` aggregation
-
-- Line 48: `existing.gross += inv.total_amount` (drop `+ discounts`).
-- Filter out `student_id IS NULL` rows entirely from Receivables view + export (after Step A this is defensive, but keeps the report clean if any slip through in future).
-- Same guard on Billing/Dashboard totals so a future orphan can't re-inflate.
-
-### Step D — Verify
-
-1. Re-open Receivables → dashboard totals should drop to the real 4Cr dues / 14Cr collected.
-2. Search "FASEEHA KHAZI" → gross ₹1,90,000, received ₹1,90,000, net ₹0.
-3. Excel export → no "Deleted Student" row.
-4. Record a test payment for a student with a pending BAL invoice → BAL becomes `paid`, no duplicate invoice.
+### Verification
+- Log in as `yelhanka@…` → dashboard shows Yelhanka totals only, Students/Billing/Receivables/Properties list Yelhanka rows only, center filter is locked.
+- Log in as super admin → all centers still visible with switcher.
 
 ---
 
-## Technical details / open decisions
+## Part 2 — HDFC refund UI (Billing + Receivables)
 
-- **FK cascade change (Step A #5)**: Switching `invoices.student_id` from `SET NULL` to `CASCADE` contradicts the "Financial Data Rules: 'ON DELETE SET NULL' for financial logs" project memory. Two options:
-  - **Cascade** (recommended, matches your intent that "deleted students shouldn't linger in financials").
-  - **Keep SET NULL** but have the `delete-student` edge function explicitly hard-delete finance rows first. Same end state, memory stays intact.
-  Please pick one before I run Step A.
-- **Duplicate-merge heuristic (Step A #4)**: I'll match on `student_id` + amount equality + a pending sibling invoice older than the paid one. Faseeha's case fits this exactly. I'll dry-run the SELECT first, show you the candidate list, and only merge after you approve.
-- No changes to HDFC webhook / reconcile function — those are working correctly. This is a manual-record + historical-data issue.
+Backend already exists: `supabase/functions/hdfc-refund/index.ts` handles the HDFC call, validates staff role, persists a `refunds` row, and returns status. Only UI wiring is needed.
 
-Which FK option (cascade vs edge-function-hard-delete) do you want for Step A #5?
+### New component: `src/components/billing/RefundDialog.tsx`
+Props: `{ open, onOpenChange, payment, invoice, onRefunded }`.
+Fields:
+- Original charged amount (read-only)
+- Already refunded amount (read-only, sum of prior `refunds.amount` for this invoice)
+- Refundable balance = charged − already refunded (read-only)
+- **Amount** input (default = refundable balance; allow partial; zod-validated `> 0` and `≤ refundable`)
+- **Reason** textarea (required, max 500 chars)
+- Confirm checkbox: "This will refund to the original card/UPI via HDFC"
+
+On submit: call `initiateRefund(order_id, amount, undefined, reason)` from `src/lib/hdfc.ts`; on success toast the gateway status (`SUCCESS` / `PENDING`) and refetch invoices/refunds. Handle `MANUAL_REVIEW` and error codes surfaced by the edge function.
+
+### Billing page (`src/pages/Billing.tsx`)
+Add a **Refund** action to the row action menu for any payment where `payment_method = 'online'`, `status = 'completed'`, and a linked `payment_transactions.order_id` exists with HDFC `status = 'SUCCESS'`. Disable (with tooltip) when already fully refunded. Opens `RefundDialog`.
+
+### Receivables page (`src/pages/Receivables.tsx`)
+Add a **Refund** button in the invoice detail drawer/row for invoices with any refundable HDFC payment. Same dialog.
+
+### Refund history visibility
+- Show a small "Refunds" section in the invoice detail view listing `refunds` rows (amount, status, reason, date, processed_by).
+- Poll `hdfc-order-status` once after a `PENDING` refund is created so the row's status self-corrects (reuses existing reconciliation pattern).
+
+### Guardrails
+- Client blocks amount > refundable; server (`hdfc-refund`) already re-validates via HDFC.
+- Only `super_admin`, `tenant_admin`, `accountant` see the Refund action (matches edge function's role check).
+
+---
+
+## Technical notes
+
+- `staff_property_assignments` already exists with `staff_has_property_access` helper; the new `user_assigned_property_ids` function complements it for `IN (...)` filters.
+- RLS rewrite is the largest surface — will be done in a single migration with policies dropped and recreated per table to keep it auditable.
+- Auth user creation runs via a throwaway invocation of a new edge function `bootstrap-center-admin` (service-role) so we never expose service key to the client; function is removed after use or gated to super_admin.
+- No changes to `hdfc-refund` edge function or `supabase/config.toml`.
+- Credentials will be echoed back in chat after the migration runs: **`yelhanka@anuttamahostels.com` / `yelhanka$951951`**.

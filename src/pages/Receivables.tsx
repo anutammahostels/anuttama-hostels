@@ -3,20 +3,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Download, FileText, Loader2, Undo2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInvoices } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToExcel } from "@/lib/exportExcel";
+import { initiateRefund } from "@/lib/hdfc";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { TablePagination } from "@/components/ui/table-pagination";
 
 const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
+type HdfcTxn = { order_id: string; amount: number; hdfc_txn_id: string | null; updated_at: string; invoice_id: string | null };
+
 const Receivables = () => {
   const { invoices, isLoading } = useInvoices();
+  const { toast } = useToast();
   const [refundsMap, setRefundsMap] = useState<Map<string, number>>(new Map());
   const [page, setPage] = useState(1);
   const pageSize = 25;
+
+  // Refund dialog state
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundStudent, setRefundStudent] = useState<{ id: string; name: string } | null>(null);
+  const [studentTxns, setStudentTxns] = useState<HdfcTxn[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<string>("");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refunding, setRefunding] = useState(false);
+  const [loadingTxns, setLoadingTxns] = useState(false);
 
   useEffect(() => {
     const fetchRefunds = async () => {
@@ -32,6 +52,56 @@ const Receivables = () => {
     fetchRefunds();
   }, []);
 
+  const openRefund = async (studentId: string, studentName: string) => {
+    setRefundStudent({ id: studentId, name: studentName });
+    setRefundOpen(true);
+    setSelectedOrder("");
+    setRefundAmount("");
+    setRefundReason("");
+    setLoadingTxns(true);
+    // Find HDFC successful transactions for this student's invoices
+    const studentInvoiceIds = invoices.filter(i => i.student_id === studentId).map(i => i.id);
+    if (studentInvoiceIds.length === 0) {
+      setStudentTxns([]);
+      setLoadingTxns(false);
+      return;
+    }
+    const { data } = await supabase
+      .from('payment_transactions')
+      .select('order_id, amount, hdfc_txn_id, updated_at, invoice_id')
+      .in('invoice_id', studentInvoiceIds)
+      .eq('status', 'SUCCESS')
+      .order('updated_at', { ascending: false });
+    setStudentTxns((data as HdfcTxn[]) || []);
+    setLoadingTxns(false);
+  };
+
+  const submitRefund = async () => {
+    if (!selectedOrder || !refundAmount || !refundReason) return;
+    setRefunding(true);
+    try {
+      const res = await initiateRefund(selectedOrder, parseFloat(refundAmount), undefined, refundReason);
+      toast({
+        title: res.status === "SUCCESS" ? "Refund processed" : "Refund initiated",
+        description: `HDFC status: ${res.status}${res.refund_id ? ` (ref ${res.refund_id})` : ""}`,
+      });
+      setRefundOpen(false);
+      // Refresh refund totals
+      const { data } = await supabase.from('refunds').select('student_id, amount');
+      if (data) {
+        const map = new Map<string, number>();
+        data.filter(r => r.student_id).forEach(r => {
+          map.set(r.student_id!, (map.get(r.student_id!) || 0) + Number(r.amount));
+        });
+        setRefundsMap(map);
+      }
+    } catch (err: any) {
+      toast({ title: "Refund failed", description: err?.message || "HDFC refund error", variant: "destructive" });
+    } finally {
+      setRefunding(false);
+    }
+  };
+
   // Group by student
   const studentMap = new Map<string, {
     name: string; rollNo: string; gross: number; discounts: number;
@@ -39,8 +109,6 @@ const Receivables = () => {
   }>();
 
   invoices.forEach(inv => {
-    // Defensive: skip orphaned invoices (deleted student). Data migration
-    // flushes these; this guard keeps the report clean if any slip through.
     if (!inv.student_id || !inv.student?.id) return;
     const sid = inv.student_id;
     const existing = studentMap.get(sid) || {
@@ -114,7 +182,6 @@ const Receivables = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Gross Receivable</p><p className="text-xl sm:text-2xl font-bold">{formatCurrency(totals.gross)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Discounts Given</p><p className="text-xl sm:text-2xl font-bold text-yellow-600">{formatCurrency(totals.discounts)}</p></CardContent></Card>
@@ -125,7 +192,6 @@ const Receivables = () => {
 
       <Card>
         <CardContent className="p-0">
-          {/* Mobile card view */}
           <div className="sm:hidden divide-y divide-border">
             {rows.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">No receivables data</div>
@@ -146,7 +212,12 @@ const Receivables = () => {
                       <div><span className="text-muted-foreground">Received:</span> <span className="text-green-600">{formatCurrency(r.received)}</span></div>
                       <div><span className="text-muted-foreground">Refunds:</span> <span className="text-orange-600">{formatCurrency(r.refunds)}</span></div>
                     </div>
-                    {r.paymentModes !== '-' && <Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge>}
+                    <div className="flex items-center justify-between pt-1">
+                      {r.paymentModes !== '-' && <Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge>}
+                      <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
+                        <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 <div className="p-4 bg-muted/50 font-bold">
@@ -158,7 +229,6 @@ const Receivables = () => {
               </>
             )}
           </div>
-          {/* Desktop table view */}
           <div className="hidden sm:block overflow-x-auto">
             <Table>
               <TableHeader>
@@ -171,11 +241,12 @@ const Receivables = () => {
                   <TableHead className="text-right">Refunds</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead className="text-right">Net Receivable</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
                 ) : pagedRows.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
@@ -186,6 +257,11 @@ const Receivables = () => {
                     <TableCell className="text-right text-orange-600">{formatCurrency(r.refunds)}</TableCell>
                     <TableCell><Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge></TableCell>
                     <TableCell className="text-right font-bold text-red-600">{formatCurrency(r.net)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
+                        <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {rows.length > 0 && (
@@ -197,6 +273,7 @@ const Receivables = () => {
                     <TableCell className="text-right text-orange-600">{formatCurrency(totals.refunds)}</TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-right text-red-600">{formatCurrency(totals.net)}</TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -205,6 +282,60 @@ const Receivables = () => {
           <TablePagination page={page} pageSize={pageSize} totalItems={rows.length} onPageChange={setPage} itemLabel="students" />
         </CardContent>
       </Card>
+
+      <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>HDFC Refund</DialogTitle>
+            <DialogDescription>Refund an online payment to the original card/UPI for {refundStudent?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {loadingTxns ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading transactions…</div>
+            ) : studentTxns.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No successful HDFC transactions found for this student. Use the manual refund in Billing for offline payments.</p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Original Transaction</Label>
+                  <Select value={selectedOrder} onValueChange={(v) => {
+                    setSelectedOrder(v);
+                    const t = studentTxns.find(x => x.order_id === v);
+                    if (t) setRefundAmount(String(t.amount));
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Select a payment" /></SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {studentTxns.map(t => (
+                        <SelectItem key={t.order_id} value={t.order_id}>
+                          {formatCurrency(Number(t.amount))} • {format(new Date(t.updated_at), "dd MMM yyyy")} • {t.order_id.slice(-8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Refund Amount (₹)</Label>
+                  <Input type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Reason</Label>
+                  <Textarea value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. Student exit, overpayment..." />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={!selectedOrder || !refundAmount || !refundReason || refunding}
+              onClick={submitRefund}
+            >
+              {refunding ? <Loader2 className="h-4 w-4 animate-spin" /> : "Process Refund"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
