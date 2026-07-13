@@ -39,15 +39,18 @@ const Receivables = () => {
   }>();
 
   invoices.forEach(inv => {
-    const sid = inv.student_id || '__deleted__';
+    // Defensive: skip orphaned invoices (deleted student). Data migration
+    // flushes these; this guard keeps the report clean if any slip through.
+    if (!inv.student_id || !inv.student?.id) return;
+    const sid = inv.student_id;
     const existing = studentMap.get(sid) || {
-      name: inv.student?.profile?.full_name || (inv.student_id === null ? "Deleted Student" : "Unknown"),
+      name: inv.student?.profile?.full_name || "Unknown",
       rollNo: inv.student?.roll_number || "-",
       gross: 0, discounts: 0, received: 0, refunds: 0, paymentModes: new Set<string>(), net: 0,
     };
-    existing.gross += inv.total_amount + (inv.discounts || 0);
-    existing.discounts += inv.discounts || 0;
-    existing.received += inv.paid_amount || 0;
+    existing.gross += Number(inv.total_amount || 0);
+    existing.discounts += Number(inv.discounts || 0);
+    existing.received += Number(inv.paid_amount || 0);
     existing.refunds = refundsMap.get(sid) || 0;
     if (inv.payment_method) existing.paymentModes.add(inv.payment_method);
     existing.net = existing.gross - existing.discounts - existing.received + existing.refunds;
