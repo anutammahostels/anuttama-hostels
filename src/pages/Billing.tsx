@@ -321,10 +321,6 @@ const Billing = () => {
     for (let i = 0; i < selectedStudentIds.length; i++) {
       const studentId = selectedStudentIds[i];
 
-      const stamp = Date.now().toString(36).toUpperCase();
-      const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-      const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${stamp}-${rand}-${i + 1}`;
-
       const notesBlob = [
         txnDetails ? `Transaction: ${txnDetails}` : null,
         txnUtr ? `UTR: ${txnUtr}` : null,
@@ -332,29 +328,7 @@ const Billing = () => {
       ].filter(Boolean).join(" | ");
 
       try {
-        const { data: inv, error: invErr } = await supabase
-          .from('invoices')
-          .insert({
-            student_id: studentId,
-            invoice_number: invoiceNumber,
-            billing_month: `${billingMonth}-01`,
-            due_date: dueDate,
-            room_rent: 0,
-            mess_charges: 0,
-            electricity_charges: 0,
-            other_charges: 0,
-            discounts: 0,
-            total_amount: amount,
-            paid_amount: 0,
-            status: 'pending',
-            notes: notesBlob || null,
-          })
-          .select()
-          .single();
-
-        if (invErr) throw invErr;
-
-        // Lookup student's property via bed → room → floor → block
+        // Resolve student's property once (needed for either allocation path)
         let propertyId: string | null = null;
         const { data: bedData } = await supabase
           .from('beds')
@@ -371,14 +345,72 @@ const Billing = () => {
             .maybeSingle();
           propertyId = (stu as any)?.property_id || null;
         }
+        if (!propertyId) throw new Error('Student has no property assigned');
 
-        if (propertyId) {
-          // Insert the payment — the DB trigger will reconcile paid_amount + status.
+        // Fetch open invoices (oldest first) and allocate the payment
+        // against them before creating any new ad-hoc invoice.
+        const { data: openInvoices } = await supabase
+          .from('invoices')
+          .select('id, total_amount, paid_amount, status')
+          .eq('student_id', studentId)
+          .in('status', ['pending', 'partial', 'overdue'])
+          .order('due_date', { ascending: true });
+
+        let remaining = amount;
+        const openList = (openInvoices || []).filter(inv => Number(inv.total_amount) - Number(inv.paid_amount || 0) > 0.01);
+
+        for (const inv of openList) {
+          if (remaining <= 0.01) break;
+          const outstanding = Number(inv.total_amount) - Number(inv.paid_amount || 0);
+          const applied = Math.min(remaining, outstanding);
           await supabase.from('payments').insert({
             invoice_id: inv.id,
             student_id: studentId,
             property_id: propertyId,
-            amount,
+            amount: applied,
+            payment_method: txnMode,
+            payment_mode_label: txnMode,
+            payment_label: txnDetails || null,
+            transaction_reference: txnUtr || null,
+            status: 'completed',
+            paid_at: new Date(txnDate).toISOString(),
+            recorded_by: user?.id || null,
+            notes: notesBlob || null,
+          } as any);
+          remaining -= applied;
+        }
+
+        // Leftover amount → treat as ad-hoc / extra charge invoice
+        if (remaining > 0.01) {
+          const stamp = Date.now().toString(36).toUpperCase();
+          const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+          const invoiceNumber = `INV-${billingMonth.replace('-', '')}-${stamp}-${rand}-${i + 1}`;
+          const { data: inv, error: invErr } = await supabase
+            .from('invoices')
+            .insert({
+              student_id: studentId,
+              invoice_number: invoiceNumber,
+              billing_month: `${billingMonth}-01`,
+              due_date: dueDate,
+              room_rent: 0,
+              mess_charges: 0,
+              electricity_charges: 0,
+              other_charges: 0,
+              discounts: 0,
+              total_amount: remaining,
+              paid_amount: 0,
+              status: 'pending',
+              notes: notesBlob || null,
+            })
+            .select()
+            .single();
+          if (invErr) throw invErr;
+
+          await supabase.from('payments').insert({
+            invoice_id: inv.id,
+            student_id: studentId,
+            property_id: propertyId,
+            amount: remaining,
             payment_method: txnMode,
             payment_mode_label: txnMode,
             payment_label: txnDetails || null,
@@ -390,12 +422,13 @@ const Billing = () => {
         }
         success++;
       } catch (e) {
-        console.error('Invoice generation failed', e);
+        console.error('Payment recording failed', e);
         failed++;
       }
 
       setGenerateProgress(Math.round(((i + 1) / selectedStudentIds.length) * 100));
     }
+
 
     setGenerateResults({ success, failed });
     setIsGenerating(false);
