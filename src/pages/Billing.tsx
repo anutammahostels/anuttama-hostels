@@ -513,17 +513,13 @@ const Billing = () => {
             </Button>
             <Button variant="outline" onClick={() => {
               if (invoices.length === 0) return;
-              const headers = ["Invoice #", "Student", "Form Number", "Billing Month", "Room Rent", "Mess", "Electricity", "Other", "Discount", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
+              const headers = ["Invoice #", "Student", "Form Number", "Billing Month", "Room Rent", "Total", "Paid", "Balance", "Due Date", "Status", "Payment Method", "Payment Date"];
               const rows = invoices.map(inv => [
                 inv.invoice_number,
                 inv.student?.profile?.full_name || "",
                 inv.student?.roll_number || "",
                 inv.billing_month,
                 inv.room_rent || 0,
-                inv.mess_charges || 0,
-                inv.electricity_charges || 0,
-                inv.other_charges || 0,
-                inv.discounts || 0,
                 inv.total_amount,
                 inv.paid_amount || 0,
                 inv.total_amount - (inv.paid_amount || 0),
