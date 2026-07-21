@@ -138,17 +138,57 @@ const Receivables = () => {
 
   const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
-  const handleExportExcel = () => {
-    exportToExcel(rows.map(r => ({
-      "Student Name": r.name,
-      "Form Number": r.rollNo,
-      "Gross Receivable": r.gross,
-      "Discounts": r.discounts,
-      "Amount Received": r.received,
-      "Refunds": r.refunds,
-      "Payment Mode": r.paymentModes,
-      "Net Receivable": r.net,
-    })), `receivables-${format(new Date(), "yyyy-MM-dd")}`, "Receivables");
+  const handleExportExcel = async () => {
+    const studentIds = rows.map(r => r.id);
+    const paymentsByStudent = new Map<string, { amount: number; date: string; method: string }[]>();
+    if (studentIds.length) {
+      // Fetch all completed payments for these students via their invoices
+      const invoiceIds = invoices.filter(i => i.student_id && studentIds.includes(i.student_id)).map(i => i.id);
+      const invoiceToStudent = new Map(invoices.filter(i => i.student_id).map(i => [i.id, i.student_id!]));
+      // Batch in chunks of 500 to avoid URL limits
+      const chunks: string[][] = [];
+      for (let i = 0; i < invoiceIds.length; i += 500) chunks.push(invoiceIds.slice(i, i + 500));
+      const allPayments: any[] = [];
+      for (const chunk of chunks) {
+        const { data } = await supabase
+          .from('payments')
+          .select('invoice_id, amount, payment_date, payment_method, status')
+          .in('invoice_id', chunk)
+          .eq('status', 'completed')
+          .order('payment_date', { ascending: true });
+        if (data) allPayments.push(...data);
+      }
+      allPayments.forEach(p => {
+        const sid = invoiceToStudent.get(p.invoice_id);
+        if (!sid) return;
+        const list = paymentsByStudent.get(sid) || [];
+        list.push({ amount: Number(p.amount), date: p.payment_date, method: p.payment_method || '' });
+        paymentsByStudent.set(sid, list);
+      });
+    }
+
+    exportToExcel(rows.map(r => {
+      const pays = paymentsByStudent.get(r.id) || [];
+      const [p1, p2, p3] = [pays[0], pays[1], pays[2]];
+      return {
+        "Student Name": r.name,
+        "Form Number": r.rollNo,
+        "Gross Receivable": r.gross,
+        "Discounts": r.discounts,
+        "Amount 1": p1?.amount || 0,
+        "Amount 1 Date": p1?.date || "",
+        "Amount 1 Method": p1?.method || "",
+        "Amount 2": p2?.amount || 0,
+        "Amount 2 Date": p2?.date || "",
+        "Amount 2 Method": p2?.method || "",
+        "Amount 3": p3?.amount || 0,
+        "Amount 3 Date": p3?.date || "",
+        "Amount 3 Method": p3?.method || "",
+        "Total Received": r.received,
+        "Refunds": r.refunds,
+        "Net Receivable": r.net,
+      };
+    }), `receivables-${format(new Date(), "yyyy-MM-dd")}`, "Receivables");
   };
 
   const handleExportPdf = () => {
