@@ -138,52 +138,41 @@ const Receivables = () => {
 
   const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
-  const handleExportExcel = async () => {
-    const studentIds = rows.map(r => r.id);
-    const paymentsByStudent = new Map<string, { amount: number; date: string; method: string }[]>();
-    if (studentIds.length) {
-      // Fetch all completed payments for these students via their invoices
-      const invoiceIds = invoices.filter(i => i.student_id && studentIds.includes(i.student_id)).map(i => i.id);
-      const invoiceToStudent = new Map(invoices.filter(i => i.student_id).map(i => [i.id, i.student_id!]));
-      // Batch in chunks of 500 to avoid URL limits
-      const chunks: string[][] = [];
-      for (let i = 0; i < invoiceIds.length; i += 500) chunks.push(invoiceIds.slice(i, i + 500));
-      const allPayments: any[] = [];
-      for (const chunk of chunks) {
-        const { data } = await supabase
-          .from('payments')
-          .select('invoice_id, amount, payment_date, payment_method, status')
-          .in('invoice_id', chunk)
-          .eq('status', 'completed')
-          .order('payment_date', { ascending: true });
-        if (data) allPayments.push(...data);
-      }
-      allPayments.forEach(p => {
-        const sid = invoiceToStudent.get(p.invoice_id);
-        if (!sid) return;
-        const list = paymentsByStudent.get(sid) || [];
-        list.push({ amount: Number(p.amount), date: p.payment_date, method: p.payment_method || '' });
-        paymentsByStudent.set(sid, list);
-      });
-    }
+  const handleExportExcel = () => {
+    // Build per-student list of paid installments from invoices (each invoice = one installment).
+    // Amount 1/2/3 = paid_amount of each invoice with paid_amount > 0, ordered chronologically.
+    const invoicesByStudent = new Map<string, any[]>();
+    invoices.forEach(inv => {
+      if (!inv.student_id) return;
+      const list = invoicesByStudent.get(inv.student_id) || [];
+      list.push(inv);
+      invoicesByStudent.set(inv.student_id, list);
+    });
 
     exportToExcel(rows.map(r => {
-      const pays = paymentsByStudent.get(r.id) || [];
-      const [p1, p2, p3] = [pays[0], pays[1], pays[2]];
+      const invs = (invoicesByStudent.get(r.id) || [])
+        .filter(i => Number(i.paid_amount || 0) > 0)
+        .sort((a, b) => {
+          const da = new Date(a.payment_date || a.billing_month || a.created_at).getTime();
+          const db = new Date(b.payment_date || b.billing_month || b.created_at).getTime();
+          return da - db;
+        });
+      const [i1, i2, i3] = [invs[0], invs[1], invs[2]];
+      const fmt = (d: any) => d ? format(new Date(d), "dd MMM yyyy") : "";
       return {
         "Student Name": r.name,
         "Form Number": r.rollNo,
         "Gross Receivable": r.gross,
         "Discounts": r.discounts,
-        "Amount 1": p1?.amount || 0,
-        "Amount 1 Date": p1?.date || "",
-        "Amount 1 Method": p1?.method || "",
-        "Amount 2": p2?.amount || 0,
-        "Amount 2 Date": p2?.date || "",
-        "Amount 2 Method": p2?.method || "",
-        "Amount 3": p3?.amount || 0,
-        "Amount 3 Date": p3?.date || "",
-        "Amount 3 Method": p3?.method || "",
+        "Amount 1": Number(i1?.paid_amount || 0),
+        "Amount 1 Date": fmt(i1?.payment_date || i1?.billing_month),
+        "Amount 1 Method": i1?.payment_method || "",
+        "Amount 2": Number(i2?.paid_amount || 0),
+        "Amount 2 Date": fmt(i2?.payment_date || i2?.billing_month),
+        "Amount 2 Method": i2?.payment_method || "",
+        "Amount 3": Number(i3?.paid_amount || 0),
+        "Amount 3 Date": fmt(i3?.payment_date || i3?.billing_month),
+        "Amount 3 Method": i3?.payment_method || "",
         "Total Received": r.received,
         "Refunds": r.refunds,
         "Net Receivable": r.net,
