@@ -108,9 +108,24 @@ const Receivables = () => {
     received: number; refunds: number; paymentModes: Set<string>; net: number;
   }>();
 
+  // Track received/refunds for excluded (inactive) students separately so they
+  // still appear in the "Amount Received" total but not in Gross/Net.
+  let excludedReceived = 0;
+  let excludedRefunds = 0;
+  const excludedStudentIds = new Set<string>();
+
   invoices.forEach(inv => {
     if (!inv.student_id || !inv.student?.id) return;
     const sid = inv.student_id;
+    const isExcluded = inv.student?.status === 'inactive';
+    if (isExcluded) {
+      excludedReceived += Number(inv.paid_amount || 0);
+      if (!excludedStudentIds.has(sid)) {
+        excludedRefunds += refundsMap.get(sid) || 0;
+        excludedStudentIds.add(sid);
+      }
+      return; // don't include in per-student receivables rows
+    }
     const existing = studentMap.get(sid) || {
       name: inv.student?.profile?.full_name || "Unknown",
       rollNo: inv.student?.roll_number || "-",
@@ -134,7 +149,8 @@ const Receivables = () => {
   const totals = rows.reduce((acc, r) => ({
     gross: acc.gross + r.gross, discounts: acc.discounts + r.discounts,
     received: acc.received + r.received, refunds: acc.refunds + r.refunds, net: acc.net + r.net,
-  }), { gross: 0, discounts: 0, received: 0, refunds: 0, net: 0 });
+  }), { gross: 0, discounts: 0, received: excludedReceived, refunds: excludedRefunds, net: 0 });
+  totals.net = totals.gross - totals.discounts - totals.received + totals.refunds;
 
   const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 

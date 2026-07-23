@@ -19,6 +19,7 @@ export interface InvoiceWithStudent extends Invoice {
     mother_name?: string | null;
     gender?: string | null;
     course?: string | null;
+    status?: string | null;
     profile?: {
       full_name: string | null;
       email: string | null;
@@ -44,7 +45,7 @@ export function useInvoices(studentId?: string) {
           .from('invoices')
           .select(`
             *,
-            student:students(id, roll_number, user_id, property_id, father_name, mother_name, gender, course)
+            student:students(id, roll_number, user_id, property_id, father_name, mother_name, gender, course, status)
           `)
           .order('created_at', { ascending: false })
           .range(from, from + PAGE - 1);
