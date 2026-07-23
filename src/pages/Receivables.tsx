@@ -119,9 +119,12 @@ const Receivables = () => {
     const sid = inv.student_id;
     const isExcluded = inv.student?.status === 'inactive';
     if (isExcluded) {
+      // paid_amount is net-of-refunds; add refunds back so "Amount Received" reflects gross collections.
       excludedReceived += Number(inv.paid_amount || 0);
       if (!excludedStudentIds.has(sid)) {
-        excludedRefunds += refundsMap.get(sid) || 0;
+        const r = refundsMap.get(sid) || 0;
+        excludedRefunds += r;
+        excludedReceived += r;
         excludedStudentIds.add(sid);
       }
       return; // don't include in per-student receivables rows
@@ -136,8 +139,15 @@ const Receivables = () => {
     existing.received += Number(inv.paid_amount || 0);
     existing.refunds = refundsMap.get(sid) || 0;
     if (inv.payment_method) existing.paymentModes.add(inv.payment_method);
-    existing.net = existing.gross - existing.discounts - existing.received + existing.refunds;
     studentMap.set(sid, existing);
+  });
+
+  // Add per-student refunds back into received so the row's Amount Received is gross-of-refunds.
+  // Net = Gross - Discounts - (Received - Refunds) = Gross - Discounts - paid_amount.
+  studentMap.forEach((d) => {
+    const grossReceived = d.received + d.refunds;
+    d.net = d.gross - d.discounts - d.received; // uses net-of-refunds paid_amount
+    d.received = grossReceived;
   });
 
   const rows = Array.from(studentMap.entries()).map(([id, d]) => ({
@@ -150,7 +160,7 @@ const Receivables = () => {
     gross: acc.gross + r.gross, discounts: acc.discounts + r.discounts,
     received: acc.received + r.received, refunds: acc.refunds + r.refunds, net: acc.net + r.net,
   }), { gross: 0, discounts: 0, received: excludedReceived, refunds: excludedRefunds, net: 0 });
-  totals.net = totals.gross - totals.discounts - totals.received + totals.refunds;
+  totals.net = totals.gross - totals.discounts - (totals.received - totals.refunds);
 
   const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
