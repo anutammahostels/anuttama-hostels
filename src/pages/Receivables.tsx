@@ -20,11 +20,14 @@ import { TablePagination } from "@/components/ui/table-pagination";
 const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 type HdfcTxn = { order_id: string; amount: number; hdfc_txn_id: string | null; updated_at: string; invoice_id: string | null };
+type PaymentRow = { student_id: string | null; amount: number; payment_method: string | null; payment_mode_label: string | null; paid_at: string | null };
 
 const Receivables = () => {
   const { invoices, isLoading } = useInvoices();
   const { toast } = useToast();
   const [refundsMap, setRefundsMap] = useState<Map<string, number>>(new Map());
+  const [paymentRowsMap, setPaymentRowsMap] = useState<Map<string, PaymentRow[]>>(new Map());
+  const [ledgerLoading, setLedgerLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
@@ -39,18 +42,60 @@ const Receivables = () => {
   const [loadingTxns, setLoadingTxns] = useState(false);
 
   useEffect(() => {
-    const fetchRefunds = async () => {
-      const { data } = await supabase.from('refunds').select('student_id, amount');
-      if (data) {
-        const map = new Map<string, number>();
-        data.filter(r => r.student_id).forEach(r => {
-          map.set(r.student_id!, (map.get(r.student_id!) || 0) + Number(r.amount));
-        });
-        setRefundsMap(map);
+    const fetchLedger = async () => {
+      setLedgerLoading(true);
+      const PAGE = 1000;
+      const refunds: { student_id: string | null; amount: number }[] = [];
+      const payments: PaymentRow[] = [];
+
+      let refundFrom = 0;
+      while (true) {
+        const { data } = await supabase
+          .from('refunds')
+          .select('student_id, amount')
+          .range(refundFrom, refundFrom + PAGE - 1);
+        if (!data || data.length === 0) break;
+        refunds.push(...data);
+        if (data.length < PAGE) break;
+        refundFrom += PAGE;
       }
+
+      let paymentFrom = 0;
+      while (true) {
+        const { data } = await supabase
+          .from('payments')
+          .select('student_id, amount, payment_method, payment_mode_label, paid_at')
+          .eq('status', 'completed')
+          .order('paid_at', { ascending: true })
+          .range(paymentFrom, paymentFrom + PAGE - 1);
+        if (!data || data.length === 0) break;
+        payments.push(...data);
+        if (data.length < PAGE) break;
+        paymentFrom += PAGE;
+      }
+
+      const refundMap = new Map<string, number>();
+      refunds.filter(r => r.student_id).forEach(r => {
+        const sid = r.student_id;
+        if (!sid) return;
+        refundMap.set(sid, (refundMap.get(sid) || 0) + Number(r.amount || 0));
+      });
+
+      const paymentMap = new Map<string, PaymentRow[]>();
+      payments.filter(p => p.student_id).forEach(p => {
+        const sid = p.student_id;
+        if (!sid) return;
+        const list = paymentMap.get(sid) || [];
+        list.push(p);
+        paymentMap.set(sid, list);
+      });
+
+      setRefundsMap(refundMap);
+      setPaymentRowsMap(paymentMap);
+      setLedgerLoading(false);
     };
-    fetchRefunds();
-  }, []);
+    fetchLedger();
+  }, [invoices]);
 
   const openRefund = async (studentId: string, studentName: string) => {
     setRefundStudent({ id: studentId, name: studentName });
@@ -87,11 +132,25 @@ const Receivables = () => {
       });
       setRefundOpen(false);
       // Refresh refund totals
-      const { data } = await supabase.from('refunds').select('student_id, amount');
-      if (data) {
+      const PAGE = 1000;
+      const refunds: { student_id: string | null; amount: number }[] = [];
+      let refundFrom = 0;
+      while (true) {
+        const { data } = await supabase
+          .from('refunds')
+          .select('student_id, amount')
+          .range(refundFrom, refundFrom + PAGE - 1);
+        if (!data || data.length === 0) break;
+        refunds.push(...data);
+        if (data.length < PAGE) break;
+        refundFrom += PAGE;
+      }
+      if (refunds.length) {
         const map = new Map<string, number>();
-        data.filter(r => r.student_id).forEach(r => {
-          map.set(r.student_id!, (map.get(r.student_id!) || 0) + Number(r.amount));
+        refunds.filter(r => r.student_id).forEach(r => {
+          const sid = r.student_id;
+          if (!sid) return;
+          map.set(sid, (map.get(sid) || 0) + Number(r.amount || 0));
         });
         setRefundsMap(map);
       }
@@ -119,12 +178,11 @@ const Receivables = () => {
     const sid = inv.student_id;
     const isExcluded = inv.student?.status === 'inactive';
     if (isExcluded) {
-      // paid_amount is net-of-refunds; add refunds back so "Amount Received" reflects gross collections.
-      excludedReceived += Number(inv.paid_amount || 0);
       if (!excludedStudentIds.has(sid)) {
         const r = refundsMap.get(sid) || 0;
+        const directPayments = paymentRowsMap.get(sid) || [];
         excludedRefunds += r;
-        excludedReceived += r;
+        excludedReceived += directPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
         excludedStudentIds.add(sid);
       }
       return; // don't include in per-student receivables rows
@@ -136,18 +194,17 @@ const Receivables = () => {
     };
     existing.gross += Number(inv.total_amount || 0);
     existing.discounts += Number(inv.discounts || 0);
-    existing.received += Number(inv.paid_amount || 0);
     existing.refunds = refundsMap.get(sid) || 0;
-    if (inv.payment_method) existing.paymentModes.add(inv.payment_method);
     studentMap.set(sid, existing);
   });
 
-  // Add per-student refunds back into received so the row's Amount Received is gross-of-refunds.
-  // Net = Gross - Discounts - (Received - Refunds) = Gross - Discounts - paid_amount.
-  studentMap.forEach((d) => {
-    const grossReceived = d.received + d.refunds;
-    d.net = d.gross - d.discounts - d.received; // uses net-of-refunds paid_amount
-    d.received = grossReceived;
+  // Amount Received is always the sum of completed payment transactions.
+  // Net Receivable follows the client report: Gross - Discounts - Amount Received.
+  studentMap.forEach((d, studentId) => {
+    const payments = paymentRowsMap.get(studentId) || [];
+    d.received = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    payments.forEach((p) => d.paymentModes.add(p.payment_mode_label || p.payment_method || '-'));
+    d.net = d.gross - d.discounts - d.received;
   });
 
   const rows = Array.from(studentMap.entries()).map(([id, d]) => ({
@@ -160,45 +217,30 @@ const Receivables = () => {
     gross: acc.gross + r.gross, discounts: acc.discounts + r.discounts,
     received: acc.received + r.received, refunds: acc.refunds + r.refunds, net: acc.net + r.net,
   }), { gross: 0, discounts: 0, received: excludedReceived, refunds: excludedRefunds, net: 0 });
-  totals.net = totals.gross - totals.discounts - (totals.received - totals.refunds);
+  totals.net = totals.gross - totals.discounts - totals.received;
 
   const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
   const handleExportExcel = () => {
-    // Build per-student list of paid installments from invoices (each invoice = one installment).
-    // Amount 1/2/3 = paid_amount of each invoice with paid_amount > 0, ordered chronologically.
-    const invoicesByStudent = new Map<string, any[]>();
-    invoices.forEach(inv => {
-      if (!inv.student_id) return;
-      const list = invoicesByStudent.get(inv.student_id) || [];
-      list.push(inv);
-      invoicesByStudent.set(inv.student_id, list);
-    });
-
     exportToExcel(rows.map(r => {
-      const invs = (invoicesByStudent.get(r.id) || [])
-        .filter(i => Number(i.paid_amount || 0) > 0)
-        .sort((a, b) => {
-          const da = new Date(a.payment_date || a.billing_month || a.created_at).getTime();
-          const db = new Date(b.payment_date || b.billing_month || b.created_at).getTime();
-          return da - db;
-        });
-      const [i1, i2, i3] = [invs[0], invs[1], invs[2]];
+      const payments = paymentRowsMap.get(r.id) || [];
+      const [p1, p2, p3] = [payments[0], payments[1], payments[2]];
       const fmt = (d: any) => d ? format(new Date(d), "dd MMM yyyy") : "";
+      const method = (p?: PaymentRow) => p?.payment_mode_label || p?.payment_method || "";
       return {
         "Student Name": r.name,
         "Form Number": r.rollNo,
         "Gross Receivable": r.gross,
         "Discounts": r.discounts,
-        "Amount 1": Number(i1?.paid_amount || 0),
-        "Amount 1 Date": fmt(i1?.payment_date || i1?.billing_month),
-        "Amount 1 Method": i1?.payment_method || "",
-        "Amount 2": Number(i2?.paid_amount || 0),
-        "Amount 2 Date": fmt(i2?.payment_date || i2?.billing_month),
-        "Amount 2 Method": i2?.payment_method || "",
-        "Amount 3": Number(i3?.paid_amount || 0),
-        "Amount 3 Date": fmt(i3?.payment_date || i3?.billing_month),
-        "Amount 3 Method": i3?.payment_method || "",
+        "Amount 1": Number(p1?.amount || 0),
+        "Amount 1 Date": fmt(p1?.paid_at),
+        "Amount 1 Method": method(p1),
+        "Amount 2": Number(p2?.amount || 0),
+        "Amount 2 Date": fmt(p2?.paid_at),
+        "Amount 2 Method": method(p2),
+        "Amount 3": Number(p3?.amount || 0),
+        "Amount 3 Date": fmt(p3?.paid_at),
+        "Amount 3 Method": method(p3),
         "Total Received": r.received,
         "Refunds": r.refunds,
         "Net Receivable": r.net,
@@ -222,7 +264,7 @@ const Receivables = () => {
     w.print();
   };
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isLoading || ledgerLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
     <div className="space-y-6">
