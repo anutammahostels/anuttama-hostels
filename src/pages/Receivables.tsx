@@ -95,7 +95,7 @@ const Receivables = () => {
       setLedgerLoading(false);
     };
     fetchLedger();
-  }, []);
+  }, [invoices]);
 
   const openRefund = async (studentId: string, studentName: string) => {
     setRefundStudent({ id: studentId, name: studentName });
@@ -200,8 +200,8 @@ const Receivables = () => {
 
   // Amount Received is always the sum of completed payment transactions.
   // Net Receivable follows the client report: Gross - Discounts - Amount Received.
-  studentMap.forEach((d) => {
-    const payments = paymentRowsMap.get(Array.from(studentMap.entries()).find(([, v]) => v === d)?.[0] || '') || [];
+  studentMap.forEach((d, studentId) => {
+    const payments = paymentRowsMap.get(studentId) || [];
     d.received = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     payments.forEach((p) => d.paymentModes.add(p.payment_mode_label || p.payment_method || '-'));
     d.net = d.gross - d.discounts - d.received;
