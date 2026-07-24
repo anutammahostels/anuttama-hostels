@@ -376,12 +376,13 @@ const Refunds = () => {
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paged.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       No refunds found
                     </TableCell>
                   </TableRow>
@@ -399,6 +400,15 @@ const Refunds = () => {
                       </TableCell>
                       <TableCell className="text-right font-semibold text-orange-600">
                         {formatCurrency(r.amount)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isPending(r.status) ? (
+                          <Button size="sm" variant="outline" onClick={() => openProcess(r)}>
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Refund
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
