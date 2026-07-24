@@ -215,7 +215,7 @@ const Refunds = () => {
 
   const openProcess = (r: RefundRow) => {
     setActiveRow(r);
-    setMethod(r.refund_method || "cash");
+    setMethod("hdfc");
     setNotes(r.reason || "");
     setProcessOpen(true);
   };
