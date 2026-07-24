@@ -148,7 +148,7 @@ const Refunds = () => {
 
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  useEffect(() => setPage(1), [search, centerId]);
+  useEffect(() => setPage(1), [search, centerId, statusFilter]);
 
   const handleExportExcel = () => {
     exportToExcel(
