@@ -270,12 +270,43 @@ const Refunds = () => {
         // Delete the placeholder pending row — initiateRefund creates a fresh refund row
         await supabase.from("refunds").delete().eq("id", activeRow.id);
       } else {
+        // Validate offline method-specific fields
+        const missing: string[] = [];
+        if (method === "neft") {
+          if (!accountHolder.trim()) missing.push("Account holder");
+          if (!accountNumber.trim()) missing.push("Account number");
+          if (!ifsc.trim()) missing.push("IFSC code");
+        } else if (method === "upi") {
+          if (!upiId.trim()) missing.push("UPI ID");
+        } else if (method === "cheque") {
+          if (!chequeNumber.trim()) missing.push("Cheque number");
+          if (!accountHolder.trim()) missing.push("Payee name");
+          if (!bankName.trim()) missing.push("Bank name");
+        } else if (method === "cash") {
+          if (!referenceNumber.trim()) missing.push("Receipt / voucher no.");
+        }
+        if (missing.length) {
+          toast({ title: "Missing details", description: missing.join(", "), variant: "destructive" });
+          setProcessing(false);
+          return;
+        }
+
+        // Compose refund details into reason for audit trail
+        const details: string[] = [];
+        if (method === "neft") details.push(`NEFT to ${accountHolder} • A/C ${accountNumber} • IFSC ${ifsc}${bankName ? ` • ${bankName}` : ""}`);
+        if (method === "upi") details.push(`UPI to ${upiId}`);
+        if (method === "cheque") details.push(`Cheque #${chequeNumber} • ${accountHolder} • ${bankName}`);
+        if (method === "cash") details.push(`Cash • Voucher ${referenceNumber}`);
+        if (referenceNumber && method !== "cash") details.push(`Ref: ${referenceNumber}`);
+        if (notes.trim()) details.push(notes.trim());
+        const composedReason = details.join(" | ");
+
         const { error } = await supabase
           .from("refunds")
           .update({
             status: "processed",
             refund_method: method,
-            reason: notes || activeRow.reason,
+            reason: composedReason || activeRow.reason,
           })
           .eq("id", activeRow.id);
         if (error) throw error;
