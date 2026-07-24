@@ -49,8 +49,6 @@ const allMenuItems: MenuItem[] = [
   { icon: Receipt, label: "Billing", shortLabel: "Bills", path: "/dashboard/billing", roles: ['super_admin', 'tenant_admin'] },
   { icon: Receipt, label: "Receivables", shortLabel: "Recv.", path: "/dashboard/receivables", roles: ['super_admin', 'tenant_admin'] },
   { icon: Undo2, label: "Refunds", shortLabel: "Refunds", path: "/dashboard/refunds", roles: ['super_admin', 'tenant_admin'] },
-  { icon: BookOpen, label: "Accounting", shortLabel: "Accounts", path: "/dashboard/accounting", roles: ['super_admin', 'tenant_admin', 'accountant'] },
-  { icon: UserPlus, label: "Admissions", shortLabel: "Admit", path: "/dashboard/admissions", roles: ['super_admin', 'tenant_admin'] },
   { icon: Wrench, label: "Maintenance", shortLabel: "Maint.", path: "/dashboard/maintenance", roles: ['super_admin', 'tenant_admin'] },
   { icon: MessageSquareWarning, label: "Complaints", shortLabel: "Compl.", path: "/dashboard/complaints", roles: ['super_admin', 'tenant_admin'] },
   { icon: Settings, label: "Settings", shortLabel: "Settings", path: "/dashboard/settings", roles: ['super_admin', 'tenant_admin'] },
