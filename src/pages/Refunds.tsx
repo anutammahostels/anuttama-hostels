@@ -296,8 +296,9 @@ const Refunds = () => {
 
       {filtered.length > pageSize && (
         <TablePagination
-          currentPage={page}
-          totalPages={Math.ceil(filtered.length / pageSize)}
+          page={page}
+          pageSize={pageSize}
+          totalItems={filtered.length}
           onPageChange={setPage}
         />
       )}
