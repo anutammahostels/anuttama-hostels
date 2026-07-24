@@ -56,7 +56,7 @@ const Refunds = () => {
   // Process refund dialog
   const [processOpen, setProcessOpen] = useState(false);
   const [activeRow, setActiveRow] = useState<RefundRow | null>(null);
-  const [method, setMethod] = useState<string>("cash");
+  const [method, setMethod] = useState<string>("hdfc");
   const [notes, setNotes] = useState("");
   const [processing, setProcessing] = useState(false);
 
@@ -215,7 +215,7 @@ const Refunds = () => {
 
   const openProcess = (r: RefundRow) => {
     setActiveRow(r);
-    setMethod(r.refund_method || "cash");
+    setMethod("hdfc");
     setNotes(r.reason || "");
     setProcessOpen(true);
   };
@@ -444,18 +444,12 @@ const Refunds = () => {
               <Select value={method} onValueChange={setMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
-                  <SelectItem value="hdfc">HDFC (Online — refund to original card/UPI)</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                  <SelectItem value="neft">NEFT / Bank Transfer</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="hdfc">HDFC Payment Gateway (refund to original card/UPI)</SelectItem>
                 </SelectContent>
               </Select>
-              {method === "hdfc" && (
-                <p className="text-xs text-muted-foreground">
-                  Requires an original successful HDFC payment on this invoice.
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Real money will be refunded via HDFC to the payer's original card/UPI. Requires an original successful HDFC payment on this invoice.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Notes / Reason</Label>
@@ -465,7 +459,7 @@ const Refunds = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setProcessOpen(false)}>Cancel</Button>
             <Button disabled={processing} onClick={submitProcess}>
-              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark as Processed"}
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refund via HDFC"}
             </Button>
           </DialogFooter>
         </DialogContent>
