@@ -213,6 +213,70 @@ const Refunds = () => {
     return "bg-yellow-100 text-yellow-700";
   };
 
+  const openProcess = (r: RefundRow) => {
+    setActiveRow(r);
+    setMethod(r.refund_method || "cash");
+    setNotes(r.reason || "");
+    setProcessOpen(true);
+  };
+
+  const submitProcess = async () => {
+    if (!activeRow) return;
+    setProcessing(true);
+    try {
+      if (method === "hdfc") {
+        // Look up a successful HDFC transaction on this invoice
+        const { data: txns } = await supabase
+          .from("payment_transactions")
+          .select("order_id, amount")
+          .eq("invoice_id", activeRow.invoice_id)
+          .eq("status", "SUCCESS")
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        const txn = (txns || [])[0];
+        if (!txn) {
+          toast({
+            title: "No HDFC transaction",
+            description: "This invoice has no successful HDFC payment. Choose an offline method.",
+            variant: "destructive",
+          });
+          setProcessing(false);
+          return;
+        }
+        const res = await initiateRefund(
+          txn.order_id,
+          activeRow.amount,
+          undefined,
+          notes || "Refund processed from Refunds tab",
+        );
+        toast({
+          title: res.status === "SUCCESS" ? "Refund processed" : "Refund initiated",
+          description: `HDFC status: ${res.status}${res.refund_id ? ` (ref ${res.refund_id})` : ""}`,
+        });
+        // Delete the placeholder pending row — initiateRefund creates a fresh refund row
+        await supabase.from("refunds").delete().eq("id", activeRow.id);
+      } else {
+        const { error } = await supabase
+          .from("refunds")
+          .update({
+            status: "processed",
+            refund_method: method,
+            reason: notes || activeRow.reason,
+          })
+          .eq("id", activeRow.id);
+        if (error) throw error;
+        toast({ title: "Refund marked as processed" });
+      }
+      setProcessOpen(false);
+      setActiveRow(null);
+      setReloadKey((k) => k + 1);
+    } catch (err: any) {
+      toast({ title: "Failed to process refund", description: err?.message || "Error", variant: "destructive" });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
