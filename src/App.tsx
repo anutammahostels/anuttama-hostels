@@ -27,7 +27,7 @@ import Billing from "./pages/Billing";
 import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
 import Complaints from "./pages/Complaints";
-import Payroll from "./pages/Payroll";
+import Refunds from "./pages/Refunds";
 import Accounting from "./pages/Accounting";
 import Admissions from "./pages/Admissions";
 import Receivables from "./pages/Receivables";
@@ -87,7 +87,7 @@ const App = () => (
               <Route path="/dashboard/passes" element={<GatePasses />} />
               <Route path="/dashboard/mess" element={<MessManagement />} />
               <Route path="/dashboard/billing" element={<Billing />} />
-              <Route path="/dashboard/payroll" element={<Payroll />} />
+              <Route path="/dashboard/refunds" element={<Refunds />} />
               <Route path="/dashboard/accounting" element={<Accounting />} />
               <Route path="/dashboard/admissions" element={<Admissions />} />
               <Route path="/dashboard/receivables" element={<Receivables />} />
