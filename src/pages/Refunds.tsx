@@ -132,7 +132,7 @@ const Refunds = () => {
       setLoading(false);
     };
     load();
-  }, [centerId]);
+  }, [centerId, reloadKey]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
