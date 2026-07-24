@@ -56,7 +56,7 @@ const Refunds = () => {
   // Process refund dialog
   const [processOpen, setProcessOpen] = useState(false);
   const [activeRow, setActiveRow] = useState<RefundRow | null>(null);
-  const [method, setMethod] = useState<string>("cash");
+  const [method, setMethod] = useState<string>("hdfc");
   const [notes, setNotes] = useState("");
   const [processing, setProcessing] = useState(false);
 
