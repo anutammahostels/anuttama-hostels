@@ -58,6 +58,13 @@ const Refunds = () => {
   const [activeRow, setActiveRow] = useState<RefundRow | null>(null);
   const [method, setMethod] = useState<string>("hdfc");
   const [notes, setNotes] = useState("");
+  const [accountHolder, setAccountHolder] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifsc, setIfsc] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const [chequeNumber, setChequeNumber] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
   const [processing, setProcessing] = useState(false);
 
   const isPending = (s: string | null) =>
@@ -217,6 +224,13 @@ const Refunds = () => {
     setActiveRow(r);
     setMethod("hdfc");
     setNotes(r.reason || "");
+    setAccountHolder("");
+    setAccountNumber("");
+    setIfsc("");
+    setBankName("");
+    setUpiId("");
+    setChequeNumber("");
+    setReferenceNumber("");
     setProcessOpen(true);
   };
 
@@ -256,12 +270,43 @@ const Refunds = () => {
         // Delete the placeholder pending row — initiateRefund creates a fresh refund row
         await supabase.from("refunds").delete().eq("id", activeRow.id);
       } else {
+        // Validate offline method-specific fields
+        const missing: string[] = [];
+        if (method === "neft") {
+          if (!accountHolder.trim()) missing.push("Account holder");
+          if (!accountNumber.trim()) missing.push("Account number");
+          if (!ifsc.trim()) missing.push("IFSC code");
+        } else if (method === "upi") {
+          if (!upiId.trim()) missing.push("UPI ID");
+        } else if (method === "cheque") {
+          if (!chequeNumber.trim()) missing.push("Cheque number");
+          if (!accountHolder.trim()) missing.push("Payee name");
+          if (!bankName.trim()) missing.push("Bank name");
+        } else if (method === "cash") {
+          if (!referenceNumber.trim()) missing.push("Receipt / voucher no.");
+        }
+        if (missing.length) {
+          toast({ title: "Missing details", description: missing.join(", "), variant: "destructive" });
+          setProcessing(false);
+          return;
+        }
+
+        // Compose refund details into reason for audit trail
+        const details: string[] = [];
+        if (method === "neft") details.push(`NEFT to ${accountHolder} • A/C ${accountNumber} • IFSC ${ifsc}${bankName ? ` • ${bankName}` : ""}`);
+        if (method === "upi") details.push(`UPI to ${upiId}`);
+        if (method === "cheque") details.push(`Cheque #${chequeNumber} • ${accountHolder} • ${bankName}`);
+        if (method === "cash") details.push(`Cash • Voucher ${referenceNumber}`);
+        if (referenceNumber && method !== "cash") details.push(`Ref: ${referenceNumber}`);
+        if (notes.trim()) details.push(notes.trim());
+        const composedReason = details.join(" | ");
+
         const { error } = await supabase
           .from("refunds")
           .update({
             status: "processed",
             refund_method: method,
-            reason: notes || activeRow.reason,
+            reason: composedReason || activeRow.reason,
           })
           .eq("id", activeRow.id);
         if (error) throw error;
@@ -438,28 +483,102 @@ const Refunds = () => {
               ) : null}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 max-h-[65vh] overflow-y-auto">
             <div className="space-y-2">
               <Label>Refund Method</Label>
               <Select value={method} onValueChange={setMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="hdfc">HDFC Payment Gateway (refund to original card/UPI)</SelectItem>
+                  <SelectItem value="neft">NEFT / Bank Transfer</SelectItem>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Real money will be refunded via HDFC to the payer's original card/UPI. Requires an original successful HDFC payment on this invoice.
-              </p>
+              {method === "hdfc" && (
+                <p className="text-xs text-muted-foreground">
+                  Real money will be refunded via HDFC to the payer's original card/UPI. Requires an original successful HDFC payment on this invoice.
+                </p>
+              )}
+              {method !== "hdfc" && (
+                <p className="text-xs text-amber-600">
+                  Offline methods only record the refund — the actual money transfer must be done manually outside the system.
+                </p>
+              )}
             </div>
+
+            {method === "neft" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Account Holder Name *</Label>
+                  <Input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="As per bank records" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account Number *</Label>
+                  <Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value.replace(/\s/g, ""))} placeholder="e.g. 1234567890" />
+                </div>
+                <div className="space-y-2">
+                  <Label>IFSC Code *</Label>
+                  <Input value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} placeholder="e.g. HDFC0001234" maxLength={11} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Bank Name</Label>
+                  <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. HDFC Bank" />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Transaction / UTR Reference</Label>
+                  <Input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="UTR / Ref no. after transfer" />
+                </div>
+              </div>
+            )}
+
+            {method === "upi" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>UPI ID *</Label>
+                  <Input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="e.g. name@okhdfc" />
+                </div>
+                <div className="space-y-2">
+                  <Label>UPI Transaction Reference</Label>
+                  <Input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Ref no. after transfer" />
+                </div>
+              </div>
+            )}
+
+            {method === "cheque" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Payee Name *</Label>
+                  <Input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="Name on cheque" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cheque Number *</Label>
+                  <Input value={chequeNumber} onChange={(e) => setChequeNumber(e.target.value)} placeholder="e.g. 123456" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Bank Name *</Label>
+                  <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Drawn on" />
+                </div>
+              </div>
+            )}
+
+            {method === "cash" && (
+              <div className="space-y-2">
+                <Label>Receipt / Voucher No. *</Label>
+                <Input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Internal voucher / receipt no." />
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label>Notes / Reason</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Bank ref no, remarks…" />
+              <Label>Notes / Remarks</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any additional remarks…" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setProcessOpen(false)}>Cancel</Button>
             <Button disabled={processing} onClick={submitProcess}>
-              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refund via HDFC"}
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : method === "hdfc" ? "Refund via HDFC" : "Mark as Processed"}
             </Button>
           </DialogFooter>
         </DialogContent>
