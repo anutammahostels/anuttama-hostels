@@ -11,13 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, FileText, Loader2, Search } from "lucide-react";
+import { Download, FileText, Loader2, Search, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToExcel } from "@/lib/exportExcel";
 import { format } from "date-fns";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useCenter } from "@/contexts/CenterContext";
 import { CenterFilter } from "@/components/dashboard/CenterFilter";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { initiateRefund } from "@/lib/hdfc";
+import { useToast } from "@/hooks/use-toast";
 
 const formatCurrency = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
@@ -45,6 +50,18 @@ const Refunds = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const pageSize = 25;
+  const { toast } = useToast();
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Process refund dialog
+  const [processOpen, setProcessOpen] = useState(false);
+  const [activeRow, setActiveRow] = useState<RefundRow | null>(null);
+  const [method, setMethod] = useState<string>("cash");
+  const [notes, setNotes] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  const isPending = (s: string | null) =>
+    !["processed", "completed", "success", "failed", "rejected"].includes((s || "").toLowerCase());
 
   useEffect(() => {
     const load = async () => {
@@ -115,7 +132,7 @@ const Refunds = () => {
       setLoading(false);
     };
     load();
-  }, [centerId]);
+  }, [centerId, reloadKey]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -196,6 +213,70 @@ const Refunds = () => {
     return "bg-yellow-100 text-yellow-700";
   };
 
+  const openProcess = (r: RefundRow) => {
+    setActiveRow(r);
+    setMethod(r.refund_method || "cash");
+    setNotes(r.reason || "");
+    setProcessOpen(true);
+  };
+
+  const submitProcess = async () => {
+    if (!activeRow) return;
+    setProcessing(true);
+    try {
+      if (method === "hdfc") {
+        // Look up a successful HDFC transaction on this invoice
+        const { data: txns } = await supabase
+          .from("payment_transactions")
+          .select("order_id, amount")
+          .eq("invoice_id", activeRow.invoice_id)
+          .eq("status", "SUCCESS")
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        const txn = (txns || [])[0];
+        if (!txn) {
+          toast({
+            title: "No HDFC transaction",
+            description: "This invoice has no successful HDFC payment. Choose an offline method.",
+            variant: "destructive",
+          });
+          setProcessing(false);
+          return;
+        }
+        const res = await initiateRefund(
+          txn.order_id,
+          activeRow.amount,
+          undefined,
+          notes || "Refund processed from Refunds tab",
+        );
+        toast({
+          title: res.status === "SUCCESS" ? "Refund processed" : "Refund initiated",
+          description: `HDFC status: ${res.status}${res.refund_id ? ` (ref ${res.refund_id})` : ""}`,
+        });
+        // Delete the placeholder pending row — initiateRefund creates a fresh refund row
+        await supabase.from("refunds").delete().eq("id", activeRow.id);
+      } else {
+        const { error } = await supabase
+          .from("refunds")
+          .update({
+            status: "processed",
+            refund_method: method,
+            reason: notes || activeRow.reason,
+          })
+          .eq("id", activeRow.id);
+        if (error) throw error;
+        toast({ title: "Refund marked as processed" });
+      }
+      setProcessOpen(false);
+      setActiveRow(null);
+      setReloadKey((k) => k + 1);
+    } catch (err: any) {
+      toast({ title: "Failed to process refund", description: err?.message || "Error", variant: "destructive" });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
@@ -272,6 +353,11 @@ const Refunds = () => {
                   </div>
                   <p className="text-xs text-muted-foreground">{r.property_name}</p>
                   {r.reason && <p className="text-xs text-muted-foreground italic">"{r.reason}"</p>}
+                  {isPending(r.status) && (
+                    <Button size="sm" className="mt-2 w-full" onClick={() => openProcess(r)}>
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Process Refund
+                    </Button>
+                  )}
                 </div>
               ))
             )}
@@ -290,12 +376,13 @@ const Refunds = () => {
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paged.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       No refunds found
                     </TableCell>
                   </TableRow>
@@ -314,6 +401,15 @@ const Refunds = () => {
                       <TableCell className="text-right font-semibold text-orange-600">
                         {formatCurrency(r.amount)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {isPending(r.status) ? (
+                          <Button size="sm" variant="outline" onClick={() => openProcess(r)}>
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Refund
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -331,6 +427,49 @@ const Refunds = () => {
           onPageChange={setPage}
         />
       )}
+
+      <Dialog open={processOpen} onOpenChange={setProcessOpen}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Process Refund</DialogTitle>
+            <DialogDescription>
+              {activeRow ? (
+                <>Refund {formatCurrency(activeRow.amount)} to {activeRow.student_name} ({activeRow.roll_number})</>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Refund Method</Label>
+              <Select value={method} onValueChange={setMethod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="hdfc">HDFC (Online — refund to original card/UPI)</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="neft">NEFT / Bank Transfer</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+              {method === "hdfc" && (
+                <p className="text-xs text-muted-foreground">
+                  Requires an original successful HDFC payment on this invoice.
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Notes / Reason</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Bank ref no, remarks…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProcessOpen(false)}>Cancel</Button>
+            <Button disabled={processing} onClick={submitProcess}>
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark as Processed"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
