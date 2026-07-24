@@ -119,15 +119,24 @@ const Refunds = () => {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return rows;
-    return rows.filter(
-      (r) =>
+    return rows.filter((r) => {
+      const matchesSearch =
+        !term ||
         r.student_name.toLowerCase().includes(term) ||
         r.roll_number.toLowerCase().includes(term) ||
         r.invoice_number.toLowerCase().includes(term) ||
-        (r.refund_method || "").toLowerCase().includes(term)
-    );
-  }, [rows, search]);
+        (r.refund_method || "").toLowerCase().includes(term);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "processed" &&
+          ["processed", "completed", "success"].includes((r.status || "").toLowerCase())) ||
+        (statusFilter === "pending" &&
+          !["processed", "completed", "success", "failed", "rejected"].includes((r.status || "").toLowerCase()));
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [rows, search, statusFilter]);
 
   const totals = useMemo(() => {
     const total = filtered.reduce((s, r) => s + r.amount, 0);
