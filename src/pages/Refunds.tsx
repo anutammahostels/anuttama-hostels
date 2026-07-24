@@ -224,6 +224,13 @@ const Refunds = () => {
     setActiveRow(r);
     setMethod("hdfc");
     setNotes(r.reason || "");
+    setAccountHolder("");
+    setAccountNumber("");
+    setIfsc("");
+    setBankName("");
+    setUpiId("");
+    setChequeNumber("");
+    setReferenceNumber("");
     setProcessOpen(true);
   };
 
