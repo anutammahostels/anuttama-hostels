@@ -50,6 +50,18 @@ const Refunds = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const pageSize = 25;
+  const { toast } = useToast();
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Process refund dialog
+  const [processOpen, setProcessOpen] = useState(false);
+  const [activeRow, setActiveRow] = useState<RefundRow | null>(null);
+  const [method, setMethod] = useState<string>("cash");
+  const [notes, setNotes] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  const isPending = (s: string | null) =>
+    !["processed", "completed", "success", "failed", "rejected"].includes((s || "").toLowerCase());
 
   useEffect(() => {
     const load = async () => {
