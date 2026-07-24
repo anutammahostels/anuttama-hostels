@@ -427,6 +427,49 @@ const Refunds = () => {
           onPageChange={setPage}
         />
       )}
+
+      <Dialog open={processOpen} onOpenChange={setProcessOpen}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Process Refund</DialogTitle>
+            <DialogDescription>
+              {activeRow ? (
+                <>Refund {formatCurrency(activeRow.amount)} to {activeRow.student_name} ({activeRow.roll_number})</>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Refund Method</Label>
+              <Select value={method} onValueChange={setMethod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="hdfc">HDFC (Online — refund to original card/UPI)</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="neft">NEFT / Bank Transfer</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+              {method === "hdfc" && (
+                <p className="text-xs text-muted-foreground">
+                  Requires an original successful HDFC payment on this invoice.
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Notes / Reason</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Bank ref no, remarks…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProcessOpen(false)}>Cancel</Button>
+            <Button disabled={processing} onClick={submitProcess}>
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark as Processed"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
