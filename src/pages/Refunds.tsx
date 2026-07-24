@@ -353,6 +353,11 @@ const Refunds = () => {
                   </div>
                   <p className="text-xs text-muted-foreground">{r.property_name}</p>
                   {r.reason && <p className="text-xs text-muted-foreground italic">"{r.reason}"</p>}
+                  {isPending(r.status) && (
+                    <Button size="sm" className="mt-2 w-full" onClick={() => openProcess(r)}>
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Process Refund
+                    </Button>
+                  )}
                 </div>
               ))
             )}
