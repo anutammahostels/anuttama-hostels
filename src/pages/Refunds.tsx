@@ -58,6 +58,13 @@ const Refunds = () => {
   const [activeRow, setActiveRow] = useState<RefundRow | null>(null);
   const [method, setMethod] = useState<string>("hdfc");
   const [notes, setNotes] = useState("");
+  const [accountHolder, setAccountHolder] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifsc, setIfsc] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const [chequeNumber, setChequeNumber] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
   const [processing, setProcessing] = useState(false);
 
   const isPending = (s: string | null) =>
