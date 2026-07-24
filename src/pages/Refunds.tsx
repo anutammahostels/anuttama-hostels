@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Download, FileText, Loader2, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -35,6 +42,7 @@ const Refunds = () => {
   const [rows, setRows] = useState<RefundRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
@@ -111,15 +119,24 @@ const Refunds = () => {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return rows;
-    return rows.filter(
-      (r) =>
+    return rows.filter((r) => {
+      const matchesSearch =
+        !term ||
         r.student_name.toLowerCase().includes(term) ||
         r.roll_number.toLowerCase().includes(term) ||
         r.invoice_number.toLowerCase().includes(term) ||
-        (r.refund_method || "").toLowerCase().includes(term)
-    );
-  }, [rows, search]);
+        (r.refund_method || "").toLowerCase().includes(term);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "processed" &&
+          ["processed", "completed", "success"].includes((r.status || "").toLowerCase())) ||
+        (statusFilter === "pending" &&
+          !["processed", "completed", "success", "failed", "rejected"].includes((r.status || "").toLowerCase()));
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [rows, search, statusFilter]);
 
   const totals = useMemo(() => {
     const total = filtered.reduce((s, r) => s + r.amount, 0);
@@ -131,7 +148,7 @@ const Refunds = () => {
 
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  useEffect(() => setPage(1), [search, centerId]);
+  useEffect(() => setPage(1), [search, centerId, statusFilter]);
 
   const handleExportExcel = () => {
     exportToExcel(
@@ -210,14 +227,26 @@ const Refunds = () => {
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Records</p><p className="text-xl sm:text-2xl font-bold">{totals.count}</p></CardContent></Card>
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by student, form no., invoice or method"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by student, form no., invoice or method"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="processed">Processed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
