@@ -22,7 +22,7 @@ const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 type HdfcTxn = { order_id: string; amount: number; hdfc_txn_id: string | null; updated_at: string; invoice_id: string | null };
 type PaymentRow = { student_id: string | null; amount: number; payment_method: string | null; payment_mode_label: string | null; paid_at: string | null };
 
-const Receivables = () => {
+const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
   const { invoices, isLoading } = useInvoices();
   const { toast } = useToast();
   const [refundsMap, setRefundsMap] = useState<Map<string, number>>(new Map());
