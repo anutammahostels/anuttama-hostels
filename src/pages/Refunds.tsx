@@ -42,7 +42,7 @@ type RefundRow = {
   property_name: string;
 };
 
-const Refunds = () => {
+const Refunds = ({ embedded = false }: { embedded?: boolean }) => {
   const { centerId } = useCenter();
   const [rows, setRows] = useState<RefundRow[]>([]);
   const [loading, setLoading] = useState(true);

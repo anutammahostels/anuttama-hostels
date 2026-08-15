@@ -49,7 +49,7 @@ const getStatusBadge = (status: string | null) => {
 
 const formatCurrency = (amount: number | null) => formatCompactINR(amount);
 
-const Billing = () => {
+const Billing = ({ embedded = false }: { embedded?: boolean }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {

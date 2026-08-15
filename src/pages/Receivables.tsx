@@ -352,12 +352,12 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
                   <TableHead className="text-right">Refunds</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead className="text-right">Net Receivable</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  {!embedded && <TableHead className="text-right">Action</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={embedded ? 8 : 9} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
                 ) : pagedRows.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
@@ -368,11 +368,13 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
                     <TableCell className="text-right text-orange-600">{formatCurrency(r.refunds)}</TableCell>
                     <TableCell><Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge></TableCell>
                     <TableCell className="text-right font-bold text-red-600">{formatCurrency(r.net)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
-                        <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
-                      </Button>
-                    </TableCell>
+                    {!embedded && (
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
+                          <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
                 {rows.length > 0 && (
@@ -384,7 +386,7 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
                     <TableCell className="text-right text-orange-600">{formatCurrency(totals.refunds)}</TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-right text-red-600">{formatCurrency(totals.net)}</TableCell>
-                    <TableCell></TableCell>
+                    {!embedded && <TableCell></TableCell>}
                   </TableRow>
                 )}
               </TableBody>
