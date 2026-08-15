@@ -281,11 +281,13 @@ const Accounting = () => {
               </div>
               {filteredTxns.length > txnPageSize && (
                 <TablePagination
-                  currentPage={txnPage}
+                  page={txnPage}
                   totalItems={filteredTxns.length}
                   pageSize={txnPageSize}
                   onPageChange={setTxnPage}
+                  itemLabel="transactions"
                 />
+
               )}
             </CardContent>
           </Card>
