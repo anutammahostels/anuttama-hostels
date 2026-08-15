@@ -35,7 +35,7 @@ const actions: Action[] = [
     shortLabel: "Invoice",
     iconBg: "bg-gradient-to-br from-amber-500 to-orange-500",
     hoverBg: "hover:border-amber-500/30",
-    path: "/dashboard/billing"
+    path: "/dashboard/accounting"
   },
   { 
     icon: Wrench, 
