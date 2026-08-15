@@ -42,7 +42,7 @@ type RefundRow = {
   property_name: string;
 };
 
-const Refunds = () => {
+const Refunds = ({ embedded = false }: { embedded?: boolean }) => {
   const { centerId } = useCenter();
   const [rows, setRows] = useState<RefundRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -331,6 +331,7 @@ const Refunds = () => {
 
   return (
     <div className="space-y-6">
+      {!embedded && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Refunds</h1>
@@ -346,12 +347,23 @@ const Refunds = () => {
           </Button>
         </div>
       </div>
+      )}
 
+      {embedded && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={handleExportPdf}>
+            <FileText className="h-4 w-4 mr-2" />Export PDF
+          </Button>
+        </div>
+      )}
+
+      {!embedded && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Refund Amount</p><p className="text-xl sm:text-2xl font-bold text-orange-600">{formatCurrency(totals.total)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Processed Refunds</p><p className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(totals.processed)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Records</p><p className="text-xl sm:text-2xl font-bold">{totals.count}</p></CardContent></Card>
       </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative max-w-md flex-1">

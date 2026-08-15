@@ -49,7 +49,7 @@ const getStatusBadge = (status: string | null) => {
 
 const formatCurrency = (amount: number | null) => formatCompactINR(amount);
 
-const Billing = () => {
+const Billing = ({ embedded = false }: { embedded?: boolean }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
@@ -485,6 +485,7 @@ const Billing = () => {
     <>
       <div className="space-y-6">
         {/* Header */}
+        {!embedded && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Billing & Invoices</h1>
@@ -546,8 +547,18 @@ const Billing = () => {
             </Button>
           </div>
         </div>
+        )}
+
+        {embedded && (
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button className="bg-[#29926A] hover:bg-[#22795a] text-white" onClick={() => { setSelectedStudentIds([]); setGenerateDialog(true); }}>
+              <Plus className="h-4 w-4 mr-2" />Generate Invoices
+            </Button>
+          </div>
+        )}
 
         {/* Stats */}
+        {!embedded && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {statsData.map((stat) => (
             <Card key={stat.label} className="border-border/50">
@@ -568,8 +579,10 @@ const Billing = () => {
             </Card>
           ))}
         </div>
+        )}
 
         {/* Late Fee Rule Info */}
+        {!embedded && (
         <Card className="border-border/50 bg-gradient-to-r from-yellow-500/5 to-transparent">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -583,6 +596,7 @@ const Billing = () => {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="invoices">
@@ -591,7 +605,7 @@ const Billing = () => {
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="overdue">Overdue</TabsTrigger>
             <TabsTrigger value="payments">Payment History</TabsTrigger>
-            <TabsTrigger value="refunds" onClick={() => fetchRefundsList()}>Refunds</TabsTrigger>
+            {!embedded && <TabsTrigger value="refunds" onClick={() => fetchRefundsList()}>Refunds</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="invoices" className="mt-6">
@@ -609,7 +623,7 @@ const Billing = () => {
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Searching invoices" />
                 )}
               </div>
-              <CenterFilter />
+              {!embedded && <CenterFilter />}
               <Button variant="outline" onClick={() => handleSendReminder()}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Reminders

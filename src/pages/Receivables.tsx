@@ -22,7 +22,7 @@ const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 type HdfcTxn = { order_id: string; amount: number; hdfc_txn_id: string | null; updated_at: string; invoice_id: string | null };
 type PaymentRow = { student_id: string | null; amount: number; payment_method: string | null; payment_mode_label: string | null; paid_at: string | null };
 
-const Receivables = () => {
+const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
   const { invoices, isLoading } = useInvoices();
   const { toast } = useToast();
   const [refundsMap, setRefundsMap] = useState<Map<string, number>>(new Map());
@@ -268,6 +268,7 @@ const Receivables = () => {
 
   return (
     <div className="space-y-6">
+      {!embedded && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Student Receivables</h1>
@@ -278,7 +279,15 @@ const Receivables = () => {
           <Button variant="outline" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-2" />Export PDF</Button>
         </div>
       </div>
+      )}
 
+      {embedded && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-2" />Export PDF</Button>
+        </div>
+      )}
+
+      {!embedded && (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Gross Receivable</p><p className="text-xl sm:text-2xl font-bold">{formatCurrency(totals.gross)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Discounts Given</p><p className="text-xl sm:text-2xl font-bold text-yellow-600">{formatCurrency(totals.discounts)}</p></CardContent></Card>
@@ -286,6 +295,8 @@ const Receivables = () => {
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Refunds</p><p className="text-xl sm:text-2xl font-bold text-orange-600">{formatCurrency(totals.refunds)}</p></CardContent></Card>
         <Card className="col-span-2 sm:col-span-1"><CardContent className="p-4"><p className="text-sm text-muted-foreground">Net Receivable</p><p className="text-xl sm:text-2xl font-bold text-red-600">{formatCurrency(totals.net)}</p></CardContent></Card>
       </div>
+      )}
+
 
       <Card>
         <CardContent className="p-0">
@@ -311,10 +322,13 @@ const Receivables = () => {
                     </div>
                     <div className="flex items-center justify-between pt-1">
                       {r.paymentModes !== '-' && <Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge>}
-                      <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
-                        <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
-                      </Button>
+                      {!embedded && (
+                        <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
+                          <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
+                        </Button>
+                      )}
                     </div>
+
                   </div>
                 ))}
                 <div className="p-4 bg-muted/50 font-bold">
@@ -338,12 +352,12 @@ const Receivables = () => {
                   <TableHead className="text-right">Refunds</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead className="text-right">Net Receivable</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  {!embedded && <TableHead className="text-right">Action</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={embedded ? 8 : 9} className="text-center py-8 text-muted-foreground">No receivables data</TableCell></TableRow>
                 ) : pagedRows.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
@@ -354,11 +368,13 @@ const Receivables = () => {
                     <TableCell className="text-right text-orange-600">{formatCurrency(r.refunds)}</TableCell>
                     <TableCell><Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge></TableCell>
                     <TableCell className="text-right font-bold text-red-600">{formatCurrency(r.net)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
-                        <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
-                      </Button>
-                    </TableCell>
+                    {!embedded && (
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
+                          <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
                 {rows.length > 0 && (
@@ -370,7 +386,7 @@ const Receivables = () => {
                     <TableCell className="text-right text-orange-600">{formatCurrency(totals.refunds)}</TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-right text-red-600">{formatCurrency(totals.net)}</TableCell>
-                    <TableCell></TableCell>
+                    {!embedded && <TableCell></TableCell>}
                   </TableRow>
                 )}
               </TableBody>

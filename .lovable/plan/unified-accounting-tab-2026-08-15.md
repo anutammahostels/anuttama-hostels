@@ -5,6 +5,7 @@ Replace the three separate tabs (Billing, Receivables, Refunds) with one **Accou
 ## Why the current setup is inconsistent
 
 Each page independently queries and re-aggregates the same records:
+
 - Billing reads `invoices`, `payments`, `refunds`
 - Receivables reads `payments`, `payment_transactions`, `refunds`
 - Refunds reads `refunds`, `payment_transactions`
