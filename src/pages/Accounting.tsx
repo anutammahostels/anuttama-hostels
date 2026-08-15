@@ -1,849 +1,302 @@
 import { useState } from "react";
-import { TablePagination } from "@/components/ui/table-pagination";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useProperties } from "@/hooks/useProperties";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import {
-  Plus, TrendingUp, TrendingDown, BookOpen, ClipboardList,
-  IndianRupee, ArrowUpRight, ArrowDownRight, Calendar, Download, FileText, FileSpreadsheet
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { Download, Loader2, Search } from "lucide-react";
 import { format } from "date-fns";
-import { exportToExcel } from "@/lib/exportExcel";
+import { CenterFilter } from "@/components/dashboard/CenterFilter";
+import { useCenter } from "@/contexts/CenterContext";
+import { useProperties } from "@/hooks/useProperties";
+import { useAccountingLedger } from "@/hooks/useAccountingLedger";
+import { exportAccountingWorkbook } from "@/lib/exportAccounting";
+import { useToast } from "@/hooks/use-toast";
+import Billing from "@/pages/Billing";
+import Receivables from "@/pages/Receivables";
+import Refunds from "@/pages/Refunds";
 
-type Account = {
-  id: string; property_id: string; name: string; code: string | null;
-  account_type: string; description: string | null; is_active: boolean | null; created_at: string;
-};
-type Transaction = {
-  id: string; property_id: string; account_id: string; transaction_type: string;
-  amount: number; date: string; description: string | null; reference_number: string | null;
-  category: string | null; payment_mode: string | null; created_by: string | null;
-  created_at: string; updated_at: string;
-};
-type JournalEntry = {
-  id: string; property_id: string; entry_number: string; date: string;
-  description: string; debit_account_id: string; credit_account_id: string;
-  amount: number; reference: string | null; created_by: string | null; created_at: string;
-};
+const formatCurrency = (n: number) => `₹${Math.round(Number(n || 0)).toLocaleString("en-IN")}`;
 
-const ACCOUNT_TYPES = ['income', 'expense', 'asset', 'liability'] as const;
-const PAYMENT_MODES = ['cash', 'bank_transfer', 'upi', 'cheque', 'card'] as const;
+type StatGroup = "collections" | "transactions" | "refunds" | "students";
 
-export default function Accounting() {
-  const { user } = useAuth();
+const STAT_GROUP_KEY = "accounting-stat-group";
+
+const Accounting = () => {
+  const { centerId } = useCenter();
   const { properties } = useProperties();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [activeTab, setActiveTab] = useState("transactions");
-
-  // Dialog states
-  const [showAccountDialog, setShowAccountDialog] = useState(false);
-  const [showTransactionDialog, setShowTransactionDialog] = useState(false);
-  const [showJournalDialog, setShowJournalDialog] = useState(false);
-
-  // Form states
-  const [accountForm, setAccountForm] = useState({ name: "", code: "", account_type: "expense" as string, description: "" });
-  const [txnForm, setTxnForm] = useState({ account_id: "", transaction_type: "expense", amount: "", date: format(new Date(), "yyyy-MM-dd"), description: "", reference_number: "", category: "", payment_mode: "cash" });
-  const [journalForm, setJournalForm] = useState({ entry_number: "", date: format(new Date(), "yyyy-MM-dd"), description: "", debit_account_id: "", credit_account_id: "", amount: "", reference: "" });
-
-  const propertyId = selectedProperty || properties[0]?.id || "";
-
-  // Queries
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("accounts").select("*").eq("property_id", propertyId).order("name");
-      if (error) throw error;
-      return data as Account[];
-    },
-    enabled: !!propertyId,
-  });
-
-  const { data: transactions = [] } = useQuery({
-    queryKey: ["transactions", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("transactions").select("*").eq("property_id", propertyId).order("date", { ascending: false });
-      if (error) throw error;
-      return data as Transaction[];
-    },
-    enabled: !!propertyId,
-  });
-
-  const { data: journalEntries = [] } = useQuery({
-    queryKey: ["journal_entries", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("journal_entries").select("*").eq("property_id", propertyId).order("date", { ascending: false });
-      if (error) throw error;
-      return data as JournalEntry[];
-    },
-    enabled: !!propertyId,
-  });
-
-  const { data: feeCollections = [] } = useQuery({
-    queryKey: ["fee-collections", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("payments")
-        .select("*, invoice:invoices(invoice_number, billing_month, student_id)")
-        .eq("property_id", propertyId)
-        .order("paid_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!propertyId,
-  });
-
-  const { data: refundsData = [] } = useQuery({
-    queryKey: ["refunds-accounting", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("refunds")
-        .select("*")
-        .eq("property_id", propertyId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!propertyId,
-  });
-
-  const { data: payrollRecords = [] } = useQuery({
-    queryKey: ["payroll-accounting", propertyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("payroll_records")
-        .select("net_salary, month, status")
-        .eq("property_id", propertyId);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!propertyId,
-  });
-
-  // Pagination
-  const pageSize = 20;
+  const ledger = useAccountingLedger();
+  const [statGroup, setStatGroup] = useState<StatGroup>(
+    () => (localStorage.getItem(STAT_GROUP_KEY) as StatGroup) || "collections"
+  );
+  const [txnSearch, setTxnSearch] = useState("");
   const [txnPage, setTxnPage] = useState(1);
-  const [journalPage, setJournalPage] = useState(1);
-  const [acctPage, setAcctPage] = useState(1);
-  const [collPage, setCollPage] = useState(1);
-  const pagedTransactions = transactions.slice((txnPage - 1) * pageSize, txnPage * pageSize);
-  const pagedJournal = journalEntries.slice((journalPage - 1) * pageSize, journalPage * pageSize);
-  const pagedAccounts = accounts.slice((acctPage - 1) * pageSize, acctPage * pageSize);
-  const combinedCollections = [
-    ...feeCollections.map((p: any) => ({ kind: 'collection', ...p })),
-    ...refundsData.map((r: any) => ({ kind: 'refund', ...r })),
-  ];
-  const pagedCollections = combinedCollections.slice((collPage - 1) * pageSize, collPage * pageSize);
+  const txnPageSize = 25;
 
-  // Mutations
-  const createAccount = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("accounts").insert({ ...accountForm, property_id: propertyId } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      
-      setShowAccountDialog(false);
-      setAccountForm({ name: "", code: "", account_type: "expense", description: "" });
-      toast({ title: "Account Created" });
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
+  const centerLabel =
+    centerId === "all" ? "All Centers" : properties.find((p) => p.id === centerId)?.name || "Center";
 
-  const createTransaction = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("transactions").insert({
-        ...txnForm, amount: Number(txnForm.amount), property_id: propertyId, created_by: user?.id,
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      
-      setShowTransactionDialog(false);
-      setTxnForm({ account_id: "", transaction_type: "expense", amount: "", date: format(new Date(), "yyyy-MM-dd"), description: "", reference_number: "", category: "", payment_mode: "cash" });
-      toast({ title: "Transaction Recorded" });
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
-  const createJournal = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("journal_entries").insert({
-        ...journalForm, amount: Number(journalForm.amount), property_id: propertyId, created_by: user?.id,
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["journal_entries"] });
-      
-      setShowJournalDialog(false);
-      setJournalForm({ entry_number: "", date: format(new Date(), "yyyy-MM-dd"), description: "", debit_account_id: "", credit_account_id: "", amount: "", reference: "" });
-      toast({ title: "Journal Entry Created" });
-    },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
-
-  // Computed stats
-  const totalIncome = transactions.filter(t => t.transaction_type === "income").reduce((s, t) => s + Number(t.amount), 0);
-  const totalExpense = transactions.filter(t => t.transaction_type === "expense").reduce((s, t) => s + Number(t.amount), 0);
-  const netBalance = totalIncome - totalExpense;
-
-  const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || "—";
-
-  const feeTotal = feeCollections.reduce((s: number, p: any) => s + Number(p.amount), 0);
-  const refundsTotal = refundsData.reduce((s: number, r: any) => s + Number(r.amount), 0);
-  const payrollTotal = payrollRecords.reduce((s: number, r: any) => s + Number(r.net_salary), 0);
-
-  const pdfStyles = `<style>
-    body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e}
-    h1{color:#16213e;border-bottom:2px solid #0f3460;padding-bottom:8px}
-    h2{color:#0f3460;margin-top:30px}
-    table{width:100%;border-collapse:collapse;margin:15px 0}
-    th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:13px}
-    th{background:#0f3460;color:#fff}
-    .income{color:#16a34a}.expense{color:#dc2626}
-    .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin:20px 0}
-    .summary-card{border:1px solid #ddd;border-radius:8px;padding:16px;text-align:center}
-    .summary-card h3{font-size:14px;color:#666;margin:0 0 8px}
-    .summary-card .value{font-size:24px;font-weight:bold}
-    @media print{body{padding:20px}}
-  </style>`;
-
-  const propName = properties.find(p => p.id === propertyId)?.name || "Property";
-  const dateStr = format(new Date(), "dd MMM yyyy, hh:mm a");
-  const fileDateStr = format(new Date(), "yyyy-MM-dd");
-
-  const buildTransactionsHTML = () => `
-    <h2>Income & Expense Transactions</h2>
-    <table><tr><th>Date</th><th>Type</th><th>Account</th><th>Category</th><th>Description</th><th>Payment Mode</th><th>Amount</th></tr>
-    ${transactions.map(t => `<tr><td>${format(new Date(t.date), "dd/MM/yyyy")}</td><td class="${t.transaction_type}">${t.transaction_type.toUpperCase()}</td><td>${getAccountName(t.account_id)}</td><td>${t.category || "—"}</td><td>${t.description || "—"}</td><td>${t.payment_mode || "—"}</td><td class="${t.transaction_type}">₹${Number(t.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
-    </table>`;
-
-  const buildLedgerHTML = () => `
-    <h2>Journal Entries (Ledger)</h2>
-    <table><tr><th>Date</th><th>Entry #</th><th>Description</th><th>Debit Account</th><th>Credit Account</th><th>Amount</th></tr>
-    ${journalEntries.map(j => `<tr><td>${format(new Date(j.date), "dd/MM/yyyy")}</td><td>${j.entry_number}</td><td>${j.description}</td><td>${getAccountName(j.debit_account_id)}</td><td>${getAccountName(j.credit_account_id)}</td><td>₹${Number(j.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
-    </table>`;
-
-  const buildAccountsHTML = () => `
-    <h2>Chart of Accounts</h2>
-    <table><tr><th>Code</th><th>Name</th><th>Type</th><th>Description</th><th>Status</th></tr>
-    ${accounts.map(a => `<tr><td>${a.code || "—"}</td><td>${a.name}</td><td>${a.account_type}</td><td>${a.description || "—"}</td><td>${a.is_active ? "Active" : "Inactive"}</td></tr>`).join("")}
-    </table>`;
-
-  const buildCollectionsHTML = () => `
-    <h2>Fee Collections</h2>
-    <table><tr><th>Date</th><th>Invoice</th><th>Method</th><th>Status</th><th>Amount</th></tr>
-    ${feeCollections.map((p: any) => `<tr><td>${format(new Date(p.paid_at), "dd/MM/yyyy")}</td><td>${p.invoice?.invoice_number || "—"}</td><td>${p.payment_method}</td><td>${p.status}</td><td>₹${Number(p.amount).toLocaleString("en-IN")}</td></tr>`).join("")}
-    ${refundsData.length > 0 ? refundsData.map((r: any) => `<tr><td>${format(new Date(r.created_at), "dd/MM/yyyy")}</td><td>REFUND</td><td>${r.refund_method || 'cash'}</td><td>${r.status || 'processed'}</td><td class="expense">-₹${Number(r.amount).toLocaleString("en-IN")}</td></tr>`).join("") : ""}
-    </table>
-    <p><strong>Total Fee Collections: </strong>₹${feeTotal.toLocaleString("en-IN")}</p>
-    ${refundsTotal > 0 ? `<p><strong>Total Refunds: </strong><span class="expense">-₹${refundsTotal.toLocaleString("en-IN")}</span></p><p><strong>Net Collections: </strong>₹${(feeTotal - refundsTotal).toLocaleString("en-IN")}</p>` : ""}`;
-
-  const buildPnlHTML = () => {
-    const incomeRows = accounts.filter(a => a.account_type === 'income').map(a => {
-      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-      return total > 0 ? `<tr><td>${a.name}</td><td>₹${total.toLocaleString("en-IN")}</td></tr>` : "";
-    }).join("");
-    const expenseRows = accounts.filter(a => a.account_type === 'expense').map(a => {
-      const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-      return total > 0 ? `<tr><td>${a.name}</td><td>₹${total.toLocaleString("en-IN")}</td></tr>` : "";
-    }).join("");
-    const netFeeIncome = feeTotal - refundsTotal;
-    const totalExpenseWithPayroll = totalExpense + payrollTotal;
-    const netPL = totalIncome + netFeeIncome - totalExpenseWithPayroll;
-    return `
-    <h2>Profit & Loss Statement</h2>
-    <h3 style="color:#16a34a">Income</h3>
-    <table><tr><th>Account</th><th>Amount</th></tr>
-    ${feeTotal > 0 ? `<tr><td>Fee Collections</td><td>₹${feeTotal.toLocaleString("en-IN")}</td></tr>` : ""}
-    ${refundsTotal > 0 ? `<tr><td>Less: Refunds</td><td style="color:#dc2626">-₹${refundsTotal.toLocaleString("en-IN")}</td></tr>` : ""}
-    ${netFeeIncome > 0 ? `<tr><td><strong>Net Fee Income</strong></td><td><strong>₹${netFeeIncome.toLocaleString("en-IN")}</strong></td></tr>` : ""}
-    ${incomeRows}
-    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Income</td><td>₹${(totalIncome + netFeeIncome).toLocaleString("en-IN")}</td></tr>
-    </table>
-    <h3 style="color:#dc2626">Expenses</h3>
-    <table><tr><th>Account</th><th>Amount</th></tr>
-    ${expenseRows}
-    ${payrollTotal > 0 ? `<tr><td>Staff Salaries (Payroll)</td><td>₹${payrollTotal.toLocaleString("en-IN")}</td></tr>` : ""}
-    <tr style="font-weight:bold;border-top:2px solid #333"><td>Total Expenses</td><td>₹${totalExpenseWithPayroll.toLocaleString("en-IN")}</td></tr>
-    </table>
-    <h3>Net Profit / Loss: <span style="color:${netPL >= 0 ? '#16a34a' : '#dc2626'}">₹${netPL.toLocaleString("en-IN")}</span></h3>`;
+  const changeStatGroup = (value: StatGroup) => {
+    setStatGroup(value);
+    localStorage.setItem(STAT_GROUP_KEY, value);
   };
 
-  const printPDF = (title: string, bodyHTML: string) => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>${pdfStyles}</head><body>
-      <h1>${title} — ${propName}</h1><p>Generated on ${dateStr}</p>${bodyHTML}</body></html>`);
-    printWindow.document.close();
-    printWindow.print();
+  const { totals, txnStats, refundStats } = ledger;
+
+  const statCards: Record<StatGroup, { label: string; value: string; className?: string }[]> = {
+    collections: [
+      { label: "Gross Receivable", value: formatCurrency(totals.gross) },
+      { label: "Discounts", value: formatCurrency(totals.discounts), className: "text-yellow-600" },
+      { label: "Amount Received", value: formatCurrency(totals.received), className: "text-green-600" },
+      { label: "Refunded", value: formatCurrency(totals.refunded), className: "text-orange-600" },
+      { label: "Net Receivable", value: formatCurrency(totals.net), className: "text-red-600" },
+    ],
+    transactions: [
+      { label: "Transactions", value: txnStats.count.toLocaleString("en-IN") },
+      { label: "Online Collected", value: formatCurrency(txnStats.online), className: "text-green-600" },
+      { label: "Offline Collected", value: formatCurrency(txnStats.offline), className: "text-blue-600" },
+      { label: "Average Payment", value: formatCurrency(txnStats.average) },
+      { label: "Collected This Month", value: formatCurrency(txnStats.thisMonth), className: "text-green-600" },
+    ],
+    refunds: [
+      { label: "Total Refunds", value: formatCurrency(refundStats.total), className: "text-orange-600" },
+      { label: "Processed", value: formatCurrency(refundStats.processed), className: "text-green-600" },
+      { label: "Processed Count", value: refundStats.processedCount.toLocaleString("en-IN") },
+      { label: "Pending Amount", value: formatCurrency(refundStats.pending), className: "text-yellow-600" },
+      { label: "Pending Count", value: refundStats.pendingCount.toLocaleString("en-IN") },
+    ],
+    students: [
+      { label: "Students Billed", value: totals.studentCount.toLocaleString("en-IN") },
+      { label: "Fully Paid", value: totals.paidCount.toLocaleString("en-IN"), className: "text-green-600" },
+      { label: "Partially Paid", value: totals.partialCount.toLocaleString("en-IN"), className: "text-blue-600" },
+      { label: "Not Started", value: totals.pendingCount.toLocaleString("en-IN"), className: "text-red-600" },
+      {
+        label: "Collection %",
+        value: `${totals.gross > 0 ? Math.round((totals.received / (totals.gross - totals.discounts || 1)) * 100) : 0}%`,
+      },
+    ],
   };
 
-  const exportSectionPDF = (section: string) => {
-    switch (section) {
-      case "transactions": printPDF("Transactions Report", buildTransactionsHTML()); break;
-      case "ledger": printPDF("Ledger Report", buildLedgerHTML()); break;
-      case "accounts": printPDF("Accounts Report", buildAccountsHTML()); break;
-      case "collections": printPDF("Fee Collections Report", buildCollectionsHTML()); break;
-      case "pnl": printPDF("Profit & Loss Report", buildPnlHTML()); break;
-      case "all":
-        const summaryHTML = `<div class="summary-grid">
-          <div class="summary-card"><h3>Total Income</h3><div class="value income">₹${totalIncome.toLocaleString("en-IN")}</div></div>
-          <div class="summary-card"><h3>Total Expenses</h3><div class="value expense">₹${totalExpense.toLocaleString("en-IN")}</div></div>
-          <div class="summary-card"><h3>Net Balance</h3><div class="value" style="color:${netBalance >= 0 ? '#16a34a' : '#dc2626'}">₹${netBalance.toLocaleString("en-IN")}</div></div>
-        </div>`;
-        printPDF("Complete Financial Report", summaryHTML + buildTransactionsHTML() + buildLedgerHTML() + buildAccountsHTML() + buildCollectionsHTML() + buildPnlHTML());
-        break;
-    }
+  const handleExport = () => {
+    exportAccountingWorkbook({
+      rows: ledger.rows,
+      invoices: ledger.invoices,
+      payments: ledger.payments,
+      refunds: ledger.refunds,
+      studentMap: ledger.studentMap,
+      invoiceNumberMap: ledger.invoiceNumberMap,
+      totals: ledger.totals,
+      txnStats: ledger.txnStats,
+      refundStats: ledger.refundStats,
+      centerLabel,
+    });
+    toast({ title: "Exported", description: "Accounting workbook downloaded (5 sheets)" });
   };
 
-  const exportSectionExcel = (section: string) => {
-    const txnData = transactions.map(t => ({
-      Date: format(new Date(t.date), "dd/MM/yyyy"), Type: t.transaction_type, Account: getAccountName(t.account_id),
-      Category: t.category || "", Description: t.description || "", Mode: t.payment_mode || "", Amount: Number(t.amount),
-    }));
-    const ledgerData = journalEntries.map(j => ({
-      Date: format(new Date(j.date), "dd/MM/yyyy"), "Entry #": j.entry_number, Description: j.description,
-      "Debit Account": getAccountName(j.debit_account_id), "Credit Account": getAccountName(j.credit_account_id), Amount: Number(j.amount),
-    }));
-    const accountsData = accounts.map(a => ({
-      Code: a.code || "", Name: a.name, Type: a.account_type, Description: a.description || "", Status: a.is_active ? "Active" : "Inactive",
-    }));
-    const collectionsData = [
-      ...feeCollections.map((p: any) => ({
-        Date: format(new Date(p.paid_at), "dd/MM/yyyy"), Invoice: p.invoice?.invoice_number || "", Type: "Collection", Method: p.payment_method, Status: p.status, Amount: Number(p.amount),
-      })),
-      ...refundsData.map((r: any) => ({
-        Date: format(new Date(r.created_at), "dd/MM/yyyy"), Invoice: "REFUND", Type: "Refund", Method: r.refund_method || "cash", Status: r.status || "processed", Amount: -Number(r.amount),
-      })),
-    ];
-    const pnlIncomeData = [
-      ...(feeTotal > 0 ? [{ Category: "Fee Collections", Type: "Income", Amount: feeTotal }] : []),
-      ...(refundsTotal > 0 ? [{ Category: "Less: Refunds", Type: "Income Deduction", Amount: -refundsTotal }] : []),
-      ...(feeTotal > 0 && refundsTotal > 0 ? [{ Category: "Net Fee Income", Type: "Income", Amount: feeTotal - refundsTotal }] : []),
-      ...accounts.filter(a => a.account_type === 'income').map(a => {
-        const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-        return { Category: a.name, Type: "Income", Amount: total };
-      }).filter(r => r.Amount > 0),
-      ...accounts.filter(a => a.account_type === 'expense').map(a => {
-        const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-        return { Category: a.name, Type: "Expense", Amount: total };
-      }).filter(r => r.Amount > 0),
-      ...(payrollTotal > 0 ? [{ Category: "Staff Salaries (Payroll)", Type: "Expense", Amount: payrollTotal }] : []),
-      { Category: "Net Profit/Loss", Type: "", Amount: totalIncome + (feeTotal - refundsTotal) - (totalExpense + payrollTotal) },
-    ];
+  // Transactions sub-view
+  const txnRows = ledger.payments
+    .slice()
+    .sort((a, b) => new Date(b.paid_at || 0).getTime() - new Date(a.paid_at || 0).getTime())
+    .map((p) => {
+      const s = p.student_id ? ledger.studentMap.get(p.student_id) : undefined;
+      return {
+        ...p,
+        name: s?.name || "-",
+        roll: s?.rollNumber || "-",
+        center: s?.propertyName || "-",
+        invoiceNumber: ledger.invoiceNumberMap.get(p.invoice_id) || "-",
+        mode: p.payment_mode_label || p.payment_method || "-",
+      };
+    });
 
-    if (section === "all") {
-      // Multi-sheet workbook
-      import("xlsx").then(XLSX => {
-        const wb = XLSX.utils.book_new();
-        if (txnData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txnData), "Transactions");
-        if (ledgerData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ledgerData), "Ledger");
-        if (accountsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(accountsData), "Accounts");
-        if (collectionsData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(collectionsData), "Fee Collections");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pnlIncomeData), "P&L");
-        XLSX.writeFile(wb, `accounting-full-report-${fileDateStr}.xlsx`);
-      });
-      return;
-    }
-
-    const map: Record<string, { data: any[]; sheet: string }> = {
-      transactions: { data: txnData, sheet: "Transactions" },
-      ledger: { data: ledgerData, sheet: "Ledger" },
-      accounts: { data: accountsData, sheet: "Accounts" },
-      collections: { data: collectionsData, sheet: "Fee Collections" },
-      pnl: { data: pnlIncomeData, sheet: "P&L" },
-    };
-    const { data, sheet } = map[section] || {};
-    if (data && data.length > 0) exportToExcel(data, `accounting-${section}-${fileDateStr}`, sheet);
-  };
+  const term = txnSearch.trim().toLowerCase();
+  const filteredTxns = term
+    ? txnRows.filter(
+        (t) =>
+          t.name.toLowerCase().includes(term) ||
+          t.roll.toLowerCase().includes(term) ||
+          t.invoiceNumber.toLowerCase().includes(term) ||
+          t.mode.toLowerCase().includes(term)
+      )
+    : txnRows;
+  const pagedTxns = filteredTxns.slice((txnPage - 1) * txnPageSize, txnPage * txnPageSize);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Accounting</h1>
-          <p className="text-muted-foreground text-sm">Manage finances and ledger entries</p>
+          <p className="text-muted-foreground">Invoices, receivables, transactions & refunds in one place</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={propertyId} onValueChange={setSelectedProperty}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Select Property" /></SelectTrigger>
+        <div className="flex flex-wrap gap-2">
+          <CenterFilter />
+          <Button variant="outline" onClick={handleExport} disabled={ledger.isLoading}>
+            <Download className="h-4 w-4 mr-2" />Export Excel
+          </Button>
+        </div>
+      </div>
+
+      {/* Configurable statistics */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Statistics</span>
+          <Select value={statGroup} onValueChange={(v) => changeStatGroup(v as StatGroup)}>
+            <SelectTrigger className="w-52">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              <SelectItem value="collections">Collections</SelectItem>
+              <SelectItem value="transactions">Transactions</SelectItem>
+              <SelectItem value="refunds">Refunds</SelectItem>
+              <SelectItem value="students">Students</SelectItem>
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Income</p>
-                <p className="text-2xl font-bold text-green-600">₹{totalIncome.toLocaleString("en-IN")}</p>
-              </div>
-              <div className="p-3 rounded-full bg-green-100"><ArrowUpRight className="h-5 w-5 text-green-600" /></div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-600">₹{totalExpense.toLocaleString("en-IN")}</p>
-              </div>
-              <div className="p-3 rounded-full bg-red-100"><ArrowDownRight className="h-5 w-5 text-red-600" /></div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Net Balance</p>
-                <p className={`text-2xl font-bold ${netBalance >= 0 ? "text-green-600" : "text-red-600"}`}>₹{netBalance.toLocaleString("en-IN")}</p>
-              </div>
-              <div className="p-3 rounded-full bg-blue-100"><IndianRupee className="h-5 w-5 text-blue-600" /></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <TabsList className="w-full sm:w-auto overflow-x-auto flex-wrap h-auto">
-            <TabsTrigger value="transactions" className="gap-1"><TrendingUp className="h-3.5 w-3.5" />Transactions</TabsTrigger>
-            <TabsTrigger value="ledger" className="gap-1"><BookOpen className="h-3.5 w-3.5" />Ledger</TabsTrigger>
-            <TabsTrigger value="accounts" className="gap-1"><ClipboardList className="h-3.5 w-3.5" />Accounts</TabsTrigger>
-            <TabsTrigger value="collections" className="gap-1"><IndianRupee className="h-3.5 w-3.5" />Fee Collections</TabsTrigger>
-            <TabsTrigger value="pnl" className="gap-1"><TrendingDown className="h-3.5 w-3.5" />P&L</TabsTrigger>
-          </TabsList>
-          <div className="flex gap-2 flex-wrap">
-            {activeTab === "transactions" && (
-              <Dialog open={showTransactionDialog} onOpenChange={setShowTransactionDialog}>
-                <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Transaction</Button></DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader><DialogTitle>Record Transaction</DialogTitle></DialogHeader>
-                  <div className="grid gap-4 py-2">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Type</Label>
-                        <Select value={txnForm.transaction_type} onValueChange={v => setTxnForm(f => ({ ...f, transaction_type: v }))}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent><SelectItem value="income">Income</SelectItem><SelectItem value="expense">Expense</SelectItem></SelectContent>
-                        </Select>
-                      </div>
-                      <div><Label>Amount (₹)</Label><Input type="number" value={txnForm.amount} onChange={e => setTxnForm(f => ({ ...f, amount: e.target.value }))} /></div>
-                    </div>
-                    <div><Label>Account</Label>
-                      <Select value={txnForm.account_id} onValueChange={v => setTxnForm(f => ({ ...f, account_id: v }))}>
-                        <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
-                        <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.account_type})</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Date</Label><Input type="date" value={txnForm.date} onChange={e => setTxnForm(f => ({ ...f, date: e.target.value }))} /></div>
-                      <div><Label>Payment Mode</Label>
-                        <Select value={txnForm.payment_mode} onValueChange={v => setTxnForm(f => ({ ...f, payment_mode: v }))}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{PAYMENT_MODES.map(m => <SelectItem key={m} value={m}>{m.replace("_", " ").toUpperCase()}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Category</Label><Input value={txnForm.category} onChange={e => setTxnForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Electricity, Rent" /></div>
-                      <div><Label>Reference #</Label><Input value={txnForm.reference_number} onChange={e => setTxnForm(f => ({ ...f, reference_number: e.target.value }))} /></div>
-                    </div>
-                    <div><Label>Description</Label><Textarea value={txnForm.description} onChange={e => setTxnForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
-                    <Button onClick={() => createTransaction.mutate()} disabled={!txnForm.account_id || !txnForm.amount}>Record Transaction</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-            {activeTab === "ledger" && (
-              <Dialog open={showJournalDialog} onOpenChange={setShowJournalDialog}>
-                <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />New Journal Entry</Button></DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader><DialogTitle>Create Journal Entry</DialogTitle></DialogHeader>
-                  <div className="grid gap-4 py-2">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Entry Number</Label><Input value={journalForm.entry_number} onChange={e => setJournalForm(f => ({ ...f, entry_number: e.target.value }))} placeholder="JE-001" /></div>
-                      <div><Label>Date</Label><Input type="date" value={journalForm.date} onChange={e => setJournalForm(f => ({ ...f, date: e.target.value }))} /></div>
-                    </div>
-                    <div><Label>Description</Label><Input value={journalForm.description} onChange={e => setJournalForm(f => ({ ...f, description: e.target.value }))} /></div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Debit Account</Label>
-                        <Select value={journalForm.debit_account_id} onValueChange={v => setJournalForm(f => ({ ...f, debit_account_id: v }))}>
-                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                      <div><Label>Credit Account</Label>
-                        <Select value={journalForm.credit_account_id} onValueChange={v => setJournalForm(f => ({ ...f, credit_account_id: v }))}>
-                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Amount (₹)</Label><Input type="number" value={journalForm.amount} onChange={e => setJournalForm(f => ({ ...f, amount: e.target.value }))} /></div>
-                      <div><Label>Reference</Label><Input value={journalForm.reference} onChange={e => setJournalForm(f => ({ ...f, reference: e.target.value }))} /></div>
-                    </div>
-                    <Button onClick={() => createJournal.mutate()} disabled={!journalForm.entry_number || !journalForm.debit_account_id || !journalForm.credit_account_id || !journalForm.amount}>Create Entry</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-            {activeTab === "accounts" && (
-              <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
-                <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Account</Button></DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Create Account</DialogTitle></DialogHeader>
-                  <div className="grid gap-4 py-2">
-                    <div><Label>Account Name</Label><Input value={accountForm.name} onChange={e => setAccountForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Hostel Fees" /></div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Code</Label><Input value={accountForm.code} onChange={e => setAccountForm(f => ({ ...f, code: e.target.value }))} placeholder="e.g. INC-001" /></div>
-                      <div><Label>Type</Label>
-                        <Select value={accountForm.account_type} onValueChange={v => setAccountForm(f => ({ ...f, account_type: v }))}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{ACCOUNT_TYPES.map(t => <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div><Label>Description</Label><Textarea value={accountForm.description} onChange={e => setAccountForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
-                    <Button onClick={() => createAccount.mutate()} disabled={!accountForm.name}>Create Account</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4 mr-1" />Export Excel</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => exportSectionExcel("transactions")}>Transactions</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionExcel("ledger")}>Ledger</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionExcel("accounts")}>Accounts</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionExcel("collections")}>Fee Collections</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionExcel("pnl")}>P&L</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => exportSectionExcel("all")} className="font-semibold">📊 Full Report (All Sheets)</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline"><FileText className="h-4 w-4 mr-1" />Export PDF</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => exportSectionPDF("transactions")}>Transactions</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionPDF("ledger")}>Ledger</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionPDF("accounts")}>Accounts</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionPDF("collections")}>Fee Collections</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportSectionPDF("pnl")}>P&L</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => exportSectionPDF("all")} className="font-semibold">📄 Complete Report</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        {ledger.isLoading ? (
+          <div className="flex items-center justify-center h-24">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {statCards[statGroup].map((s) => (
+              <Card key={s.label}>
+                <CardContent className="p-4">
+                  <p className="text-xs sm:text-sm text-muted-foreground">{s.label}</p>
+                  <p className={`text-lg sm:text-2xl font-bold ${s.className || ""}`}>{s.value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
-        {/* Transactions Tab */}
-        <TabsContent value="transactions">
+      {/* Sub-views */}
+      <Tabs defaultValue="invoices">
+        <TabsList className="w-full sm:w-auto overflow-x-auto flex-wrap h-auto">
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="receivables">Receivables</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="refunds">Refunds</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="invoices" className="mt-6">
+          <Billing embedded />
+        </TabsContent>
+
+        <TabsContent value="receivables" className="mt-6">
+          <Receivables embedded />
+        </TabsContent>
+
+        <TabsContent value="transactions" className="mt-6 space-y-4">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by student, form no., invoice or method"
+              value={txnSearch}
+              onChange={(e) => {
+                setTxnSearch(e.target.value);
+                setTxnPage(1);
+              }}
+              className="pl-9"
+            />
+          </div>
           <Card>
             <CardContent className="p-0">
-              {/* Mobile card view */}
+              {/* Mobile */}
               <div className="sm:hidden divide-y divide-border">
-                {transactions.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">No transactions recorded yet</div>
-                ) : pagedTransactions.map(t => (
-                  <div key={t.id} className="p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Badge variant={t.transaction_type === "income" ? "default" : "destructive"} className="text-xs">{t.transaction_type}</Badge>
-                      <span className={`font-semibold ${t.transaction_type === "income" ? "text-green-600" : "text-red-600"}`}>₹{Number(t.amount).toLocaleString("en-IN")}</span>
+                {pagedTxns.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">No transactions found</div>
+                ) : (
+                  pagedTxns.map((t) => (
+                    <div key={t.id} className="p-4 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{t.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {t.roll} · {t.invoiceNumber}
+                          </p>
+                        </div>
+                        <p className="font-bold text-green-600 whitespace-nowrap">{formatCurrency(t.amount)}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <Badge variant="outline" className="capitalize">{t.mode}</Badge>
+                        <span className="text-muted-foreground">
+                          {t.paid_at ? format(new Date(t.paid_at), "dd MMM yyyy") : "-"}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-sm">{t.description || getAccountName(t.account_id)}</p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{format(new Date(t.date), "dd MMM yyyy")}</span>
-                      <Badge variant="outline" className="text-xs">{t.payment_mode}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Desktop table view */}
-              <div className="hidden sm:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Account</TableHead>
-                    <TableHead>Category</TableHead><TableHead>Description</TableHead><TableHead>Mode</TableHead><TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No transactions recorded yet</TableCell></TableRow>
-                  ) : pagedTransactions.map(t => (
-                    <TableRow key={t.id}>
-                      <TableCell className="text-sm">{format(new Date(t.date), "dd MMM yyyy")}</TableCell>
-                      <TableCell><Badge variant={t.transaction_type === "income" ? "default" : "destructive"} className="text-xs">{t.transaction_type === "income" ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}{t.transaction_type}</Badge></TableCell>
-                      <TableCell className="text-sm">{getAccountName(t.account_id)}</TableCell>
-                      <TableCell className="text-sm">{t.category || "—"}</TableCell>
-                      <TableCell className="text-sm max-w-[200px] truncate">{t.description || "—"}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs">{t.payment_mode}</Badge></TableCell>
-                      <TableCell className={`text-right font-semibold ${t.transaction_type === "income" ? "text-green-600" : "text-red-600"}`}>₹{Number(t.amount).toLocaleString("en-IN")}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              </div>
-              <TablePagination page={txnPage} pageSize={pageSize} totalItems={transactions.length} onPageChange={setTxnPage} itemLabel="transactions" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Ledger Tab */}
-        <TabsContent value="ledger">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead><TableHead>Entry #</TableHead><TableHead>Description</TableHead>
-                    <TableHead>Debit A/C</TableHead><TableHead>Credit A/C</TableHead><TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {journalEntries.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No journal entries yet</TableCell></TableRow>
-                  ) : pagedJournal.map(j => (
-                    <TableRow key={j.id}>
-                      <TableCell className="text-sm">{format(new Date(j.date), "dd MMM yyyy")}</TableCell>
-                      <TableCell className="font-mono text-sm">{j.entry_number}</TableCell>
-                      <TableCell className="text-sm">{j.description}</TableCell>
-                      <TableCell className="text-sm text-green-600">{getAccountName(j.debit_account_id)}</TableCell>
-                      <TableCell className="text-sm text-red-600">{getAccountName(j.credit_account_id)}</TableCell>
-                      <TableCell className="text-right font-semibold">₹{Number(j.amount).toLocaleString("en-IN")}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <TablePagination page={journalPage} pageSize={pageSize} totalItems={journalEntries.length} onPageChange={setJournalPage} itemLabel="entries" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Accounts Tab */}
-        <TabsContent value="accounts">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead><TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accounts.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No accounts created yet. Add accounts to start tracking finances.</TableCell></TableRow>
-                  ) : pagedAccounts.map(a => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-mono text-sm">{a.code || "—"}</TableCell>
-                      <TableCell className="font-medium">{a.name}</TableCell>
-                      <TableCell><Badge variant="outline" className="capitalize">{a.account_type}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[250px] truncate">{a.description || "—"}</TableCell>
-                      <TableCell><Badge variant={a.is_active ? "default" : "secondary"}>{a.is_active ? "Active" : "Inactive"}</Badge></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <TablePagination page={acctPage} pageSize={pageSize} totalItems={accounts.length} onPageChange={setAcctPage} itemLabel="accounts" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Fee Collections Tab */}
-        <TabsContent value="collections">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Fee Collections</CardTitle>
-                {refundsTotal > 0 && (
-                  <div className="flex gap-4 text-sm">
-                    <span>Collections: <strong className="text-green-600">₹{feeTotal.toLocaleString("en-IN")}</strong></span>
-                    <span>Refunds: <strong className="text-orange-600">-₹{refundsTotal.toLocaleString("en-IN")}</strong></span>
-                    <span>Net: <strong>₹{(feeTotal - refundsTotal).toLocaleString("en-IN")}</strong></span>
-                  </div>
+                  ))
                 )}
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Invoice</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {feeCollections.length === 0 && refundsData.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No fee collections recorded yet. Payments from Billing will appear here.</TableCell></TableRow>
-                  ) : (
-                    <>
-                      {feeCollections.map((p: any) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="text-sm">{format(new Date(p.paid_at), "dd MMM yyyy")}</TableCell>
-                          <TableCell className="font-mono text-sm">{p.invoice?.invoice_number || "—"}</TableCell>
-                          <TableCell><Badge className="bg-green-500/10 text-green-600 text-xs">Collection</Badge></TableCell>
-                          <TableCell><Badge variant="outline" className="text-xs capitalize">{p.payment_method}</Badge></TableCell>
-                          <TableCell><Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-xs">{p.status}</Badge></TableCell>
-                          <TableCell className="text-right font-semibold text-green-600">₹{Number(p.amount).toLocaleString("en-IN")}</TableCell>
+              {/* Desktop */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Form Number</TableHead>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Center</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Reference</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pagedTxns.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No transactions found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      pagedTxns.map((t) => (
+                        <TableRow key={t.id}>
+                          <TableCell>{t.paid_at ? format(new Date(t.paid_at), "dd MMM yyyy") : "-"}</TableCell>
+                          <TableCell className="font-medium">{t.name}</TableCell>
+                          <TableCell>{t.roll}</TableCell>
+                          <TableCell>{t.invoiceNumber}</TableCell>
+                          <TableCell>{t.center}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize text-xs">{t.mode}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {t.transaction_reference || t.transaction_id || "-"}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-green-600">
+                            {formatCurrency(t.amount)}
+                          </TableCell>
                         </TableRow>
-                      ))}
-                      {refundsData.map((r: any) => (
-                        <TableRow key={`refund-${r.id}`} className="bg-orange-50/50 dark:bg-orange-950/10">
-                          <TableCell className="text-sm">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
-                          <TableCell className="font-mono text-sm">—</TableCell>
-                          <TableCell><Badge className="bg-orange-500/10 text-orange-600 text-xs">Refund</Badge></TableCell>
-                          <TableCell><Badge variant="outline" className="text-xs capitalize">{r.refund_method || 'cash'}</Badge></TableCell>
-                          <TableCell><Badge variant="secondary" className="text-xs">{r.status || 'processed'}</Badge></TableCell>
-                          <TableCell className="text-right font-semibold text-orange-600">-₹{Number(r.amount).toLocaleString("en-IN")}</TableCell>
-                        </TableRow>
-                      ))}
-                    </>
-                  )}
-                </TableBody>
-              </Table>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {filteredTxns.length > txnPageSize && (
+                <TablePagination
+                  currentPage={txnPage}
+                  totalItems={filteredTxns.length}
+                  pageSize={txnPageSize}
+                  onPageChange={setTxnPage}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Profit & Loss Tab */}
-        <TabsContent value="pnl">
-          {(() => {
-            const netFeeIncome = feeTotal - refundsTotal;
-            const totalGrossIncome = totalIncome + netFeeIncome;
-            const totalExpenseWithPayroll = totalExpense + payrollTotal;
-            const netPL = totalGrossIncome - totalExpenseWithPayroll;
-            return (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader><CardTitle className="text-lg text-green-600">Income</CardTitle></CardHeader>
-                    <CardContent>
-                      {accounts.filter(a => a.account_type === 'income').length === 0 && feeCollections.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No income data yet</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {feeTotal > 0 && (
-                            <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                              <span className="font-medium">Fee Collections</span>
-                              <span className="font-bold text-green-600">₹{feeTotal.toLocaleString("en-IN")}</span>
-                            </div>
-                          )}
-                          {refundsTotal > 0 && (
-                            <div className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                              <span className="font-medium">Less: Refunds</span>
-                              <span className="font-bold text-orange-600">-₹{refundsTotal.toLocaleString("en-IN")}</span>
-                            </div>
-                          )}
-                          {(feeTotal > 0 && refundsTotal > 0) && (
-                            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                              <span className="font-medium">Net Fee Income</span>
-                              <span className="font-bold text-green-600">₹{netFeeIncome.toLocaleString("en-IN")}</span>
-                            </div>
-                          )}
-                          {accounts.filter(a => a.account_type === 'income').map(a => {
-                            const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-                            return total > 0 ? (
-                              <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                                <span>{a.name}</span>
-                                <span className="font-semibold text-green-600">₹{total.toLocaleString("en-IN")}</span>
-                              </div>
-                            ) : null;
-                          })}
-                          <div className="flex justify-between items-center p-3 border-t-2 font-bold">
-                            <span>Total Income</span>
-                            <span className="text-green-600">₹{totalGrossIncome.toLocaleString("en-IN")}</span>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader><CardTitle className="text-lg text-red-600">Expenses</CardTitle></CardHeader>
-                    <CardContent>
-                      {accounts.filter(a => a.account_type === 'expense').length === 0 && payrollTotal === 0 ? (
-                        <p className="text-muted-foreground text-sm">No expense data yet</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {accounts.filter(a => a.account_type === 'expense').map(a => {
-                            const total = transactions.filter(t => t.account_id === a.id).reduce((s, t) => s + Number(t.amount), 0);
-                            return total > 0 ? (
-                              <div key={a.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                                <span>{a.name}</span>
-                                <span className="font-semibold text-red-600">₹{total.toLocaleString("en-IN")}</span>
-                              </div>
-                            ) : null;
-                          })}
-                          {payrollTotal > 0 && (
-                            <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                              <span className="font-medium">Staff Salaries (Payroll)</span>
-                              <span className="font-bold text-red-600">₹{payrollTotal.toLocaleString("en-IN")}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between items-center p-3 border-t-2 font-bold">
-                            <span>Total Expenses</span>
-                            <span className="text-red-600">₹{totalExpenseWithPayroll.toLocaleString("en-IN")}</span>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-                <Card className="mt-6">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Net Profit / Loss</p>
-                        <p className={`text-3xl font-bold ${netPL >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          ₹{netPL.toLocaleString("en-IN")}
-                        </p>
-                      </div>
-                      <Button variant="outline" onClick={() => exportSectionPDF("all")}><Download className="h-4 w-4 mr-1" />Download Full Report</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            );
-          })()}
+        <TabsContent value="refunds" className="mt-6">
+          <Refunds embedded />
         </TabsContent>
-
       </Tabs>
     </div>
   );
-}
+};
+
+export default Accounting;
