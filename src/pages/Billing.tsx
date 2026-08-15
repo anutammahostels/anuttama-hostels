@@ -623,7 +623,7 @@ const Billing = ({ embedded = false }: { embedded?: boolean }) => {
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" aria-label="Searching invoices" />
                 )}
               </div>
-              <CenterFilter />
+              {!embedded && <CenterFilter />}
               <Button variant="outline" onClick={() => handleSendReminder()}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Reminders
