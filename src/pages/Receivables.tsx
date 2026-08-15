@@ -268,6 +268,7 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
 
   return (
     <div className="space-y-6">
+      {!embedded && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Student Receivables</h1>
@@ -278,7 +279,15 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
           <Button variant="outline" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-2" />Export PDF</Button>
         </div>
       </div>
+      )}
 
+      {embedded && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-2" />Export PDF</Button>
+        </div>
+      )}
+
+      {!embedded && (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Gross Receivable</p><p className="text-xl sm:text-2xl font-bold">{formatCurrency(totals.gross)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Discounts Given</p><p className="text-xl sm:text-2xl font-bold text-yellow-600">{formatCurrency(totals.discounts)}</p></CardContent></Card>
@@ -286,6 +295,8 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Refunds</p><p className="text-xl sm:text-2xl font-bold text-orange-600">{formatCurrency(totals.refunds)}</p></CardContent></Card>
         <Card className="col-span-2 sm:col-span-1"><CardContent className="p-4"><p className="text-sm text-muted-foreground">Net Receivable</p><p className="text-xl sm:text-2xl font-bold text-red-600">{formatCurrency(totals.net)}</p></CardContent></Card>
       </div>
+      )}
+
 
       <Card>
         <CardContent className="p-0">
