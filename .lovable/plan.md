@@ -1,112 +1,68 @@
-## Reconciliation result (Excel vs current DB, per-Form Number)
+# Unified "Accounting" Tab
 
-Matched **1,226 of 1,228** Sarjapur students by Form Number. Deltas across the entire receivables book are small and fully explained:
+Replace the three separate tabs (Billing, Receivables, Refunds) with one **Accounting** section that shares a single data layer, one configurable statistics strip, and one consolidated Excel export.
 
-| Check | Result | Amount impact |
-|---|---|---|
-| Gross Receivable per student | **0 mismatches** across 1,226 matched students | ₹0 |
-| Total Received (A1+A2+A3) per student | **0 mismatches** across 1,226 matched students | ₹0 |
-| Form-number-only mismatch (student & amounts identical) | **2 students** | ₹0 |
-| Refund missing in DB (form in DB, refund not imported earlier) | **4 students** | ₹4,27,000 |
-| Refund with no valid Form Number in Refund Excel | **2 rows** (Samudyatha P, NAYANA) | ₹90,000 |
-| Manual override you specified (SAKSHI RACHAGOND second ₹60k payment) | 1 payment row | ₹60,000 |
+## Why the current setup is inconsistent
 
-Total DB adjustments needed to make DB match the two Excels + your override = **₹5,77,000** (not ₹33,35,000 — see "About the ₹33.35 L number" below).
+Each page independently queries and re-aggregates the same records:
+- Billing reads `invoices`, `payments`, `refunds`
+- Receivables reads `payments`, `payment_transactions`, `refunds`
+- Refunds reads `refunds`, `payment_transactions`
 
-## Detailed reconciliation report
+Because each page joins and sums on its own, the same student can appear with different totals, and refund actions exist in two places. The underlying tables are correct — the duplication is in the frontend aggregation, so the fix is one shared ledger layer, not new tables.
 
-### A. Form-Number-only mismatch (rename, no financial change)
-Same student, same fees, same payments — only the roll_number differs.
+## Step 1 — Single ledger data layer
 
-| Student | DB form_no | Excel form_no | Action |
-|---|---|---|---|
-| PRITAM PRAKASH NAYAK | 2460847068 | 2461196442 | UPDATE students.roll_number → 2461196442 |
-| DHEERAJ R | 2461098765 | 2461585745 | UPDATE students.roll_number → 2461585745 |
+Create one hook (`useAccountingLedger`) that is the only place financial data is read and aggregated. It loads invoices, completed payments, refunds, gateway transactions, students and centers once, then builds a normalized per-student ledger:
 
-### B. Missing refunds (4 students, ₹4,27,000)
-All four students already exist in the DB; only their refund rows were not imported in the last pass because the earlier refund-Excel had different Form Numbers.
+- gross billed, discounts, received (installment 1/2/3 split), refunded, net receivable
+- payment status (paid / partial / pending / overdue), inactive students excluded from receivable totals
+- per-transaction rows (online/offline, mode, reference, date) and per-refund rows (status, method, reason)
 
-| Form No | Student | Refund Amount | Mode | Date |
-|---|---|---|---|---|
-| 2460237980 | MOKSHITH D S | ₹1,75,000 | UPI | 2026-05-10 |
-| 2460778233 | LUCKY BHASKAR | ₹5,000 | UPI | 2026-04-10 |
-| 2460983772 | SRIYA REDDY YEDDULA | ₹85,000 | UPI | 2026-05-14 |
-| 2461343661 | AMULYA | ₹1,62,000 | CASH | (blank in Excel — use import date) |
+All views and exports read from this one source, so numbers can no longer disagree between views.
 
-For each: INSERT refund row linked to the student's oldest completed-payment invoice, `status='processed'`, then call `public.reconcile_invoice(invoice_id)` so paid_amount/status recompute.
+## Step 2 — One Accounting page with sub-views
 
-### C. Refund rows with unresolvable Form Number (₹90,000) — you approved "create missing students"
-| Form No in Excel | Student | Amount | Mode |
-|---|---|---|---|
-| "NOT PAID" | Samudyatha P | ₹60,000 | Cash |
-| "ALLEN NOT PAID" | NAYANA | ₹30,000 | UPI |
+Route `/dashboard/accounting`, replacing the three sidebar entries with a single "Accounting" item. Inside it, segmented sub-views over the same ledger:
 
-Per your instruction I'll create these two students under Sarjapur with placeholder Form Numbers (`REFUND-SAMUDYATHA-P`, `REFUND-NAYANA-ALLEN`), a synthetic ₹0-fee "refund-only" invoice, plus the refund row. Marked in a comment so you can rename later once you send the real Form Numbers.
+- **Invoices** — invoice list, create/generate invoices, record offline payment
+- **Receivables** — per-student dues with installment breakdown
+- **Transactions** — every payment (online + offline) with receipts
+- **Refunds** — refund list with the single refund action (HDFC real-money or offline with the detail modal)
 
-### D. SAKSHI RACHAGOND manual override (₹60,000)
-- DB and client Excel both show two ₹60,000 UPI payments (₹1,20,000 total).
-- You explicitly told me the correct value is ₹60,000. I'll DELETE the later of the two `payments` rows for invoice, then `reconcile_invoice()` — bringing paid_amount to ₹60,000 and due to ₹1,30,000.
-- Note: this makes the DB disagree with the client Excel by ₹60k on this single row. Flagging so we're aligned before I execute.
+The refund action lives here only once. Old routes `/dashboard/billing`, `/dashboard/receivables`, `/dashboard/refunds` redirect to the new tab so existing links keep working.
 
-## About the ₹33,35,000 number
-I could not reproduce a ₹33.35 L gap from the uploaded files. The measured picture is:
+## Step 3 — Configurable statistics strip
 
-| Metric | Client Excel | Current DB | Diff |
-|---|---|---|---|
-| Gross Receivable (Sarjapur) | ₹22,14,81,000 | ₹22,14,81,000 | ₹0 |
-| Amount Received (A1+A2+A3 sum) | ₹18,24,99,599 | ₹18,24,99,599 | ₹0 |
-| Refunds | ₹49,16,000 (44 rows) | ₹43,54,000 (37 rows) | ₹5,62,000 (of which ₹4,27,000 → §B, ₹90,000 → §C, ₹45,000 = PREETHAM PRAKASH 2461196442 which collides with §A's DB form and will be handled after the rename) |
+A stat group selector above the sub-views, driven by the same ledger:
 
-After applying §A + §B + §C + §D, DB will read:
-- Amount Received = ₹18,24,99,599 − ₹60,000 (SAKSHI) = **₹18,24,39,599** ✅ matches your target
-- Total Refunds = ₹43,54,000 + ₹4,27,000 + ₹90,000 + ₹45,000 (PREETHAM after rename) = **₹49,16,000** ✅ matches Refund Excel
+- **Collections** — gross billed, received, pending dues, collection %
+- **Transactions** — transaction count, online vs offline split, average ticket, this-month collected
+- **Refunds** — total refunded, processed vs pending count, pending refund amount
+- **Occupancy/Students** — active students, fully paid, partially paid, not started
 
-Your "Net Receivable ₹3,88,71,401" target still leaves an unexplained ₹1,70,000 vs the arithmetic (Gross − Received = ₹3,90,41,401 post-fix). Before executing I need you to confirm which of these the client uses for "Net Receivable":
-- (a) `Gross − Received` (would give ₹3,90,41,401)
-- (b) `Gross − Received + Refunds` (would give ₹4,39,57,401)
-- (c) `Gross − Received − Refunds` (would give ₹3,41,25,401)
-- (d) Something else — please share the formula.
+Selection persists per user (localStorage), and every card respects the active center filter and date range.
 
-## SQL to be executed (previewed here, NOT run)
+## Step 4 — Centralized Excel export
 
-```sql
--- §A  Form-number renames
-UPDATE public.students SET roll_number='2461196442'
- WHERE roll_number='2460847068' AND property_id=(SELECT id FROM properties WHERE name ILIKE 'sarjapur');
-UPDATE public.students SET roll_number='2461585745'
- WHERE roll_number='2461098765' AND property_id=(SELECT id FROM properties WHERE name ILIKE 'sarjapur');
+One export builder used by all sub-views, producing a single workbook with sheets:
 
--- §B  Missing refunds (idempotent — WHERE NOT EXISTS guards)
--- One block per student, e.g. MOKSHITH:
-INSERT INTO public.refunds (student_id, invoice_id, property_id, amount, refund_method, status, created_at, reason)
-SELECT s.id, i.id, s.property_id, 175000, 'upi', 'processed', '2026-05-10', 'Refund import (Excel S.No 20)'
-FROM public.students s
-JOIN LATERAL (SELECT id FROM public.invoices WHERE student_id=s.id ORDER BY created_at LIMIT 1) i ON TRUE
-WHERE s.roll_number='2460237980'
-  AND NOT EXISTS (SELECT 1 FROM public.refunds r WHERE r.student_id=s.id AND r.amount=175000);
--- (same shape for LUCKY BHASKAR 5000, SRIYA 85000, AMULYA 162000)
+1. `Summary` — the statistics for the current filters
+2. `Receivables` — one row per student: gross, discount, Amount 1/2/3, received, refunded, net due, status
+3. `Transactions` — one row per payment with mode, reference, date, receipt no.
+4. `Refunds` — one row per refund with method, status, reason/bank details
+5. `Invoices` — invoice-level rows (no mess/electricity/other/discount noise columns)
 
--- §C  Create Samudyatha P + NAYANA with placeholder form & refund-only invoice.
+Exports honour the active center and filters, and exclude deleted/orphaned records.
 
--- §D  SAKSHI override
-DELETE FROM public.payments
- WHERE id=(
-   SELECT p.id FROM public.payments p
-   JOIN public.students s ON s.id=p.student_id
-   WHERE s.roll_number='2460276367' AND p.amount=60000 AND p.status='completed'
-   ORDER BY p.paid_at DESC NULLS LAST, p.created_at DESC LIMIT 1);
+## Step 5 — Cleanup and verification
 
--- After all: run reconcile on every touched invoice
-SELECT public.reconcile_invoice(i.id)
-  FROM public.invoices i JOIN public.students s ON s.id=i.student_id
- WHERE s.roll_number IN ('2461196442','2461585745','2460237980','2460778233','2460983772','2461343661','2460276367','REFUND-SAMUDYATHA-P','REFUND-NAYANA-ALLEN');
-```
+- Delete the now-unused per-page query/aggregation code from the three old pages
+- Verify the unified totals still match the confirmed figures (Amount Received ₹18,29,64,599 / Net Receivable ₹3,92,21,401) before and after the switch
+- Check mobile layout of the new tab (cards on small screens, tables on desktop)
 
-Full statements will be assembled in a single idempotent migration file when you approve. Migration will end with a `SELECT` printing before/after totals for Amount Received, Refunds, and Net Receivable so you can verify against your target values.
+## Technical notes
 
-## Delivery
-- One migration file with everything from §A–§D, all guarded so a re-run does nothing.
-- Post-run verification query.
-- Two open items to confirm before I execute:
-  1. Which "Net Receivable" formula the client uses (see options above).
-  2. Confirm SAKSHI's DB should be ₹60k even though her Excel row shows ₹1,20,000.
+- No schema changes; `invoices`, `payments`, `refunds`, `payment_transactions` stay as they are. "Centralized" means one frontend ledger module, keeping RLS center isolation intact.
+- New files: `src/hooks/useAccountingLedger.ts`, `src/pages/Accounting.tsx`, `src/components/accounting/*` (sub-views, stat strip), `src/lib/exportAccounting.ts`.
+- `src/App.tsx` gains the accounting route plus three redirects; `DashboardSidebar.tsx` collapses three items into one.
