@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -24,6 +24,7 @@ import RoomAllocation from "./pages/RoomAllocation";
 import GatePasses from "./pages/GatePasses";
 import MessManagement from "./pages/MessManagement";
 import Billing from "./pages/Billing";
+import Accounting from "./pages/Accounting";
 import Maintenance from "./pages/Maintenance";
 import Settings from "./pages/Settings";
 import Complaints from "./pages/Complaints";
@@ -84,9 +85,10 @@ const App = () => (
               <Route path="/dashboard/rooms" element={<RoomAllocation />} />
               <Route path="/dashboard/passes" element={<GatePasses />} />
               <Route path="/dashboard/mess" element={<MessManagement />} />
-              <Route path="/dashboard/billing" element={<Billing />} />
-              <Route path="/dashboard/refunds" element={<Refunds />} />
-              <Route path="/dashboard/receivables" element={<Receivables />} />
+              <Route path="/dashboard/accounting" element={<Accounting />} />
+              <Route path="/dashboard/billing" element={<Navigate to="/dashboard/accounting" replace />} />
+              <Route path="/dashboard/refunds" element={<Navigate to="/dashboard/accounting" replace />} />
+              <Route path="/dashboard/receivables" element={<Navigate to="/dashboard/accounting" replace />} />
               <Route path="/dashboard/maintenance" element={<Maintenance />} />
               <Route path="/dashboard/complaints" element={<Complaints />} />
               <Route path="/dashboard/settings" element={<Settings />} />
