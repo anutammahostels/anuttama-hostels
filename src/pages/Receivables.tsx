@@ -322,10 +322,13 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
                     </div>
                     <div className="flex items-center justify-between pt-1">
                       {r.paymentModes !== '-' && <Badge variant="outline" className="text-xs capitalize">{r.paymentModes}</Badge>}
-                      <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
-                        <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
-                      </Button>
+                      {!embedded && (
+                        <Button size="sm" variant="outline" onClick={() => openRefund(r.id, r.name)}>
+                          <Undo2 className="h-3.5 w-3.5 mr-1" />Refund
+                        </Button>
+                      )}
                     </div>
+
                   </div>
                 ))}
                 <div className="p-4 bg-muted/50 font-bold">
