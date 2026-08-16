@@ -982,6 +982,11 @@ const Students = () => {
               <Download className="h-4 w-4 mr-2" />
               Download Template
             </Button>
+            <Button variant="outline" onClick={exportMasterData}>
+              <Download className="h-4 w-4 mr-2" />
+              Master Data
+            </Button>
+
             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 mr-2" />
               Bulk Upload
