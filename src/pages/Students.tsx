@@ -101,6 +101,8 @@ const Students = () => {
   const { centerId } = useCenter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
 
   // Helper: property id → name lookup
   const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p.name])), [properties]);
