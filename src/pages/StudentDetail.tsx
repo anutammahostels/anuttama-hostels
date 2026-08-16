@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, IndianRupee, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/lib/formatCurrency";
+import { formatINR as formatCurrency } from "@/lib/formatCurrency";
 
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "—");
 
