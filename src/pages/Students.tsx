@@ -1248,6 +1248,12 @@ const Students = () => {
                             <p className="text-sm">{student.gender || "-"}</p>
                           </TableCell>
                           <TableCell>
+                            <p className="text-sm whitespace-nowrap">{(student as any).course || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm whitespace-nowrap">{(student as any).department || "-"}</p>
+                          </TableCell>
+                          <TableCell>
                             <p className="text-sm">{student.profile?.phone || "-"}</p>
                           </TableCell>
                           <TableCell>
@@ -1259,6 +1265,13 @@ const Students = () => {
                           <TableCell>
                             {(student as any).final_fee > 0 ? (
                               <p className="text-sm font-medium">₹{Number((student as any).final_fee).toLocaleString("en-IN")}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {student.finance?.concession ? (
+                              <p className="text-sm font-medium text-blue-600">₹{student.finance.concession.toLocaleString("en-IN")}</p>
                             ) : (
                               <p className="text-sm text-muted-foreground">-</p>
                             )}
@@ -1278,22 +1291,42 @@ const Students = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            {student.finance && student.finance.payments.length > 0 ? (
-                              <div className="min-w-[160px]">
-                                <p className="text-sm font-medium whitespace-nowrap">
-                                  {student.finance.lastPaymentMode || "Payment"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {student.finance.lastPaymentDate
-                                    ? new Date(student.finance.lastPaymentDate).toLocaleDateString("en-IN")
-                                    : ""}
-                                  {student.finance.payments.length > 1 && ` · ${student.finance.payments.length} txns`}
-                                </p>
-                              </div>
+                            {student.finance?.refunded ? (
+                              <p className="text-sm font-medium text-destructive">₹{student.finance.refunded.toLocaleString("en-IN")}</p>
                             ) : (
                               <p className="text-sm text-muted-foreground">-</p>
                             )}
                           </TableCell>
+                          {[0, 1, 2].map((i) => {
+                            const p = student.finance?.installments?.[i];
+                            return (
+                              <TableCell key={i}>
+                                {p ? (
+                                  <div className="min-w-[150px]">
+                                    <p className="text-sm font-medium whitespace-nowrap">
+                                      ₹{p.amount.toLocaleString("en-IN")} · {p.mode || "-"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {p.paid_at ? new Date(p.paid_at).toLocaleDateString("en-IN") : "-"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate max-w-[150px]" title={`Txn: ${p.txn || "-"} | UTR: ${p.utr || "-"}`}>
+                                      {p.txn || p.utr ? `Txn: ${p.txn || "-"} · UTR: ${p.utr || "-"}` : ""}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">-</p>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell>
+                            {student.finance?.receiptGiven ? (
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">DONE</Badge>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
+                            )}
+                          </TableCell>
+
                           <TableCell>
                             <p className="text-sm truncate max-w-[150px]" title={(student as any).remarks || ""}>{(student as any).remarks || "-"}</p>
                           </TableCell>
