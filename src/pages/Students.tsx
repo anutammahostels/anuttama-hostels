@@ -1120,8 +1120,11 @@ const Students = () => {
                               {student.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm truncate">{student.profile?.full_name || "Unknown"}</p>
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => navigate(`/dashboard/students/${student.id}`)}
+                          >
+                            <p className="font-semibold text-sm truncate hover:underline">{student.profile?.full_name || "Unknown"}</p>
                             <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"}</p>
                           </div>
                           <DropdownMenu>
