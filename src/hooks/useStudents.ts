@@ -149,12 +149,23 @@ export function useStudents(propertyId?: string) {
         chunk(studentIds, 200).map(ids =>
           supabase
             .from('invoices')
-            .select('student_id, total_amount, paid_amount, status')
+            .select('student_id, total_amount, paid_amount, discounts, status')
             .in('student_id', ids)
             .then(r => r.data || [])
         )
       );
       const invoicesData = invoiceChunks.flat();
+
+      const refundChunks = await Promise.all(
+        chunk(studentIds, 200).map(ids =>
+          supabase
+            .from('refunds')
+            .select('student_id, amount, status')
+            .in('student_id', ids)
+            .then(r => r.data || [])
+        )
+      );
+      const refundsData = refundChunks.flat();
 
       // Map profiles and beds to students
       const profilesMap = new Map(profilesData.map(p => [p.id, p]));
@@ -174,16 +185,35 @@ export function useStudents(propertyId?: string) {
         list.push(i);
         invoicesByStudent.set(i.student_id, list);
       });
+      const refundsByStudent = new Map<string, number>();
+      refundsData.forEach(r => {
+        if (!r.student_id) return;
+        refundsByStudent.set(r.student_id, (refundsByStudent.get(r.student_id) || 0) + Number(r.amount || 0));
+      });
+
+      const normalizePayment = (p: any) => ({
+        amount: Number(p.amount || 0),
+        mode: p.payment_mode_label || p.payment_method || null,
+        txn: p.transaction_id || null,
+        utr: p.transaction_reference || null,
+        label: p.payment_label || null,
+        paid_at: p.paid_at || null,
+      });
 
       const result = studentsData.map(student => {
         const pays = paymentsByStudent.get(student.id) || [];
         const invs = invoicesByStudent.get(student.id) || [];
         const totalPaid = pays.reduce((s, p) => s + Number(p.amount || 0), 0);
         const invoiceTotal = invs.reduce((s, i) => s + Number(i.total_amount || 0), 0);
+        const concession = invs.reduce((s, i) => s + Number((i as any).discounts || 0), 0);
+        const refunded = refundsByStudent.get(student.id) || 0;
         const finalFee = Number((student as any).final_fee || 0);
         const totalDue = Math.max(invoiceTotal, finalFee);
         const pending = Math.max(totalDue - totalPaid, 0);
         const last = pays[0];
+        const installments = [...pays]
+          .sort((a, b) => new Date(a.paid_at || 0).getTime() - new Date(b.paid_at || 0).getTime())
+          .map(normalizePayment);
         return {
           ...student,
           profile: profilesMap.get(student.user_id) || null,
@@ -191,21 +221,19 @@ export function useStudents(propertyId?: string) {
           finance: {
             totalPaid,
             pending,
+            concession,
+            refunded,
+            receiptGiven: totalPaid > 0 && pending === 0,
             lastPaymentMode: last?.payment_mode_label || last?.payment_method || null,
             lastTransactionDetails: last?.transaction_id || null,
             lastUtr: last?.transaction_reference || null,
             lastPaymentDate: last?.paid_at || null,
-            payments: pays.map(p => ({
-              amount: Number(p.amount || 0),
-              mode: p.payment_mode_label || p.payment_method || null,
-              txn: p.transaction_id || null,
-              utr: p.transaction_reference || null,
-              label: p.payment_label || null,
-              paid_at: p.paid_at || null,
-            })),
+            payments: pays.map(normalizePayment),
+            installments,
           },
         };
       });
+
 
       return result as StudentWithProfile[];
     },
