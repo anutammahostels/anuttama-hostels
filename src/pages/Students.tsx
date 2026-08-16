@@ -1229,7 +1229,10 @@ const Students = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-3">
+                            <div
+                              className="flex items-center gap-3 cursor-pointer"
+                              onClick={() => navigate(`/dashboard/students/${student.id}`)}
+                            >
                               <Avatar className="h-9 w-9">
                                 <AvatarImage src={student.profile?.avatar_url || ""} />
                                 <AvatarFallback className="bg-primary/10 text-primary">
@@ -1237,7 +1240,7 @@ const Students = () => {
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
+                                <p className="font-medium hover:underline">{student.profile?.full_name || "Unknown"}</p>
                                 <p className="text-sm text-muted-foreground">{student.roll_number || "No Form Number"}</p>
                               </div>
                             </div>
