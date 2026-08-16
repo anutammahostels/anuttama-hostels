@@ -240,6 +240,69 @@ const Students = () => {
     XLSX.writeFile(wb, "anuttama_hostels_student_template.xlsx");
   };
 
+  // Master Data export — mirrors the offline "STUDENT REGISTER" Excel sheet column-for-column
+  const exportMasterData = async () => {
+    const XLSX = await import("xlsx");
+    const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "");
+    const headers = [
+      "sl no ", "CENTER", "form no", "STUDENT NAME", "FATHER NAME", "GEN",
+      "CONTACT NO1", "CONTACT NO 2", "GRADE", "STREAM",
+      "DATE OF THE PAYMENT", "FINALFEE",
+      "PAYMENT MODE-1", "AMOUNT 1", "TRANSACTION DETAILS-1", "UTR ID",
+      "DATE OF THE PAYMENT (2nd)", "PAYMENT MODE-2", "AMOUNT 2", "BALANCE PAYMENT DATE",
+      "TRANSACTION DETAILS-2", "UTR ID-2",
+      "PAYMENT MODE-3", "AMOUNT 3", "BALANCE PAYMENT DATE (3rd)",
+      "TRANSACTION DETAILS-3", "UTR ID-3",
+      "RECEIPT GIVEN ", "Amount Paid", "Due Amount", "CONCESSION AMOUNT",
+    ];
+
+    const rows = filteredStudents.map((s: any, idx: number) => {
+      const inst = s.finance?.installments || [];
+      const [p1, p2, p3] = inst;
+      return [
+        idx + 1,
+        propertyMap.get(s.property_id) || "",
+        s.roll_number || "",
+        s.profile?.full_name || "",
+        s.father_name || "",
+        s.gender || "",
+        s.profile?.phone || "",
+        s.emergency_contact || "",
+        s.course || "",
+        s.department || "",
+        fmt(p1?.paid_at || s.payment_date),
+        Number(s.final_fee || 0),
+        p1?.mode || "",
+        p1?.amount || "",
+        p1?.txn || "",
+        p1?.utr || "",
+        fmt(p2?.paid_at),
+        p2?.mode || "",
+        p2?.amount || "",
+        "",
+        p2?.txn || "",
+        p2?.utr || "",
+        p3?.mode || "",
+        p3?.amount || "",
+        fmt(p3?.paid_at),
+        p3?.txn || "",
+        p3?.utr || "",
+        s.finance?.receiptGiven ? "DONE" : "",
+        s.finance?.totalPaid || 0,
+        s.finance?.pending || 0,
+        s.finance?.concession || "",
+      ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map(h => ({ wch: Math.max(h.length + 2, 14) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "STUDENT REGISTER");
+    XLSX.writeFile(wb, `HOSTEL_MASTER_DATA_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
+
+
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
