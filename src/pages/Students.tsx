@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { TablePagination } from "@/components/ui/table-pagination";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,6 +101,8 @@ const Students = () => {
   const { centerId } = useCenter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
 
   // Helper: property id → name lookup
   const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p.name])), [properties]);
@@ -1117,8 +1120,11 @@ const Students = () => {
                               {student.profile?.full_name?.split(" ").map(n => n[0]).join("") || "?"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm truncate">{student.profile?.full_name || "Unknown"}</p>
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => navigate(`/dashboard/students/${student.id}`)}
+                          >
+                            <p className="font-semibold text-sm truncate hover:underline">{student.profile?.full_name || "Unknown"}</p>
                             <p className="text-xs text-muted-foreground">{student.roll_number || "No Form Number"}</p>
                           </div>
                           <DropdownMenu>
@@ -1223,7 +1229,10 @@ const Students = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-3">
+                            <div
+                              className="flex items-center gap-3 cursor-pointer"
+                              onClick={() => navigate(`/dashboard/students/${student.id}`)}
+                            >
                               <Avatar className="h-9 w-9">
                                 <AvatarImage src={student.profile?.avatar_url || ""} />
                                 <AvatarFallback className="bg-primary/10 text-primary">
@@ -1231,7 +1240,7 @@ const Students = () => {
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
+                                <p className="font-medium hover:underline">{student.profile?.full_name || "Unknown"}</p>
                                 <p className="text-sm text-muted-foreground">{student.roll_number || "No Form Number"}</p>
                               </div>
                             </div>

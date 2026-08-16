@@ -20,6 +20,7 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Students from "./pages/Students";
+import StudentDetail from "./pages/StudentDetail";
 import RoomAllocation from "./pages/RoomAllocation";
 import GatePasses from "./pages/GatePasses";
 import MessManagement from "./pages/MessManagement";
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/properties" element={<Properties />} />
               <Route path="/dashboard/students" element={<Students />} />
+              <Route path="/dashboard/students/:id" element={<StudentDetail />} />
               <Route path="/dashboard/rooms" element={<RoomAllocation />} />
               <Route path="/dashboard/passes" element={<GatePasses />} />
               <Route path="/dashboard/mess" element={<MessManagement />} />
