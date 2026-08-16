@@ -20,6 +20,7 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Students from "./pages/Students";
+import StudentDetail from "./pages/StudentDetail";
 import RoomAllocation from "./pages/RoomAllocation";
 import GatePasses from "./pages/GatePasses";
 import MessManagement from "./pages/MessManagement";
