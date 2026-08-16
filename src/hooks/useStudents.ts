@@ -35,6 +35,9 @@ export interface StudentWithProfile extends Student {
   finance?: {
     totalPaid: number;
     pending: number;
+    concession: number;
+    refunded: number;
+    receiptGiven: boolean;
     lastPaymentMode: string | null;
     lastTransactionDetails: string | null;
     lastUtr: string | null;
@@ -47,8 +50,18 @@ export interface StudentWithProfile extends Student {
       label: string | null;
       paid_at: string | null;
     }>;
+    /** Payments in chronological order (installment 1, 2, 3 ...) */
+    installments: Array<{
+      amount: number;
+      mode: string | null;
+      txn: string | null;
+      utr: string | null;
+      label: string | null;
+      paid_at: string | null;
+    }>;
   };
 }
+
 
 export function useStudents(propertyId?: string) {
   const { user } = useAuth();
