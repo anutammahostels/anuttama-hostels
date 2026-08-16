@@ -1194,14 +1194,22 @@ const Students = () => {
                         <TableHead>Center</TableHead>
                         <TableHead>Father Name</TableHead>
                         <TableHead>Gender</TableHead>
+                        <TableHead>Class/Grade</TableHead>
+                        <TableHead>Stream</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Room</TableHead>
                         <TableHead>Final Fee</TableHead>
+                        <TableHead>Concession</TableHead>
                         <TableHead>Paid</TableHead>
                         <TableHead>Pending</TableHead>
-                        <TableHead>Last Payment</TableHead>
+                        <TableHead>Refund</TableHead>
+                        <TableHead>Payment 1</TableHead>
+                        <TableHead>Payment 2</TableHead>
+                        <TableHead>Payment 3</TableHead>
+                        <TableHead>Receipt</TableHead>
                         <TableHead>Remarks</TableHead>
                         <TableHead>Status</TableHead>
+
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
