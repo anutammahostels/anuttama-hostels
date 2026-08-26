@@ -1,4 +1,4 @@
-project_id = "riguxshscsoygimxzwaf"
+project_id = "tzjdchzoriseyzzuzliq"
 
 [functions.create-student]
 verify_jwt = false
