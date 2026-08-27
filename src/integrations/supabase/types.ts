@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -1554,10 +1554,14 @@ export type Database = {
           mother_name: string | null
           parent_id: string | null
           payment_date: string | null
+          payment_type: Database["public"]["Enums"]["payment_type"] | null
           property_id: string | null
           remarks: string | null
           roll_number: string | null
           status: string | null
+          student_category:
+            | Database["public"]["Enums"]["student_category"]
+            | null
           updated_at: string
           user_id: string
           year: number | null
@@ -1579,10 +1583,14 @@ export type Database = {
           mother_name?: string | null
           parent_id?: string | null
           payment_date?: string | null
+          payment_type?: Database["public"]["Enums"]["payment_type"] | null
           property_id?: string | null
           remarks?: string | null
           roll_number?: string | null
           status?: string | null
+          student_category?:
+            | Database["public"]["Enums"]["student_category"]
+            | null
           updated_at?: string
           user_id: string
           year?: number | null
@@ -1604,10 +1612,14 @@ export type Database = {
           mother_name?: string | null
           parent_id?: string | null
           payment_date?: string | null
+          payment_type?: Database["public"]["Enums"]["payment_type"] | null
           property_id?: string | null
           remarks?: string | null
           roll_number?: string | null
           status?: string | null
+          student_category?:
+            | Database["public"]["Enums"]["student_category"]
+            | null
           updated_at?: string
           user_id?: string
           year?: number | null
@@ -1757,6 +1769,8 @@ export type Database = {
         | "parent"
         | "security_guard"
         | "accountant"
+      payment_type: "one-time" | "installment"
+      student_category: "6th-10th" | "11th-12th-dropper"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1894,6 +1908,8 @@ export const Constants = {
         "security_guard",
         "accountant",
       ],
+      payment_type: ["one-time", "installment"],
+      student_category: ["6th-10th", "11th-12th-dropper"],
     },
   },
 } as const
