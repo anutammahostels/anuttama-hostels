@@ -28,6 +28,7 @@ import { createNotification } from "@/lib/notifications";
 import { useProperties } from "@/hooks/useProperties";
 import { useCenter } from "@/contexts/CenterContext";
 import { CenterFilter } from "@/components/dashboard/CenterFilter";
+import { STUDENT_CATEGORIES, PAYMENT_TYPES, calculateFinalFee, studentCategoryLabel, paymentTypeLabel, type StudentCategory, type PaymentType } from "@/lib/feeMatrix";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,6 +58,8 @@ const Students = () => {
     alloted_room_no: "",
     account_number: "",
     payment_date: "",
+    student_category: "",
+    payment_type: "",
     final_fee: "",
   });
   const [isUpdating, setIsUpdating] = useState(false);
@@ -518,6 +521,8 @@ const Students = () => {
     father_name: "",
     mother_name: "",
     gender: "",
+    student_category: "",
+    payment_type: "",
     final_fee: "",
     alloted_room_no: "",
     remarks: "",
@@ -618,6 +623,8 @@ const Students = () => {
       alloted_room_no: (student as any).alloted_room_no || "",
       account_number: (student as any).account_number || "",
       payment_date: (student as any).payment_date || "",
+      student_category: (student as any).student_category || "",
+      payment_type: (student as any).payment_type || "",
       final_fee: (student as any).final_fee?.toString() || "",
     });
     setEditDialogOpen(true);
@@ -647,7 +654,9 @@ const Students = () => {
         alloted_room_no: editForm.alloted_room_no || null,
         account_number: editForm.account_number || null,
         payment_date: editForm.payment_date || null,
-        final_fee: editForm.final_fee ? parseFloat(editForm.final_fee) : 0,
+        student_category: (editForm.student_category || null) as StudentCategory | null,
+        payment_type: (editForm.payment_type || null) as PaymentType | null,
+        final_fee: calculateFinalFee(editForm.student_category, editForm.payment_type) ?? 0,
       });
       setEditDialogOpen(false);
       setEditingStudent(null);
@@ -1202,6 +1211,8 @@ const Students = () => {
                         <TableHead>Gender</TableHead>
                         <TableHead>Class/Grade</TableHead>
                         <TableHead>Stream</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Payment Type</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Room</TableHead>
                         <TableHead>Final Fee</TableHead>
@@ -1261,6 +1272,12 @@ const Students = () => {
                           </TableCell>
                           <TableCell>
                             <p className="text-sm whitespace-nowrap">{(student as any).department || "-"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm whitespace-nowrap">{studentCategoryLabel((student as any).student_category)}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm whitespace-nowrap">{paymentTypeLabel((student as any).payment_type)}</p>
                           </TableCell>
                           <TableCell>
                             <p className="text-sm">{student.profile?.phone || "-"}</p>
@@ -1508,8 +1525,33 @@ const Students = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
+                    <Label className="text-xs font-semibold">Student Category</Label>
+                    <Select value={form.student_category} onValueChange={(v) => setForm(f => ({ ...f, student_category: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        {STUDENT_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Payment Type</Label>
+                    <Select value={form.payment_type} onValueChange={(v) => setForm(f => ({ ...f, payment_type: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select payment type" /></SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_TYPES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label className="text-xs font-semibold">Final Fee</Label>
-                    <Input type="number" placeholder="e.g. 180000" value={form.final_fee} onChange={(e) => setForm(f => ({ ...f, final_fee: e.target.value }))} />
+                    <Input
+                      type="number"
+                      readOnly
+                      disabled
+                      placeholder="Select category & payment type"
+                      value={calculateFinalFee(form.student_category, form.payment_type) ?? ""}
+                      className="bg-muted"
+                    />
                   </div>
                   <div>
                     <Label className="text-xs font-semibold">Allotted Room No</Label>
@@ -1575,7 +1617,7 @@ const Students = () => {
                     (parseFloat(form.amount_1) || 0) +
                     (parseFloat(form.amount_2) || 0) +
                     (parseFloat(form.amount_3) || 0);
-                  const finalFeeNum = parseFloat(form.final_fee) || 0;
+                  const finalFeeNum = calculateFinalFee(form.student_category, form.payment_type) ?? 0;
                   const balance = Math.max(0, finalFeeNum - totalPaid);
 
                   return (
@@ -1785,8 +1827,31 @@ const Students = () => {
                 <Input value={editForm.alloted_room_no} onChange={(e) => setEditForm(f => ({ ...f, alloted_room_no: e.target.value }))} />
               </div>
               <div>
+                <Label className="text-xs font-semibold">Student Category</Label>
+                <Select value={editForm.student_category} onValueChange={(v) => setEditForm(f => ({ ...f, student_category: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {STUDENT_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Payment Type</Label>
+                <Select value={editForm.payment_type} onValueChange={(v) => setEditForm(f => ({ ...f, payment_type: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select payment type" /></SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_TYPES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label className="text-xs font-semibold">Final Fee (₹)</Label>
-                <Input type="number" value={editForm.final_fee} onChange={(e) => setEditForm(f => ({ ...f, final_fee: e.target.value }))} />
+                <Input type="number" readOnly disabled className="bg-muted" value={calculateFinalFee(editForm.student_category, editForm.payment_type) ?? ""} />
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs text-muted-foreground">
+                  Changing category/payment type updates this student's Final Fee but does not modify already-recorded invoices/payments.
+                </p>
               </div>
               <div>
                 <Label className="text-xs font-semibold">Account Number</Label>

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { calculateFinalFee } from "../_shared/feeMatrix.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -106,6 +107,8 @@ serve(async (req) => {
     const roll_number = safeStr(rawBody.roll_number);
     const course = safeStr(rawBody.course);
     const department = safeStr(rawBody.department);
+    const studentCategory = safeStr(rawBody.student_category);
+    const paymentType = safeStr(rawBody.payment_type);
     const year = rawBody.year;
     const date_of_birth = rawBody.date_of_birth;
     const blood_group = safeStr(rawBody.blood_group);
@@ -113,7 +116,6 @@ serve(async (req) => {
     const father_name = safeStr(rawBody.father_name);
     const mother_name = safeStr(rawBody.mother_name);
     const gender = safeStr(rawBody.gender);
-    const final_fee = rawBody.final_fee;
     const payment_date = rawBody.payment_date;
     const account_number = safeStr(rawBody.account_number);
     const alloted_room_no = safeStr(rawBody.alloted_room_no);
@@ -240,7 +242,9 @@ serve(async (req) => {
     }
 
     // Create student record with new fields
-    const parsedFinalFee = parseFloat(String(final_fee || "0").replace(/,/g, "")) || 0;
+    // final_fee is always computed server-side from category + payment type
+    // (fixed fee matrix) — any client-supplied final_fee is ignored so it can't be tampered with.
+    const parsedFinalFee = calculateFinalFee(studentCategory, paymentType) ?? 0;
 
     // Resolve center → property_id. Order: explicit property_id, then center name match,
     // then fallback to the first available property (keeps legacy uploads working).
@@ -284,6 +288,8 @@ serve(async (req) => {
         roll_number: roll_number || null,
         course: course || null,
         department: department || null,
+        student_category: studentCategory || null,
+        payment_type: paymentType || null,
         year: year ? parseInt(year) : null,
         date_of_birth: toDateOnly(date_of_birth),
         blood_group: blood_group || null,
