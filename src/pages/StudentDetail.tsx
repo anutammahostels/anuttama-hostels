@@ -1,19 +1,132 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, IndianRupee, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, IndianRupee, Loader2, Receipt, Wallet, Percent } from "lucide-react";
 import { formatINR as formatCurrency } from "@/lib/formatCurrency";
+import { useInvoices } from "@/hooks/useInvoices";
+import { invoiceToReceipt, buildReceiptHtml } from "@/lib/receiptTemplate";
+import { useToast } from "@/hooks/use-toast";
 
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "—");
 
 const StudentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { recordPayment, updateInvoice } = useInvoices(id);
+
+  const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; invoice: any | null }>({ open: false, invoice: null });
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentCount, setPaymentCount] = useState<number | null>(null);
+
+  const [discountDialog, setDiscountDialog] = useState<{ open: boolean; invoice: any | null }>({ open: false, invoice: null });
+  const [discountAmount, setDiscountAmount] = useState("");
+
+  const closeDiscountDialog = () => {
+    setDiscountDialog({ open: false, invoice: null });
+    setDiscountAmount("");
+  };
+
+  const openDiscountDialog = (inv: any) => {
+    setDiscountDialog({ open: true, invoice: inv });
+    setDiscountAmount(String(Number(inv.discounts) || 0));
+  };
+
+  const handleSetDiscount = async () => {
+    const inv = discountDialog.invoice;
+    if (!inv) return;
+    const newDiscount = parseFloat(discountAmount) || 0;
+    const grossFee = Number(inv.total_amount || 0) + Number(inv.discounts || 0);
+    const newTotal = grossFee - newDiscount;
+    const paidSoFar = Number(inv.paid_amount || 0);
+    if (newDiscount < 0 || newTotal < 0) {
+      toast({ title: "Invalid discount", description: "Discount cannot be negative or exceed the fee amount.", variant: "destructive" });
+      return;
+    }
+    if (newTotal < paidSoFar) {
+      toast({ title: "Invalid discount", description: `Discount can't reduce the payable amount below what's already paid (₹${paidSoFar.toLocaleString("en-IN")}).`, variant: "destructive" });
+      return;
+    }
+    await updateInvoice.mutateAsync({ id: inv.id, discounts: newDiscount, total_amount: newTotal });
+    queryClient.invalidateQueries({ queryKey: ["student-detail", id] });
+    closeDiscountDialog();
+  };
+
+  const closePaymentDialog = () => {
+    setPaymentDialog({ open: false, invoice: null });
+    setPaymentAmount("");
+    setPaymentReference("");
+    setPaymentCount(null);
+  };
+
+  // Load count of completed payments whenever the payment dialog opens,
+  // mirroring Billing.tsx's rule enforcement (max 3 partial payments per invoice).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!paymentDialog.open || !paymentDialog.invoice) {
+        setPaymentCount(null);
+        return;
+      }
+      const { count } = await supabase
+        .from("payments")
+        .select("id", { count: "exact", head: true })
+        .eq("invoice_id", paymentDialog.invoice.id)
+        .eq("status", "completed");
+      if (!cancelled) {
+        const used = count || 0;
+        setPaymentCount(used);
+        const inv = paymentDialog.invoice;
+        const balance = Math.max(0, (inv.total_amount || 0) - (inv.paid_amount || 0));
+        if (used === 2) setPaymentAmount(String(balance));
+        else if (!paymentAmount) setPaymentAmount(String(balance));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentDialog.open, paymentDialog.invoice?.id]);
+
+  const handleRecordPayment = async () => {
+    if (!paymentDialog.invoice || !paymentAmount) return;
+    await recordPayment.mutateAsync({
+      id: paymentDialog.invoice.id,
+      amount: parseFloat(paymentAmount),
+      method: paymentMethod,
+      modeLabel: paymentMethod,
+      reference: paymentReference || undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ["student-detail", id] });
+    closePaymentDialog();
+  };
+
+  const handleDownloadReceipt = (inv: any, student: any, studentName: string) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const data = invoiceToReceipt(inv, {
+      studentName,
+      rollNumber: student.roll_number,
+      fatherName: student.father_name,
+      motherName: student.mother_name,
+      gender: student.gender,
+      course: student.course,
+    });
+    const html = buildReceiptHtml(data);
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["student-detail", id],
@@ -242,6 +355,7 @@ const StudentDetail = () => {
                     <TableHead>Paid</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -254,6 +368,33 @@ const StudentDetail = () => {
                       <TableCell>{formatCurrency(Number(inv.paid_amount || 0))}</TableCell>
                       <TableCell>{fmtDate(inv.due_date)}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{inv.status}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {inv.status !== "paid" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPaymentDialog({ open: true, invoice: inv })}
+                            >
+                              <Wallet className="h-3.5 w-3.5 mr-1" /> Record Payment
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDiscountDialog(inv)}
+                          >
+                            <Percent className="h-3.5 w-3.5 mr-1" /> Discount
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadReceipt(inv, student, profile?.full_name || "Unknown")}
+                          >
+                            <Receipt className="h-3.5 w-3.5 mr-1" /> Receipt
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -296,6 +437,184 @@ const StudentDetail = () => {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={paymentDialog.open} onOpenChange={(open) => { if (!open) closePaymentDialog(); }}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Recording payment for invoice {paymentDialog.invoice?.invoice_number}
+            </DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const inv = paymentDialog.invoice;
+            const total = inv?.total_amount || 0;
+            const paidSoFar = inv?.paid_amount || 0;
+            const balance = Math.max(0, total - paidSoFar);
+            const used = paymentCount ?? 0;
+            const remaining = Math.max(0, 3 - used);
+            const isFinal = used === 2;
+            const isExhausted = used >= 3;
+            return (
+              <>
+                <div className="space-y-4 py-4">
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Amount:</span>
+                      <span className="font-medium">{formatCurrency(total)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Already Paid:</span>
+                      <span className="text-green-600">{formatCurrency(paidSoFar)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-muted-foreground">Balance Due:</span>
+                      <span className="font-bold text-red-500">{formatCurrency(balance)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-muted-foreground">Partial payments used:</span>
+                      <Badge variant={isFinal || isExhausted ? "destructive" : "secondary"}>
+                        {used} of 3 {remaining > 0 ? `(${remaining} left)` : "(none left)"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {isExhausted && (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                      This invoice has already used all 3 allowed partial payments. No more partial entries can be recorded.
+                    </div>
+                  )}
+                  {isFinal && !isExhausted && (
+                    <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700">
+                      This is the final allowed payment — it must clear the full remaining balance of {formatCurrency(balance)}.
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Payment Amount</Label>
+                    <Input
+                      type="number"
+                      placeholder="Enter amount..."
+                      value={paymentAmount}
+                      disabled={isExhausted || isFinal}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                    />
+                    {isFinal && (
+                      <p className="text-xs text-muted-foreground">Locked to remaining balance.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Payment Method</Label>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select method..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="upi">UPI</SelectItem>
+                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                        <SelectItem value="cheque">Cheque</SelectItem>
+                        <SelectItem value="online">Online Payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Transaction Reference / UTR (optional)</Label>
+                    <Input
+                      placeholder="UTR, cheque #, txn ID..."
+                      value={paymentReference}
+                      onChange={(e) => setPaymentReference(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={closePaymentDialog}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleRecordPayment}
+                    disabled={!paymentAmount || recordPayment.isPending || isExhausted}
+                    className="gradient-primary text-white"
+                  >
+                    {recordPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Record Payment"}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={discountDialog.open} onOpenChange={(open) => { if (!open) closeDiscountDialog(); }}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Set Discount</DialogTitle>
+            <DialogDescription>
+              Applying a discount for invoice {discountDialog.invoice?.invoice_number}
+            </DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const inv = discountDialog.invoice;
+            if (!inv) return null;
+            const paidSoFar = Number(inv.paid_amount || 0);
+            const grossFee = Number(inv.total_amount || 0) + Number(inv.discounts || 0);
+            const newDiscount = parseFloat(discountAmount) || 0;
+            const newTotal = Math.max(0, grossFee - newDiscount);
+            const newDue = Math.max(0, newTotal - paidSoFar);
+            return (
+              <>
+                <div className="space-y-4 py-4">
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Original Fee:</span>
+                      <span className="font-medium">{formatCurrency(grossFee)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Already Paid:</span>
+                      <span className="text-green-600">{formatCurrency(paidSoFar)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-muted-foreground">Net Payable (after discount):</span>
+                      <span className="font-bold">{formatCurrency(newTotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Remaining Due:</span>
+                      <span className="font-bold text-red-500">{formatCurrency(newDue)}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Discount Amount (₹)</Label>
+                    <Input
+                      type="number"
+                      placeholder="e.g. 5000"
+                      value={discountAmount}
+                      onChange={(e) => setDiscountAmount(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This reduces the student's payable amount for this invoice. Already-paid amounts are not affected.
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={closeDiscountDialog}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSetDiscount}
+                    disabled={updateInvoice.isPending}
+                    className="gradient-primary text-white"
+                  >
+                    {updateInvoice.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Discount"}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

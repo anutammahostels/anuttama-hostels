@@ -258,6 +258,9 @@ export function invoiceToReceipt(
 ): ReceiptData {
   const total = Number(inv.total_amount) || 0;
   const discounts = Number(inv.discounts) || 0;
+  // total_amount already reflects any discount applied (it's reduced when a
+  // discount is set), so the gross/original fee for display is total + discounts.
+  const grossFee = total + discounts;
   const paid = Number(inv.paid_amount) || 0;
   const due = Math.max(0, total - paid);
   const items: ReceiptData["lineItems"] = [];
@@ -281,7 +284,7 @@ export function invoiceToReceipt(
       .replace(/_/g, " ")
       .replace(/\b\w/g, (c: string) => c.toUpperCase()),
     amountPaid: paid || total,
-    totalAmount: total,
+    totalAmount: grossFee,
     discounts,
     paidAmount: paid,
     totalDue: due,
