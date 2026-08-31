@@ -153,9 +153,10 @@ Deno.serve(async (req) => {
     const MERCHANT_ID = Deno.env.get("HDFC_MERCHANT_ID")!;
     const ENVIRONMENT = Deno.env.get("HDFC_ENVIRONMENT") || "sandbox";
     const BASE_URL =
-      ENVIRONMENT === "production"
+      Deno.env.get("HDFC_BASE_URL") ||
+      (ENVIRONMENT === "production"
         ? Deno.env.get("HDFC_BASE_URL_PRODUCTION") || "https://smartgateway.hdfc.bank.in"
-        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in";
+        : Deno.env.get("HDFC_BASE_URL_SANDBOX") || "https://smartgateway.hdfcuat.bank.in");
     const PAYMENT_PAGE_CLIENT_ID =
       Deno.env.get("HDFC_PAYMENT_PAGE_CLIENT_ID") || Deno.env.get("HDFC_CLIENT_ID") || "hdfcmaster";
 
