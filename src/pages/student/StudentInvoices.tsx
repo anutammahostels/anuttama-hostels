@@ -59,8 +59,8 @@ export default function StudentInvoices() {
     enabled: !!student,
   });
 
-  const totalDue = invoices.filter((i) => i.status !== "paid").reduce((s, i) => s + (i.total_amount - (i.paid_amount || 0)), 0);
-  const totalPaid = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total_amount, 0);
+  const totalDue = invoices.reduce((s, i) => s + Math.max(0, (i.total_amount || 0) - (i.paid_amount || 0)), 0);
+  const totalPaid = invoices.reduce((s, i) => s + (i.paid_amount || 0), 0);
 
   // Load payment count when pay dialog opens
   useEffect(() => {
@@ -205,7 +205,7 @@ export default function StudentInvoices() {
               </div>
               <div>
                 <p className="font-semibold text-foreground">Total Dues: ₹{totalDue.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Across {invoices.filter(i => i.status !== 'paid').length} unpaid invoice(s)</p>
+                <p className="text-xs text-muted-foreground">Across {invoices.filter(i => (i.total_amount - (i.paid_amount || 0)) > 0).length} unpaid invoice(s)</p>
               </div>
             </div>
           </CardContent>
@@ -217,8 +217,9 @@ export default function StudentInvoices() {
           <Card><CardContent className="p-8 text-center text-muted-foreground">No invoices yet</CardContent></Card>
         ) : (
           invoices.map((inv) => {
-            const balance = inv.total_amount - (inv.paid_amount || 0);
+            const balance = Math.max(0, inv.total_amount - (inv.paid_amount || 0));
             const isPaying = payingInvoiceId === inv.id;
+            const computedStatus = balance === 0 ? "paid" : (inv.paid_amount || 0) > 0 ? "partial" : (inv.status || "pending");
             return (
               <Card key={inv.id} className="border-border/50">
                 <CardContent className="p-4">
@@ -227,7 +228,7 @@ export default function StudentInvoices() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
                         <h3 className="font-semibold text-foreground">{inv.invoice_number}</h3>
-                        <Badge variant={inv.status === "paid" ? "default" : inv.status === "overdue" ? "destructive" : "secondary"} className="text-xs">{inv.status}</Badge>
+                        <Badge variant={computedStatus === "paid" ? "default" : computedStatus === "overdue" ? "destructive" : "secondary"} className="text-xs">{computedStatus}</Badge>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-muted-foreground mt-2">
                         <span>Month: {format(new Date(inv.billing_month), "MMM yyyy")}</span>
@@ -239,9 +240,9 @@ export default function StudentInvoices() {
                       <div className="flex gap-2 mt-3">
                         <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(inv)}>
                           <Download className="h-3 w-3 mr-1" />
-                          {inv.status === "paid" ? "Receipt" : "Download"}
+                          {computedStatus === "paid" ? "Receipt" : "Download"}
                         </Button>
-                        {inv.status !== "paid" && (
+                        {balance > 0 && (
                           <Button
                             size="sm"
                             className="gradient-primary text-white"
@@ -256,10 +257,10 @@ export default function StudentInvoices() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-lg font-bold text-foreground">₹{inv.total_amount.toLocaleString()}</p>
-                      {inv.status === "paid" && inv.payment_date && (
+                      {computedStatus === "paid" && inv.payment_date && (
                         <p className="text-xs text-green-600">Paid on {format(new Date(inv.payment_date), "MMM d")}</p>
                       )}
-                      {balance > 0 && inv.status !== "paid" && (
+                      {balance > 0 && (
                         <p className="text-xs text-destructive">Due: ₹{balance.toLocaleString()}</p>
                       )}
                     </div>

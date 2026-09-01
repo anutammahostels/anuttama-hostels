@@ -78,12 +78,11 @@ export default function StudentDashboard() {
   });
 
   const unpaidAmount = recentInvoices
-    .filter((i) => i.status !== "paid")
-    .reduce((sum, i) => sum + (i.total_amount - (i.paid_amount || 0)), 0);
+    .reduce((sum, i) => sum + Math.max(0, (i.total_amount || 0) - (i.paid_amount || 0)), 0);
 
   const quickLinks = [
     { icon: QrCode, label: "Gate Passes", path: "/student/passes", count: pendingPasses.length, color: "text-blue-500 bg-blue-50" },
-    { icon: Receipt, label: "Invoices", path: "/student/invoices", count: recentInvoices.filter((i) => i.status !== "paid").length, color: "text-amber-500 bg-amber-50" },
+    { icon: Receipt, label: "Invoices", path: "/student/invoices", count: recentInvoices.filter((i) => ((i.total_amount || 0) - (i.paid_amount || 0)) > 0).length, color: "text-amber-500 bg-amber-50" },
     { icon: Wrench, label: "Maintenance", path: "/student/maintenance", count: 0, color: "text-purple-500 bg-purple-50" },
     { icon: Bell, label: "Notices", path: "/student/notices", count: notices.length, color: "text-green-500 bg-green-50" },
   ];
