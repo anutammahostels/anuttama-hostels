@@ -414,7 +414,8 @@ const Students = () => {
         })(),
         // Finance fields — payment_date kept for backward compat (= installment-1 date)
         payment_date: date1,
-        final_fee: String(parseAmount(findCol(["final_fee"]))),
+        final_fee: String(parseAmount(findCol(["final_fee", "final_amount", "finalfee"]))),
+        discount: String(parseAmount(findCol(["concession_amount", "concession"]))),
         // Installment 1
         payment_date_1: date1,
         payment_mode_1: findCol(["payment_mode-1", "payment_mode_1"]),
@@ -524,6 +525,7 @@ const Students = () => {
     student_category: "",
     payment_type: "",
     final_fee: "",
+    discount: "",
     alloted_room_no: "",
     remarks: "",
     account_number: "",
@@ -1618,18 +1620,37 @@ const Students = () => {
                     (parseFloat(form.amount_2) || 0) +
                     (parseFloat(form.amount_3) || 0);
                   const finalFeeNum = calculateFinalFee(form.student_category, form.payment_type) ?? 0;
-                  const balance = Math.max(0, finalFeeNum - totalPaid);
+                  const discountNum = parseFloat(form.discount) || 0;
+                  const balance = Math.max(0, finalFeeNum - discountNum - totalPaid);
 
                   return (
                     <>
                       {renderInstallment(1, "Payment 1")}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs font-semibold">Discount on Payment 1 (₹)</Label>
+                          <Input
+                            type="number"
+                            placeholder="e.g. 5000"
+                            value={form.discount}
+                            onChange={(e) => setForm(f => ({ ...f, discount: e.target.value }))}
+                          />
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Concession applies only to the first installment.
+                          </p>
+                        </div>
+                      </div>
                       {renderInstallment(2, "Payment 2")}
                       {renderInstallment(3, "Payment 3")}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border bg-muted/40 p-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 rounded-md border bg-muted/40 p-3">
                         <div>
                           <Label className="text-xs font-semibold text-muted-foreground">Final Fee</Label>
                           <p className="text-sm font-semibold">₹ {finalFeeNum.toLocaleString("en-IN")}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs font-semibold text-muted-foreground">Discount</Label>
+                          <p className="text-sm font-semibold">₹ {discountNum.toLocaleString("en-IN")}</p>
                         </div>
                         <div>
                           <Label className="text-xs font-semibold text-muted-foreground">Total Paid</Label>

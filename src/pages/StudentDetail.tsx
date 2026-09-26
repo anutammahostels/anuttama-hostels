@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, IndianRupee, Loader2, Receipt, Wallet, Percent } from "lucide-react";
+import { ArrowLeft, IndianRupee, Loader2, Receipt, Wallet } from "lucide-react";
 import { formatINR as formatCurrency } from "@/lib/formatCurrency";
 import { useInvoices } from "@/hooks/useInvoices";
 import { invoiceToReceipt, buildReceiptHtml } from "@/lib/receiptTemplate";
@@ -31,39 +31,6 @@ const StudentDetail = () => {
   const [paymentMethod, setPaymentMethod] = useState("upi");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentCount, setPaymentCount] = useState<number | null>(null);
-
-  const [discountDialog, setDiscountDialog] = useState<{ open: boolean; invoice: any | null }>({ open: false, invoice: null });
-  const [discountAmount, setDiscountAmount] = useState("");
-
-  const closeDiscountDialog = () => {
-    setDiscountDialog({ open: false, invoice: null });
-    setDiscountAmount("");
-  };
-
-  const openDiscountDialog = (inv: any) => {
-    setDiscountDialog({ open: true, invoice: inv });
-    setDiscountAmount(String(Number(inv.discounts) || 0));
-  };
-
-  const handleSetDiscount = async () => {
-    const inv = discountDialog.invoice;
-    if (!inv) return;
-    const newDiscount = parseFloat(discountAmount) || 0;
-    const grossFee = Number(inv.total_amount || 0) + Number(inv.discounts || 0);
-    const newTotal = grossFee - newDiscount;
-    const paidSoFar = Number(inv.paid_amount || 0);
-    if (newDiscount < 0 || newTotal < 0) {
-      toast({ title: "Invalid discount", description: "Discount cannot be negative or exceed the fee amount.", variant: "destructive" });
-      return;
-    }
-    if (newTotal < paidSoFar) {
-      toast({ title: "Invalid discount", description: `Discount can't reduce the payable amount below what's already paid (₹${paidSoFar.toLocaleString("en-IN")}).`, variant: "destructive" });
-      return;
-    }
-    await updateInvoice.mutateAsync({ id: inv.id, discounts: newDiscount, total_amount: newTotal });
-    queryClient.invalidateQueries({ queryKey: ["student-detail", id] });
-    closeDiscountDialog();
-  };
 
   const closePaymentDialog = () => {
     setPaymentDialog({ open: false, invoice: null });
@@ -380,13 +347,6 @@ const StudentDetail = () => {
                             </Button>
                           )}
                           <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openDiscountDialog(inv)}
-                          >
-                            <Percent className="h-3.5 w-3.5 mr-1" /> Discount
-                          </Button>
-                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDownloadReceipt(inv, student, profile?.full_name || "Unknown")}
@@ -547,74 +507,6 @@ const StudentDetail = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={discountDialog.open} onOpenChange={(open) => { if (!open) closeDiscountDialog(); }}>
-        <DialogContent className="bg-background">
-          <DialogHeader>
-            <DialogTitle>Set Discount</DialogTitle>
-            <DialogDescription>
-              Applying a discount for invoice {discountDialog.invoice?.invoice_number}
-            </DialogDescription>
-          </DialogHeader>
-          {(() => {
-            const inv = discountDialog.invoice;
-            if (!inv) return null;
-            const paidSoFar = Number(inv.paid_amount || 0);
-            const grossFee = Number(inv.total_amount || 0) + Number(inv.discounts || 0);
-            const newDiscount = parseFloat(discountAmount) || 0;
-            const newTotal = Math.max(0, grossFee - newDiscount);
-            const newDue = Math.max(0, newTotal - paidSoFar);
-            return (
-              <>
-                <div className="space-y-4 py-4">
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Original Fee:</span>
-                      <span className="font-medium">{formatCurrency(grossFee)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Already Paid:</span>
-                      <span className="text-green-600">{formatCurrency(paidSoFar)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-2">
-                      <span className="text-muted-foreground">Net Payable (after discount):</span>
-                      <span className="font-bold">{formatCurrency(newTotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Remaining Due:</span>
-                      <span className="font-bold text-red-500">{formatCurrency(newDue)}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Discount Amount (₹)</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 5000"
-                      value={discountAmount}
-                      onChange={(e) => setDiscountAmount(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      This reduces the student's payable amount for this invoice. Already-paid amounts are not affected.
-                    </p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={closeDiscountDialog}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSetDiscount}
-                    disabled={updateInvoice.isPending}
-                    className="gradient-primary text-white"
-                  >
-                    {updateInvoice.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Discount"}
-                  </Button>
-                </DialogFooter>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

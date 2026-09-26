@@ -136,6 +136,7 @@ serve(async (req) => {
     const transaction_details_3 = safeStr(rawBody.transaction_details_3);
     const utr_id_3 = safeStr(rawBody.utr_id_3);
     const balance_payment = rawBody.balance_payment;
+    const discount = Math.max(0, parseFloat(String(rawBody.discount ?? "0").replace(/,/g, "")) || 0);
     const centerInput = safeStr(rawBody.center);
     const propertyIdInput = safeStr(rawBody.property_id);
 
@@ -242,9 +243,13 @@ serve(async (req) => {
     }
 
     // Create student record with new fields
-    // final_fee is always computed server-side from category + payment type
-    // (fixed fee matrix) — any client-supplied final_fee is ignored so it can't be tampered with.
-    const parsedFinalFee = calculateFinalFee(studentCategory, paymentType) ?? 0;
+    // final_fee: prefer the client-supplied amount (e.g. the actual negotiated/Excel fee,
+    // which may include a concession that isn't reflected in the fixed matrix). Fall back
+    // to the fixed category+payment-type matrix when no explicit amount was provided
+    // (e.g. new students added manually through the UI).
+    const clientFinalFee = Math.max(0, parseFloat(String(rawBody.final_fee ?? "").replace(/,/g, "")) || 0);
+    const matrixFinalFee = calculateFinalFee(studentCategory, paymentType) ?? 0;
+    const parsedFinalFee = clientFinalFee > 0 ? clientFinalFee : matrixFinalFee;
 
     // Resolve center → property_id. Order: explicit property_id, then center name match,
     // then fallback to the first available property (keeps legacy uploads working).
@@ -385,12 +390,16 @@ serve(async (req) => {
           if (inst.n === installments.length && balanceNote) noteParts.push(balanceNote);
           if (baseRemarks) noteParts.push(baseRemarks);
 
+          // Discount is recorded only against the first installment invoice.
+          const instDiscount = inst.n === 1 ? discount : 0;
+
           const { data: invoice, error: invError } = await adminClient.from("invoices").insert({
             student_id: student.id,
             invoice_number: invoiceNumber,
             billing_month: billingDate,
             due_date: billingDate,
             total_amount: inst.amt,
+            discounts: instDiscount,
             paid_amount: 0,
             room_rent: inst.amt,
             status: "pending",
@@ -418,7 +427,7 @@ serve(async (req) => {
           }
         }
 
-        const outstanding = parsedFinalFee - totalPaid;
+        const outstanding = parsedFinalFee - discount - totalPaid;
         if (outstanding > 0) {
           const invoiceNumber = `INV-${roll_number}-BAL-${tsToken}`;
           const balDueDate = toDateOnly(balance_payment, undefined) || baseBillingDate;

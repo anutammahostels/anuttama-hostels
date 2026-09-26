@@ -1,4 +1,4 @@
-# Migrate off Lovable Cloud to a self-owned Supabase project
+pP# Migrate off Lovable Cloud to a self-owned Supabase project
 
 The app was scaffolded with Lovable, which auto-provisioned a managed "Lovable Cloud" Supabase project (ref `riguxshscsoygimxzwaf`) as its backend. We're moving the backend to a Supabase project we own directly (ref `tzjdchzoriseyzzuzliq`), and eventually leaving the Lovable editor/hosting entirely — this migration is step one of that exit, done in isolation from the frontend-hosting move.
 
