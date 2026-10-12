@@ -160,8 +160,11 @@ const StudentDetail = () => {
   const concession = invoices.reduce((s: number, i: any) => s + Number(i.discounts || 0), 0);
   const paid = payments.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const refunded = refunds.reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
-  const finalFee = Number(student.final_fee || 0);
-  const pending = Math.max(Math.max(gross, finalFee) - paid, 0);
+  // students.final_fee stores the original/total fee (before concession).
+  const totalFee = Math.max(Number(student.final_fee || 0), gross);
+  const finalFee = Math.max(totalFee - concession, 0);
+  const netPaid = Math.max(paid - refunded, 0);
+  const pending = Math.max(finalFee - netPaid, 0);
 
   const room = bed?.room
     ? `${bed.room.floor?.block?.name ? bed.room.floor.block.name + " / " : ""}${bed.room.room_number} · Bed ${bed.bed_number}`
@@ -185,8 +188,9 @@ const StudentDetail = () => {
   ];
 
   const stats = [
-    { label: "Final Fee", value: finalFee || gross },
+    { label: "Total Fee", value: totalFee },
     { label: "Concession", value: concession },
+    { label: "Final Fee", value: finalFee },
     { label: "Total Paid", value: paid },
     { label: "Pending Dues", value: pending },
     { label: "Refunded", value: refunded },
@@ -216,7 +220,7 @@ const StudentDetail = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
         {stats.map(s => (
           <Card key={s.label}>
             <CardContent className="p-3 md:p-4">

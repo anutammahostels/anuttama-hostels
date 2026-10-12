@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { calculateFinalFee } from "../_shared/feeMatrix.ts";
+import { calculateFeeByClass, calculateFinalFee } from "../_shared/feeMatrix.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -247,8 +247,10 @@ serve(async (req) => {
     // which may include a concession that isn't reflected in the fixed matrix). Fall back
     // to the fixed category+payment-type matrix when no explicit amount was provided
     // (e.g. new students added manually through the UI).
+    // Server-side matrix validation: prefer the exact class-wise rate (course + payment_type);
+    // fall back to the legacy broad-category rate for older records that lack a specific class.
     const clientFinalFee = Math.max(0, parseFloat(String(rawBody.final_fee ?? "").replace(/,/g, "")) || 0);
-    const matrixFinalFee = calculateFinalFee(studentCategory, paymentType) ?? 0;
+    const matrixFinalFee = calculateFeeByClass(course, paymentType) ?? calculateFinalFee(studentCategory, paymentType) ?? 0;
     const parsedFinalFee = clientFinalFee > 0 ? clientFinalFee : matrixFinalFee;
 
     // Resolve center → property_id. Order: explicit property_id, then center name match,

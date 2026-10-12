@@ -33,6 +33,8 @@ export interface StudentWithProfile extends Student {
     } | null;
   } | null;
   finance?: {
+    totalFee: number;
+    finalFee: number;
     totalPaid: number;
     pending: number;
     concession: number;
@@ -207,9 +209,11 @@ export function useStudents(propertyId?: string) {
         const invoiceTotal = invs.reduce((s, i) => s + Number(i.total_amount || 0), 0);
         const concession = invs.reduce((s, i) => s + Number((i as any).discounts || 0), 0);
         const refunded = refundsByStudent.get(student.id) || 0;
-        const finalFee = Number((student as any).final_fee || 0);
-        const totalDue = Math.max(invoiceTotal, finalFee);
-        const pending = Math.max(totalDue - totalPaid, 0);
+        // students.final_fee stores the original/total fee (before concession).
+        const totalFee = Math.max(Number((student as any).final_fee || 0), invoiceTotal);
+        const finalFee = Math.max(totalFee - concession, 0);
+        const netPaid = Math.max(totalPaid - refunded, 0);
+        const pending = Math.max(finalFee - netPaid, 0);
         const last = pays[0];
         const installments = [...pays]
           .sort((a, b) => new Date(a.paid_at || 0).getTime() - new Date(b.paid_at || 0).getTime())
@@ -219,6 +223,8 @@ export function useStudents(propertyId?: string) {
           profile: profilesMap.get(student.user_id) || null,
           bed: bedsMap.get(student.id) || null,
           finance: {
+            totalFee,
+            finalFee,
             totalPaid,
             pending,
             concession,

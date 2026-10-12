@@ -28,7 +28,7 @@ import { createNotification } from "@/lib/notifications";
 import { useProperties } from "@/hooks/useProperties";
 import { useCenter } from "@/contexts/CenterContext";
 import { CenterFilter } from "@/components/dashboard/CenterFilter";
-import { STUDENT_CATEGORIES, PAYMENT_TYPES, calculateFinalFee, studentCategoryLabel, paymentTypeLabel, type StudentCategory, type PaymentType } from "@/lib/feeMatrix";
+import { CLASSES, PAYMENT_TYPES, calculateFeeByClass, categoryForClass, studentCategoryLabel, paymentTypeLabel, type PaymentType } from "@/lib/feeMatrix";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,6 +58,7 @@ const Students = () => {
     alloted_room_no: "",
     account_number: "",
     payment_date: "",
+    course: "",
     student_category: "",
     payment_type: "",
     final_fee: "",
@@ -522,6 +523,7 @@ const Students = () => {
     father_name: "",
     mother_name: "",
     gender: "",
+    course: "",
     student_category: "",
     payment_type: "",
     final_fee: "",
@@ -625,6 +627,7 @@ const Students = () => {
       alloted_room_no: (student as any).alloted_room_no || "",
       account_number: (student as any).account_number || "",
       payment_date: (student as any).payment_date || "",
+      course: (student as any).course || "",
       student_category: (student as any).student_category || "",
       payment_type: (student as any).payment_type || "",
       final_fee: (student as any).final_fee?.toString() || "",
@@ -656,9 +659,15 @@ const Students = () => {
         alloted_room_no: editForm.alloted_room_no || null,
         account_number: editForm.account_number || null,
         payment_date: editForm.payment_date || null,
-        student_category: (editForm.student_category || null) as StudentCategory | null,
+        course: editForm.course || null,
+        student_category: editForm.course ? categoryForClass(editForm.course) : null,
         payment_type: (editForm.payment_type || null) as PaymentType | null,
-        final_fee: calculateFinalFee(editForm.student_category, editForm.payment_type) ?? 0,
+        // Only recalculate final_fee when both class & payment type are known — never
+        // silently zero out an existing fee just because one of those fields is still
+        // blank on an older record (e.g. bulk-imported students with no payment_type set).
+        final_fee:
+          calculateFeeByClass(editForm.course, editForm.payment_type) ??
+          Number(editingStudent.final_fee ?? 0),
       });
       setEditDialogOpen(false);
       setEditingStudent(null);
@@ -1217,8 +1226,9 @@ const Students = () => {
                         <TableHead>Payment Type</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Room</TableHead>
-                        <TableHead>Final Fee</TableHead>
+                        <TableHead>Total Fee</TableHead>
                         <TableHead>Concession</TableHead>
+                        <TableHead>Final Fee</TableHead>
                         <TableHead>Paid</TableHead>
                         <TableHead>Pending</TableHead>
                         <TableHead>Refund</TableHead>
@@ -1291,8 +1301,8 @@ const Students = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            {(student as any).final_fee > 0 ? (
-                              <p className="text-sm font-medium">₹{Number((student as any).final_fee).toLocaleString("en-IN")}</p>
+                            {student.finance?.totalFee ? (
+                              <p className="text-sm font-medium">₹{student.finance.totalFee.toLocaleString("en-IN")}</p>
                             ) : (
                               <p className="text-sm text-muted-foreground">-</p>
                             )}
@@ -1300,6 +1310,13 @@ const Students = () => {
                           <TableCell>
                             {student.finance?.concession ? (
                               <p className="text-sm font-medium text-blue-600">₹{student.finance.concession.toLocaleString("en-IN")}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">-</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {student.finance?.finalFee ? (
+                              <p className="text-sm font-medium">₹{student.finance.finalFee.toLocaleString("en-IN")}</p>
                             ) : (
                               <p className="text-sm text-muted-foreground">-</p>
                             )}
@@ -1527,16 +1544,19 @@ const Students = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-semibold">Student Category</Label>
-                    <Select value={form.student_category} onValueChange={(v) => setForm(f => ({ ...f, student_category: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <Label className="text-xs font-semibold">Class *</Label>
+                    <Select
+                      value={form.course}
+                      onValueChange={(v) => setForm(f => ({ ...f, course: v, student_category: categoryForClass(v) }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                       <SelectContent>
-                        {STUDENT_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                        {CLASSES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Payment Type</Label>
+                    <Label className="text-xs font-semibold">Payment Type *</Label>
                     <Select value={form.payment_type} onValueChange={(v) => setForm(f => ({ ...f, payment_type: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select payment type" /></SelectTrigger>
                       <SelectContent>
@@ -1545,13 +1565,13 @@ const Students = () => {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">Final Fee</Label>
+                    <Label className="text-xs font-semibold">Total Fee</Label>
                     <Input
                       type="number"
                       readOnly
                       disabled
-                      placeholder="Select category & payment type"
-                      value={calculateFinalFee(form.student_category, form.payment_type) ?? ""}
+                      placeholder="Select class & payment type"
+                      value={calculateFeeByClass(form.course, form.payment_type) ?? ""}
                       className="bg-muted"
                     />
                   </div>
@@ -1619,9 +1639,9 @@ const Students = () => {
                     (parseFloat(form.amount_1) || 0) +
                     (parseFloat(form.amount_2) || 0) +
                     (parseFloat(form.amount_3) || 0);
-                  const finalFeeNum = calculateFinalFee(form.student_category, form.payment_type) ?? 0;
+                  const totalFeeNum = calculateFeeByClass(form.course, form.payment_type) ?? 0;
                   const discountNum = parseFloat(form.discount) || 0;
-                  const balance = Math.max(0, finalFeeNum - discountNum - totalPaid);
+                  const balance = Math.max(0, totalFeeNum - discountNum - totalPaid);
 
                   return (
                     <>
@@ -1645,8 +1665,8 @@ const Students = () => {
 
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 rounded-md border bg-muted/40 p-3">
                         <div>
-                          <Label className="text-xs font-semibold text-muted-foreground">Final Fee</Label>
-                          <p className="text-sm font-semibold">₹ {finalFeeNum.toLocaleString("en-IN")}</p>
+                          <Label className="text-xs font-semibold text-muted-foreground">Total Fee</Label>
+                          <p className="text-sm font-semibold">₹ {totalFeeNum.toLocaleString("en-IN")}</p>
                         </div>
                         <div>
                           <Label className="text-xs font-semibold text-muted-foreground">Discount</Label>
@@ -1848,11 +1868,11 @@ const Students = () => {
                 <Input value={editForm.alloted_room_no} onChange={(e) => setEditForm(f => ({ ...f, alloted_room_no: e.target.value }))} />
               </div>
               <div>
-                <Label className="text-xs font-semibold">Student Category</Label>
-                <Select value={editForm.student_category} onValueChange={(v) => setEditForm(f => ({ ...f, student_category: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <Label className="text-xs font-semibold">Class</Label>
+                <Select value={editForm.course} onValueChange={(v) => setEditForm(f => ({ ...f, course: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                   <SelectContent>
-                    {STUDENT_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    {CLASSES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -1866,12 +1886,10 @@ const Students = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Final Fee (₹)</Label>
-                <Input type="number" readOnly disabled className="bg-muted" value={calculateFinalFee(editForm.student_category, editForm.payment_type) ?? ""} />
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-muted-foreground">
-                  Changing category/payment type updates this student's Final Fee but does not modify already-recorded invoices/payments.
+                <Label className="text-xs font-semibold">Total Fee (₹)</Label>
+                <Input type="number" readOnly disabled className="bg-muted" value={calculateFeeByClass(editForm.course, editForm.payment_type) ?? ""} />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Changing class/payment type recalculates Total Fee but does not modify already-recorded invoices/payments.
                 </p>
               </div>
               <div>

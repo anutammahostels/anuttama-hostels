@@ -190,21 +190,27 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
     const existing = studentMap.get(sid) || {
       name: inv.student?.profile?.full_name || "Unknown",
       rollNo: inv.student?.roll_number || "-",
-      gross: 0, discounts: 0, received: 0, refunds: 0, paymentModes: new Set<string>(), net: 0,
+      // Gross = Total Fee, the original amount before concession (students.final_fee).
+      // NOT the sum of invoice totals — the balance invoice is already created net of
+      // the discount, so summing invoice totals here would subtract the concession twice.
+      gross: Number(inv.student?.final_fee || 0),
+      discounts: 0, received: 0, refunds: 0, paymentModes: new Set<string>(), net: 0,
     };
-    existing.gross += Number(inv.total_amount || 0);
+    existing.gross = Math.max(existing.gross, Number(inv.student?.final_fee || 0), Number(inv.total_amount || 0));
     existing.discounts += Number(inv.discounts || 0);
     existing.refunds = refundsMap.get(sid) || 0;
     studentMap.set(sid, existing);
   });
 
   // Amount Received is always the sum of completed payment transactions.
-  // Net Receivable follows the client report: Gross - Discounts - Amount Received.
+  // Net Receivable = Final Fee (Gross - Discounts) - Net Paid (Received - Refunds).
   studentMap.forEach((d, studentId) => {
     const payments = paymentRowsMap.get(studentId) || [];
     d.received = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     payments.forEach((p) => d.paymentModes.add(p.payment_mode_label || p.payment_method || '-'));
-    d.net = d.gross - d.discounts - d.received;
+    const finalFee = Math.max(d.gross - d.discounts, 0);
+    const netPaid = Math.max(d.received - d.refunds, 0);
+    d.net = Math.max(finalFee - netPaid, 0);
   });
 
   const rows = Array.from(studentMap.entries()).map(([id, d]) => ({
@@ -217,8 +223,6 @@ const Receivables = ({ embedded = false }: { embedded?: boolean }) => {
     gross: acc.gross + r.gross, discounts: acc.discounts + r.discounts,
     received: acc.received + r.received, refunds: acc.refunds + r.refunds, net: acc.net + r.net,
   }), { gross: 0, discounts: 0, received: excludedReceived, refunds: excludedRefunds, net: 0 });
-  totals.net = totals.gross - totals.discounts - totals.received;
-
   const pagedRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
   const handleExportExcel = () => {
