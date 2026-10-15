@@ -392,16 +392,17 @@ serve(async (req) => {
           if (inst.n === installments.length && balanceNote) noteParts.push(balanceNote);
           if (baseRemarks) noteParts.push(baseRemarks);
 
-          // Discount is recorded only against the first installment invoice.
-          const instDiscount = inst.n === 1 ? discount : 0;
-
+          // Installment invoices carry no discount of their own — the concession is
+          // billed to the whole course fee via a dedicated invoice below, so every
+          // invoice's own total/discount/paid stay internally consistent (never a
+          // row that looks "100% discounted" and "fully paid in cash" at once).
           const { data: invoice, error: invError } = await adminClient.from("invoices").insert({
             student_id: student.id,
             invoice_number: invoiceNumber,
             billing_month: billingDate,
             due_date: billingDate,
             total_amount: inst.amt,
-            discounts: instDiscount,
+            discounts: 0,
             paid_amount: 0,
             room_rent: inst.amt,
             status: "pending",
@@ -429,7 +430,30 @@ serve(async (req) => {
           }
         }
 
-        const outstanding = parsedFinalFee - discount - totalPaid;
+        // Concession is applied against the whole course fee (not any single installment):
+        // billed as its own invoice, capped so it can never exceed what's actually left
+        // owing. total_amount === discounts on this invoice, so its own due is always 0 —
+        // it records the approved waiver without ever looking like a cash payment.
+        const grossRemaining = Math.max(parsedFinalFee - totalPaid, 0);
+        const appliedDiscount = Math.min(Math.max(discount, 0), grossRemaining);
+        if (appliedDiscount > 0) {
+          const { error: discErr } = await adminClient.from("invoices").insert({
+            student_id: student.id,
+            invoice_number: `INV-${roll_number}-CONC-${tsToken}`,
+            billing_month: baseBillingDate,
+            due_date: baseBillingDate,
+            total_amount: appliedDiscount,
+            discounts: appliedDiscount,
+            paid_amount: 0,
+            room_rent: 0,
+            status: "paid",
+            notes: "Concession / discount against total course fee — not a cash transaction",
+          });
+          if (discErr) invoiceErrors.push(`concession invoice: ${discErr.message}`);
+          else invoicesCreated++;
+        }
+
+        const outstanding = grossRemaining - appliedDiscount;
         if (outstanding > 0) {
           const invoiceNumber = `INV-${roll_number}-BAL-${tsToken}`;
           const balDueDate = toDateOnly(balance_payment, undefined) || baseBillingDate;
@@ -443,6 +467,7 @@ serve(async (req) => {
             billing_month: baseBillingDate,
             due_date: balDueDate,
             total_amount: outstanding,
+            discounts: 0,
             paid_amount: 0,
             room_rent: outstanding,
             status: "pending",
