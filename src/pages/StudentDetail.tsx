@@ -321,7 +321,7 @@ const StudentDetail = () => {
                   <TableRow>
                     <TableHead>Invoice</TableHead>
                     <TableHead>Billing Month</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Final Fee</TableHead>
                     <TableHead>Paid</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
