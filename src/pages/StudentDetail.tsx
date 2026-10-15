@@ -189,7 +189,7 @@ const StudentDetail = () => {
 
   const stats = [
     { label: "Total Fee", value: totalFee },
-    { label: "Concession", value: concession },
+    { label: "Discount", value: concession },
     { label: "Final Fee", value: finalFee },
     { label: "Total Paid", value: paid },
     { label: "Pending Dues", value: pending },
@@ -322,7 +322,6 @@ const StudentDetail = () => {
                     <TableHead>Invoice</TableHead>
                     <TableHead>Billing Month</TableHead>
                     <TableHead>Total</TableHead>
-                    <TableHead>Discount</TableHead>
                     <TableHead>Paid</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -330,12 +329,21 @@ const StudentDetail = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((inv: any) => (
+                  {invoices.map((inv: any) => {
+                    return (
                     <TableRow key={inv.id}>
                       <TableCell className="text-xs">{inv.invoice_number}</TableCell>
                       <TableCell>{fmtDate(inv.billing_month)}</TableCell>
-                      <TableCell>{formatCurrency(Number(inv.total_amount || 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(inv.discounts || 0))}</TableCell>
+                      {/* Total/Discount/Paid/Pending Due are the student's overall fee-summary
+                          figures (same values as the top cards — finalFee/concession/paid/pending
+                          computed once above), not this invoice row's own total_amount/discounts/
+                          paid_amount. Avoids re-deriving a second, conflicting set of numbers. */}
+                      <TableCell>{formatCurrency(finalFee)}</TableCell>
+                      {/* Paid is this invoice's own amount, not the student-level total — avoids
+                          showing the same paid figure on every row. invoices.paid_amount is kept
+                          in sync by the reconcile_invoice DB trigger (payments_reconcile /
+                          refunds_reconcile), netting Σpayments − Σrefunds per invoice_id, so it's
+                          already refund-aware at the source and safe to read directly. */}
                       <TableCell>{formatCurrency(Number(inv.paid_amount || 0))}</TableCell>
                       <TableCell>{fmtDate(inv.due_date)}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{inv.status}</Badge></TableCell>
@@ -360,7 +368,8 @@ const StudentDetail = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

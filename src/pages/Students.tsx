@@ -29,6 +29,7 @@ import { useProperties } from "@/hooks/useProperties";
 import { useCenter } from "@/contexts/CenterContext";
 import { CenterFilter } from "@/components/dashboard/CenterFilter";
 import { CLASSES, PAYMENT_TYPES, calculateFeeByClass, categoryForClass, studentCategoryLabel, paymentTypeLabel, type PaymentType } from "@/lib/feeMatrix";
+import { STREAMS } from "@/lib/streams";
 
 const Students = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +60,7 @@ const Students = () => {
     account_number: "",
     payment_date: "",
     course: "",
+    department: "",
     student_category: "",
     payment_type: "",
     final_fee: "",
@@ -524,6 +526,7 @@ const Students = () => {
     mother_name: "",
     gender: "",
     course: "",
+    department: "",
     student_category: "",
     payment_type: "",
     final_fee: "",
@@ -628,6 +631,7 @@ const Students = () => {
       account_number: (student as any).account_number || "",
       payment_date: (student as any).payment_date || "",
       course: (student as any).course || "",
+      department: (student as any).department || "",
       student_category: (student as any).student_category || "",
       payment_type: (student as any).payment_type || "",
       final_fee: (student as any).final_fee?.toString() || "",
@@ -660,6 +664,7 @@ const Students = () => {
         account_number: editForm.account_number || null,
         payment_date: editForm.payment_date || null,
         course: editForm.course || null,
+        department: editForm.department || null,
         student_category: editForm.course ? categoryForClass(editForm.course) : null,
         payment_type: (editForm.payment_type || null) as PaymentType | null,
         // Only recalculate final_fee when both class & payment type are known — never
@@ -1556,6 +1561,15 @@ const Students = () => {
                     </Select>
                   </div>
                   <div>
+                    <Label className="text-xs font-semibold">Stream</Label>
+                    <Select value={form.department} onValueChange={(v) => setForm(f => ({ ...f, department: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select stream" /></SelectTrigger>
+                      <SelectContent>
+                        {STREAMS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label className="text-xs font-semibold">Payment Type *</Label>
                     <Select value={form.payment_type} onValueChange={(v) => setForm(f => ({ ...f, payment_type: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select payment type" /></SelectTrigger>
@@ -1873,6 +1887,18 @@ const Students = () => {
                   <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                   <SelectContent>
                     {CLASSES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Stream</Label>
+                <Select value={editForm.department} onValueChange={(v) => setEditForm(f => ({ ...f, department: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select stream" /></SelectTrigger>
+                  <SelectContent>
+                    {STREAMS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    {editForm.department && !STREAMS.some(s => s.value === editForm.department) && (
+                      <SelectItem value={editForm.department}>{editForm.department} (existing)</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
